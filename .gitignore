@@ -1,0 +1,23 @@
+.DS_Store
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+*.log
+.env
+.env.*
+!.env.example
+
+# 本地开发、试验与历史备份
+道渊前端桌宠/work/
+道渊前端桌宠/integration/tavern-helper-pet/output/
+道渊前端桌宠/integration/tavern-helper-pet/update-spec.json
+**/beauty-plaque-chroma.png
+*.bak.json
+*.failed-*.json
+
+# Codex 协作记忆与内部开发过程，不作为公开项目文档
+项目记忆.md
+开发实施记录.md
+讨论设计文档.md
+开发实施流程.md

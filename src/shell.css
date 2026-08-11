@@ -1,0 +1,75 @@
+#daoyuan-feature-hud {
+  position: fixed;
+  z-index: 2147483000;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr);
+  box-sizing: border-box;
+  aspect-ratio: 390 / 844;
+  overflow: hidden;
+  border: 1px solid rgba(216, 193, 136, .42);
+  border-radius: 9px;
+  background: #0c0f14;
+  box-shadow: 0 18px 55px rgba(0, 0, 0, .58), 0 0 0 1px rgba(0, 0, 0, .5);
+  transition: width .18s ease, height .18s ease, left .18s ease, top .18s ease, border-radius .18s ease;
+}
+#daoyuan-feature-hud[hidden],
+#daoyuan-feature-orb[hidden] { display: none !important; }
+#daoyuan-feature-hud.is-dragging { transition: none; }
+#daoyuan-feature-hud .daoyuan-hud-drag-strip {
+  position: absolute;
+  z-index: 3;
+  top: 0;
+  right: 86px;
+  left: 42px;
+  height: 38px;
+  border-radius: 8px 8px 0 0;
+  cursor: grab;
+  touch-action: none;
+}
+#daoyuan-feature-hud .daoyuan-hud-drag-strip::after {
+  position: absolute;
+  top: 7px;
+  left: 50%;
+  width: 28px;
+  height: 2px;
+  border-radius: 2px;
+  background: rgba(216, 193, 136, .28);
+  content: '';
+  transform: translateX(-50%);
+}
+#daoyuan-feature-hud .daoyuan-hud-drag-strip.is-dragging { cursor: grabbing; }
+#daoyuan-feature-hud .daoyuan-hud-drag-strip.is-dragging::after { background: rgba(216, 193, 136, .72); }
+#daoyuan-feature-hud iframe { display: block; width: 100%; height: 100%; border: 0; background: #0c0f14; }
+#daoyuan-feature-orb {
+  position: fixed;
+  z-index: 2147483000;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 58px;
+  height: 72px;
+  padding: 5px;
+  border: 1px solid rgba(216, 193, 136, .65);
+  border-radius: 12px 12px 15px 15px;
+  background: linear-gradient(145deg, rgba(216,193,136,.18), rgba(23,28,38,.96) 62%);
+  box-shadow: 0 8px 26px rgba(0,0,0,.45), 0 0 18px rgba(216,193,136,.16), inset 0 0 0 1px rgba(255,255,255,.035);
+  color: #d8c188;
+  cursor: pointer;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+  line-height: 0;
+  transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+#daoyuan-feature-orb:hover { border-color: #d8c188; box-shadow: 0 8px 30px rgba(0,0,0,.55), 0 0 22px rgba(216,193,136,.28), inset 0 0 0 1px rgba(255,255,255,.06); transform: translateY(-2px); }
+#daoyuan-feature-orb:active { transform: translateY(0); }
+#daoyuan-feature-orb .jade-slip-icon { display: block; width: 46px; height: 60px; overflow: visible; }
+#daoyuan-feature-orb .jade-slip-shadow { fill: rgba(0,0,0,.42); transform: translate(2px, 3px); }
+#daoyuan-feature-orb .jade-slip-body { fill: url(#jade-slip-fill); stroke: rgba(216,241,208,.72); stroke-width: 1.2; }
+#daoyuan-feature-orb .jade-slip-edge { fill: url(#jade-slip-edge); opacity: .9; }
+#daoyuan-feature-orb .jade-slip-groove { fill: none; stroke: rgba(32,72,66,.72); stroke-width: 1.35; stroke-linecap: round; }
+#daoyuan-feature-orb .jade-slip-seal { fill: rgba(216,241,208,.78); }
+@media (max-width: 420px) {
+  #daoyuan-feature-hud { border-radius: 0; }
+  #daoyuan-feature-orb { width: 54px; height: 68px; }
+  #daoyuan-feature-orb .jade-slip-icon { width: 43px; height: 56px; }
+}

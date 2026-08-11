@@ -1,0 +1,9 @@
+{
+  "frameDurationMs": 260,
+  "frameDurationByState": { "PhoneLoop": 900 },
+  "Idle": ["/assets/pet/ziwei/idle/idle_01.png", "/assets/pet/ziwei/idle/idle_02.png", "/assets/pet/ziwei/idle/idle_03.png"],
+  "TapReaction": ["/assets/pet/ziwei/tap-reaction/tap-reaction_01.png", "/assets/pet/ziwei/tap-reaction/tap-reaction_02.png"],
+  "PhoneEnter": ["/assets/pet/ziwei/phone-enter/phone-enter_01.png", "/assets/pet/ziwei/phone-enter/phone-enter_02.png"],
+  "PhoneLoop": ["/assets/pet/ziwei/phone-loop/phone-loop_03.png"],
+  "PhoneExit": ["/assets/pet/ziwei/phone-exit/phone-exit_01.png", "/assets/pet/ziwei/phone-exit/phone-exit_02.png"]
+}
