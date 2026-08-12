@@ -1,4 +1,4 @@
-import { extractOpenAIText, fetchAuto, modelsEndpoint } from './openaiProtocol';
+import { extractOpenAIText, extractModelIds, fetchAuto, modelEndpoints } from './openaiProtocol';
 
 interface YujianRuntimeHost {
   Mvu?: {
@@ -138,21 +138,17 @@ function readSelectedLoreFromRuntime(runtime: YujianRuntimeHost): string[] {
 
 export async function fetchYujianModels(apiBaseUrl: string, apiKey: string): Promise<string[]> {
   if (!apiBaseUrl.trim()) throw new Error('请先填写基础 URL');
-  const endpoint = modelsEndpoint(apiBaseUrl);
-  const response = await fetch(endpoint, {
-    method: 'GET',
-    headers: apiKey ? { Authorization: `Bearer ${apiKey}` } : {},
-  });
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`获取模型列表失败: ${response.status} - ${errorText.slice(0, 200)}`);
+  let lastError = '';
+  for (const endpoint of modelEndpoints(apiBaseUrl)) {
+    try {
+      const response = await fetch(endpoint, { method: 'GET', headers: apiKey ? { Authorization: `Bearer ${apiKey}` } : {} });
+      if (!response.ok) { lastError = `${response.status} ${(await response.text()).slice(0, 160)}`; continue; }
+      const models = extractModelIds(await response.json());
+      if (models.length) return models;
+      lastError = '返回中没有模型';
+    } catch (error) { lastError = error instanceof Error ? error.message : String(error); }
   }
-  const payload = asRecord(await response.json());
-  const rows = Array.isArray(payload.data) ? payload.data : [];
-  return rows
-    .map(item => typeof item === 'string' ? item : asRecord(item).id)
-    .filter((item): item is string => typeof item === 'string' && Boolean(item))
-    .sort((a, b) => a.localeCompare(b));
+  throw new Error(`获取模型列表失败：${lastError || '未找到可用模型接口'}`);
 }
 
 export interface StandaloneYujianMessage {

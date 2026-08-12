@@ -8,6 +8,18 @@ export function modelsEndpoint(url: string): string {
   return normalized.endsWith('/models') ? normalized : `${normalized}/models`;
 }
 
+export function modelEndpoints(url: string): string[] {
+  const normalized = url.trim().replace(/\/+$/, '').replace(/\/(?:chat\/completions|responses|messages|models)$/i, '');
+  if (/\/v\d+$/i.test(normalized)) return [`${normalized}/models`];
+  return [`${normalized}/v1/models`, `${normalized}/models`];
+}
+
+export function extractModelIds(value: unknown): string[] {
+  const record = value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
+  const rows = Array.isArray(value) ? value : Array.isArray(record.data) ? record.data : Array.isArray(record.models) ? record.models : [];
+  return rows.map(item => typeof item === 'string' ? item : item && typeof item === 'object' ? String((item as Record<string, unknown>).id ?? (item as Record<string, unknown>).name ?? '') : '').filter(Boolean).sort((a, b) => a.localeCompare(b));
+}
+
 function protocolFor(url: string): 'anthropic' | 'responses' | 'chat' {
   const value = url.toLowerCase();
   if (value.endsWith('/messages')) return 'anthropic';
