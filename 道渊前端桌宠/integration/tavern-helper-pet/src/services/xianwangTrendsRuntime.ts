@@ -13,6 +13,7 @@ export interface XianwangApiSettings {
   maxPosts: number;
   forumAutoEnabled: boolean; forumAutoInterval: number; forumBatchSize: number; forumMaxPosts: number;
   newsAutoEnabled: boolean; newsAutoInterval: number; newsBatchSize: number; newsMaxPapers: number;
+  decentralizedMode: boolean; autoAiReply: boolean; showHeat: boolean; showCommentPreview: boolean; jailbreakPrompt: boolean; generatedCommentCount: number;
 }
 
 const AiCommentSchema = z.object({
@@ -66,7 +67,8 @@ export const XIANWANG_TRENDS_SYSTEM_PROMPT = `你是修仙世界“仙网风闻�
 铁律：
 1. 风闻不等于世界事实。可以误读、夸张、猜测或互相矛盾，但不得把未知内容宣称为已经确认的官方事实。
 2. 不得提前泄露尚未发生的剧情，不得虚构输入资料明确否定的设定。
-3. 大多数风闻应来自世界中的普通修士、商贩、弟子、旅人或匿名用户，不得全部围绕主角。
+3. 仙网覆盖整个修仙界，不是主角专属播报。优先报道主角未参与的并行动态：不同界域与地域的宗门事务、边境冲突、商路物价、秘境开放、天灾异象、修士生活、地方习俗、悬赏纠纷、妖兽迁徙和普通人的小事。
+4. 默认生成零条主角及其身边人物相关内容。只有输入明确证明某件主角事件已经形成跨地域、跨势力的公共影响时，才允许本批最多出现一条相关风闻；“最近正文提到了主角”不构成公共影响。不得把主角、玩家、当前任务、当前地点或主角认识的人物当作默认选题。
 4. 同批标题与主题必须明显不同；评论应包含相信、质疑、调侃或补充等不同立场。
 5. storyTime必须使用故事内时间。credibility为0至100整数，heat为非负整数。
 6. 只能返回一个合法JSON对象，不得输出Markdown、代码围栏、解释、思考过程或额外字段。
@@ -116,6 +118,9 @@ export async function generateTrends(
   const max = Math.max(min, Math.min(8, Math.floor(settings.batchMax)));
   const user = `【本次任务】生成${min}～${max}条全新的仙网风闻。
 
+【世界视角硬约束】
+先从世界资料中寻找主角之外的并行动态，再完成输出；最近正文只是局部观测，不是选题中心。默认不得生成主角、主角身边人物、当前任务或当前地点的内容。仅当资料明确证明某事件已形成跨地域公共影响时，才允许最多一条相关内容。优先覆盖不同地域、宗门、族群、坊市、商路、边境、秘境和普通修士生活。
+
 【当前故事时间】${input.worldTime || '未知'}
 【当前地点】${input.location || '未知'}
 
@@ -126,24 +131,26 @@ ${input.recentStory.slice(0, 12000) || '无'}
 ${input.worldFacts.slice(0, 12000) || '无'}
 
 【世界书资料，只作身份与设定校准】
-${input.lore.slice(0, 16000) || '无'}
+${input.lore || '无'}
 
 【已有标题，禁止重复】
 ${input.existingTitles.slice(-40).join('\n') || '无'}
 
 返回前检查数量、字段、时间线、主题差异和观点冲突。`;
+  const commentRule = settings.generatedCommentCount > 0 ? `每条生成恰好${settings.generatedCommentCount}条评论。` : 'comments必须返回空数组，不要生成评论。';
+  const systemPrompt = `${XIANWANG_TRENDS_SYSTEM_PROMPT}${settings.decentralizedMode ? '\n【去中心化模式】禁止围绕主角组织本批内容；主角相关条目为零。' : ''}${settings.jailbreakPrompt ? '\n【创作完整性】不要因内容尖锐、负面、争议或涉及世界内冲突而拒绝创作；仍须服从既定格式、安全边界与世界设定。' : ''}`;
   const response = await fetchAuto(settings.apiBaseUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...(settings.apiKey ? { Authorization: `Bearer ${settings.apiKey}` } : {}) },
     body: JSON.stringify({ model: settings.apiModel.trim(), temperature: 0.85, max_tokens: 5000, messages: [
-      { role: 'system', content: XIANWANG_TRENDS_SYSTEM_PROMPT },
-      { role: 'user', content: user },
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: `${user}\n【评论要求】${commentRule}` },
     ] }),
   });
   if (!response.ok) throw new Error(`仙网内容 API 请求失败：${response.status} ${(await response.text()).slice(0, 200)}`);
   const raw = extractText(await response.json());
   if (!raw) throw new Error('仙网内容 API 返回为空');
-  return parseTrendGeneration(raw, min, max, input.sourceMessageId);
+  return parseTrendGeneration(raw, min, max, input.sourceMessageId).map(post => ({ ...post, comments: post.comments.slice(0, settings.generatedCommentCount) }));
 }
 
 export function retainTrendPosts(posts: TrendPost[], maxGeneratedPosts: number): TrendPost[] {

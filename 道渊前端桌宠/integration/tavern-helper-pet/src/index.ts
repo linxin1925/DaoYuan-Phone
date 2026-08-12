@@ -13,12 +13,12 @@ import { parseIndependentBeautyRankData } from './services/beautyRankService';
 import { DEFAULT_BEAUTY_RANK_PROMPT } from './services/beautyRankPrompt';
 import { generateBeautyRank, generateBeautyRankReply, type BeautyRankApiSettings } from './services/beautyRankRuntime';
 import { generateTrends, retainTrendPosts, type XianwangApiSettings } from './services/xianwangTrendsRuntime';
-import { generateForumPosts, generateNewsPapers, normalizeNewsIssueSequence, retainNewest } from './services/xianwangForumNewsRuntime';
+import { generateForumPosts, generateForumReplies, generateNewsPapers, normalizeNewsIssueSequence, retainNewest } from './services/xianwangForumNewsRuntime';
 import { normalizeMapNode, type MapRealm } from './services/mapService';
 import { applyPromptInjection, buildPromptInjectionContent, DEFAULT_PROMPT_INJECTION_SETTINGS, normalizePromptInjectionSettings, type PromptInjectionApi, type PromptInjectionSettings, type YujianInjectionMessage } from './services/promptInjectionRuntime';
 import appCss from './styles.css?inline';
 import shellCss from './shell.css?inline';
-import { ZiweiPetController } from './petController';
+import { ZiweiPetController, type PetSize } from './petController';
 
 const SCRIPT_ID = 'daoyuan-feature-frontend-hud';
 const HOST_ID = 'daoyuan-feature-hud';
@@ -26,9 +26,21 @@ const ORB_ID = 'daoyuan-feature-orb';
 const IPHONE_WIDTH = 390;
 const IPHONE_HEIGHT = 844;
 const IPHONE_RATIO = IPHONE_WIDTH / IPHONE_HEIGHT;
+const PET_SIZE_KEY = 'daoyuan_ziwei_pet_size_v1';
 
 type ShellMode = 'phone';
 type Layout = 'phone';
+
+function readPetSize(hostWindow: Window): PetSize {
+  try {
+    const value = hostWindow.localStorage.getItem(PET_SIZE_KEY);
+    return value === 'small' || value === 'medium' || value === 'large' ? value : 'large';
+  } catch { return 'large'; }
+}
+
+function savePetSize(hostWindow: Window, size: PetSize): void {
+  try { hostWindow.localStorage.setItem(PET_SIZE_KEY, size); } catch { /* optional preference */ }
+}
 
 interface RuntimeGlobals {
   $?: (callback: () => void) => void;
@@ -43,7 +55,7 @@ interface RuntimeGlobals {
   generate?: (input: unknown) => unknown | Promise<unknown>;
   injectPrompts?: PromptInjectionApi['injectPrompts'];
   getCharWorldbookNames?: (scope?: string) => { primary?: string; additional?: string[] };
-  getWorldbook?: (name: string) => Promise<Array<{ uid?: unknown; name?: unknown; content?: unknown; enabled?: unknown; strategy?: { keys?: unknown[] } }>>;
+  getWorldbook?: (name: string) => Promise<Array<{ uid?: unknown; name?: unknown; comment?: unknown; content?: unknown; enabled?: unknown; disable?: unknown; constant?: unknown; key?: unknown[]; strategy?: { type?: unknown; keys?: unknown[] } }>>;
 }
 
 const runtime = globalThis as typeof globalThis & RuntimeGlobals;
@@ -128,9 +140,15 @@ function readXianwangApiSettings(hostWindow: Window): XianwangApiSettings {
       newsAutoInterval: typeof value.newsAutoInterval === 'number' ? Math.max(0, Math.floor(value.newsAutoInterval)) : 5,
       newsBatchSize: typeof value.newsBatchSize === 'number' ? Math.max(1, Math.floor(value.newsBatchSize)) : 1,
       newsMaxPapers: typeof value.newsMaxPapers === 'number' ? Math.max(1, Math.floor(value.newsMaxPapers)) : 12,
+      decentralizedMode: value.decentralizedMode === true,
+      autoAiReply: value.autoAiReply !== false,
+      showHeat: value.showHeat !== false,
+      showCommentPreview: value.showCommentPreview !== false,
+      jailbreakPrompt: value.jailbreakPrompt !== false,
+      generatedCommentCount: typeof value.generatedCommentCount === 'number' ? Math.max(0, Math.min(10, Math.floor(value.generatedCommentCount))) : 3,
     };
   } catch {
-    return { apiBaseUrl: '', apiKey: '', apiModel: '', trendsAutoEnabled: true, autoInterval: 3, batchMin: 2, batchMax: 3, maxPosts: 30, forumAutoEnabled: true, forumAutoInterval: 3, forumBatchSize: 2, forumMaxPosts: 30, newsAutoEnabled: true, newsAutoInterval: 5, newsBatchSize: 1, newsMaxPapers: 12 };
+    return { apiBaseUrl: '', apiKey: '', apiModel: '', trendsAutoEnabled: true, autoInterval: 3, batchMin: 2, batchMax: 3, maxPosts: 30, forumAutoEnabled: true, forumAutoInterval: 3, forumBatchSize: 2, forumMaxPosts: 30, newsAutoEnabled: true, newsAutoInterval: 5, newsBatchSize: 1, newsMaxPapers: 12, decentralizedMode:false, autoAiReply:true, showHeat:true, showCommentPreview:true, jailbreakPrompt:true, generatedCommentCount:3 };
   }
 }
 
@@ -166,6 +184,41 @@ async function readYujianLore(hostWindow: Window): Promise<YujianLoreEntry[]> {
     } catch { /* ignore one unavailable worldbook */ }
   }
   return entries;
+}
+
+async function readXianwangRuleLore(hostWindow:Window):Promise<YujianLoreEntry[]> {
+  const loreRuntime=hostWindow as Window & RuntimeGlobals;
+  if(typeof loreRuntime.getCharWorldbookNames!=='function'||typeof loreRuntime.getWorldbook!=='function')return [];
+  const names=loreRuntime.getCharWorldbookNames('current');
+  const books=[names.primary,...(names.additional||[])].filter((name):name is string=>Boolean(name));
+  const entries:YujianLoreEntry[]=[];
+  for(const book of books){try{const list=await loreRuntime.getWorldbook(book);for(const item of list){
+    const strategyType=typeof item.strategy?.type==='string'?item.strategy.type.toLowerCase():'';
+    if(item.constant!==true&&strategyType!=='constant')continue;
+    const content=typeof item.content==='string'?item.content.trim():'';if(!content)continue;
+    const rawKeys=Array.isArray(item.strategy?.keys)?item.strategy.keys:Array.isArray(item.key)?item.key:[];
+    entries.push({uid:String(item.uid??`${book}:${entries.length}`),name:typeof item.name==='string'&&item.name?item.name:typeof item.comment==='string'&&item.comment?item.comment:'未命名规则',content,keys:rawKeys.map(String)});
+  }}catch{/* ignore one unavailable worldbook */}}
+  return entries;
+}
+
+function buildXianwangLore(entries:YujianLoreEntry[]):string {
+  return entries.map(entry=>`【${entry.name}】\n${entry.content}`).join('\n\n');
+}
+
+function removeXianwangForbiddenWorldFields(value:unknown):unknown {
+  if (Array.isArray(value)) return value.map(removeXianwangForbiddenWorldFields);
+  if (!value || typeof value !== 'object') return value;
+  const result:Record<string, unknown> = {};
+  for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
+    if (key === '动向' || key === '世界动向' || key === '动态') continue;
+    result[key] = removeXianwangForbiddenWorldFields(child);
+  }
+  return result;
+}
+
+function serializeXianwangWorldFacts(value:unknown):string {
+  return JSON.stringify(removeXianwangForbiddenWorldFields(value)).slice(0, 12000);
 }
 
 function resolveHostContext(): HostContext {
@@ -303,7 +356,10 @@ class FeatureShell {
     this.orb.innerHTML = '<img class="ziwei-pet-frame" alt="紫薇桌宠" draggable="false">';
     this.hostDocument.body.append(this.orb);
     const petImage = this.orb.querySelector<HTMLImageElement>('.ziwei-pet-frame');
-    if (petImage) this.petController = new ZiweiPetController(this.orb, petImage, () => this.open());
+    if (petImage) {
+      this.petController = new ZiweiPetController(this.orb, petImage, () => this.open());
+      this.petController.setSize(readPetSize(this.hostWindow));
+    }
     this.bindOrbDrag();
 
     this.dragStrip = this.hostDocument.createElement('div');
@@ -470,19 +526,22 @@ class FeatureShell {
     const idByFingerprint = new Map([...sources].map(([id, fingerprint]) => [fingerprint, id]));
     const chatId = this.session.chatId;
     const removedYujian = reconcileAutoYujianRecords(this.hostWindow, chatId, sources);
-    const reconcileMeta = <T extends { processedMessageIds: string[]; processedSwipeKeys: string[]; triggeredMessageIds: string[]; autoCounter: number }>(data: T, interval: number): T => {
+    const reconcileMeta = <T extends { processedMessageIds: string[]; processedSwipeKeys: string[]; triggeredMessageIds: string[]; triggeredSwipeKeys: string[]; autoCounter: number }>(data: T, interval: number): T => {
       if (!data.processedSwipeKeys.length) return data;
       const processedFingerprints = new Set(data.processedSwipeKeys.map(key => key.slice(key.indexOf(':') + 1)));
-      const triggeredFingerprints = new Set(data.processedSwipeKeys.flatMap(key => {
-        const split = key.indexOf(':');
-        return data.triggeredMessageIds.includes(key.slice(0, split)) ? [key.slice(split + 1)] : [];
-      }));
+      const triggeredFingerprints = new Set(data.triggeredSwipeKeys.length
+        ? data.triggeredSwipeKeys.map(key => key.slice(key.indexOf(':') + 1))
+        : data.processedSwipeKeys.flatMap(key => {
+          const split = key.indexOf(':');
+          return data.triggeredMessageIds.includes(key.slice(0, split)) ? [key.slice(split + 1)] : [];
+        }));
       const processedMessageIds = [...sources].filter(([, fp]) => processedFingerprints.has(fp)).map(([id]) => id);
       const processedSwipeKeys = [...sources].filter(([, fp]) => processedFingerprints.has(fp)).map(([id, fp]) => `${id}:${fp}`).slice(-400);
       const triggeredMessageIds = [...sources].filter(([, fp]) => triggeredFingerprints.has(fp)).map(([id]) => id).slice(-200);
+      const triggeredSwipeKeys = [...sources].filter(([, fp]) => triggeredFingerprints.has(fp)).map(([id, fp]) => `${id}:${fp}`).slice(-200);
       const lastTrigger = triggeredMessageIds.length ? Math.max(...triggeredMessageIds.map(Number)) : -1;
       const sinceTrigger = processedMessageIds.filter(id => Number(id) > lastTrigger).length;
-      return { ...data, processedMessageIds: processedMessageIds.slice(-200), processedSwipeKeys, triggeredMessageIds, autoCounter: interval > 0 ? sinceTrigger % interval : 0 };
+      return { ...data, processedMessageIds: processedMessageIds.slice(-200), processedSwipeKeys, triggeredMessageIds, triggeredSwipeKeys, autoCounter: interval > 0 ? sinceTrigger % interval : 0 };
     };
 
     const trendSettings = readXianwangApiSettings(this.hostWindow);
@@ -713,6 +772,13 @@ class FeatureShell {
       this.preferences.lastApp = payload.app;
       saveUiPreferences(this.preferences);
     }
+    if (action === 'SET_PET_SIZE' && (payload.size === 'small' || payload.size === 'medium' || payload.size === 'large')) {
+      const size = payload.size as PetSize;
+      if (this.hostWindow) savePetSize(this.hostWindow, size);
+      this.petController?.setSize(size);
+      this.positionOrb();
+      this.sendContext();
+    }
     if (action === 'SET_MAP_VIEW') void this.saveMapView(payload);
     if (action === 'CLOSE_SHELL') this.close();
     if (action === 'REQUEST_DIAGNOSTIC') this.sendContext();
@@ -736,6 +802,10 @@ class FeatureShell {
     if (action === 'DELETE_FORUM_POST') void this.deleteForumPost(payload);
     if (action === 'GENERATE_NEWS') void this.generateNewsContent(undefined, false, true);
     if (action === 'DELETE_NEWS_PAPER') void this.deleteNewsPaper(payload);
+    if (action === 'TOGGLE_TREND_LIKE') void this.toggleXianwangLike('trends', payload);
+    if (action === 'TOGGLE_FORUM_LIKE') void this.toggleXianwangLike('forum', payload);
+    if (action === 'TOGGLE_NEWS_LIKE') void this.toggleXianwangLike('news', payload);
+    if (action === 'SUBMIT_FORUM_COMMENT') void this.submitForumComment(payload);
     if (action === 'GENERATE_BEAUTY_RANK') void this.generateBeautyRank();
     if (action === 'GENERATE_BEAUTY_REPLY') void this.generateBeautyReply(payload);
     if (action === 'SEND_YUJIAN_MESSAGE') {
@@ -1003,6 +1073,12 @@ class FeatureShell {
       newsAutoInterval: typeof payload.newsAutoInterval === 'number' ? Math.max(0, Math.floor(payload.newsAutoInterval)) : 5,
       newsBatchSize: typeof payload.newsBatchSize === 'number' ? Math.max(1, Math.floor(payload.newsBatchSize)) : 1,
       newsMaxPapers: typeof payload.newsMaxPapers === 'number' ? Math.max(1, Math.floor(payload.newsMaxPapers)) : 12,
+      decentralizedMode: payload.decentralizedMode === true,
+      autoAiReply: payload.autoAiReply !== false,
+      showHeat: payload.showHeat !== false,
+      showCommentPreview: payload.showCommentPreview !== false,
+      jailbreakPrompt: payload.jailbreakPrompt !== false,
+      generatedCommentCount: typeof payload.generatedCommentCount === 'number' ? Math.max(0, Math.min(10, Math.floor(payload.generatedCommentCount))) : 3,
     };
     this.hostWindow.localStorage.setItem('daoyuan_xianwang_api_settings', JSON.stringify(settings));
     this.frame?.contentWindow?.postMessage(makeBridgeMessage('event', 'XIANWANG_SETTINGS_STATUS', { settingsSaved: true }), '*');
@@ -1069,13 +1145,13 @@ class FeatureShell {
       }).filter(Boolean).join('\n\n');
       const loreWindow = typeof runtime.getCharWorldbookNames === 'function' && typeof runtime.getWorldbook === 'function'
         ? runtime as unknown as Window : this.hostWindow;
-      const loreEntries = await readYujianLore(loreWindow);
-      const lore = loreEntries.slice(0, 30).map(entry => `【${entry.name}】\n${entry.content}`).join('\n\n');
+      const loreEntries = await readXianwangRuleLore(loreWindow);
+      const lore = buildXianwangLore(loreEntries);
       const posts = await generateTrends(settings, {
         worldTime: this.worldStatus.time,
         location: this.worldStatus.location,
         recentStory,
-        worldFacts: this.worldData ? JSON.stringify(this.worldData).slice(0, 12000) : '',
+        worldFacts: this.worldData ? serializeXianwangWorldFacts(this.worldData) : '',
         lore,
         existingTitles: this.trendPosts.map(post => post.title),
         sourceMessageId: sourceMessageId === undefined ? undefined : String(sourceMessageId),
@@ -1116,13 +1192,23 @@ class FeatureShell {
     }
   }
 
+  private async toggleXianwangLike(kind:'trends'|'forum'|'news',payload:Record<string,unknown>):Promise<void>{
+    const id=typeof payload.id==='string'?payload.id:''; if(!id)return;
+    if(kind==='trends'){this.trendPosts=this.trendPosts.map(item=>item.id===id?{...item,liked:!item.liked,heat:Math.max(0,item.heat+(item.liked?-1:1))}:item);const data=parseTrendsData(this.repository.getData('daoyuan_web_trends_data'));await this.repository.write('daoyuan_web_trends_data',{...data,posts:this.trendPosts});}
+    if(kind==='forum'){this.forumPosts=this.forumPosts.map(item=>item.id===id?{...item,liked:!item.liked,likes:Math.max(0,item.likes+(item.liked?-1:1))}:item);const data=parseForumData(this.repository.getData('daoyuan_forum_data'));await this.repository.write('daoyuan_forum_data',{...data,posts:this.forumPosts});}
+    if(kind==='news'){this.newsPapers=this.newsPapers.map(item=>item.id===id?{...item,liked:!item.liked,likes:Math.max(0,item.likes+(item.liked?-1:1))}:item);const data=parseNewsData(this.repository.getData('daoyuan_news_data'));await this.repository.write('daoyuan_news_data',{...data,papers:this.newsPapers});}
+    this.appData=this.repository.project();this.sendContext();
+  }
+
+  private async submitForumComment(payload:Record<string,unknown>):Promise<void>{const id=typeof payload.id==='string'?payload.id:'',content=typeof payload.content==='string'?payload.content.trim().slice(0,3000):'';const post=this.forumPosts.find(item=>item.id===id);if(!post||!content)return;const userComment={id:`forum-comment:${Date.now()}:user`,author:'我',content,storyTime:this.worldStatus.time};let comments=[...post.comments,userComment];try{this.forumPosts=this.forumPosts.map(item=>item.id===id?{...item,comments:comments.slice(-20)}:item);let data=parseForumData(this.repository.getData('daoyuan_forum_data'));await this.repository.write('daoyuan_forum_data',{...data,posts:this.forumPosts});this.sendContext();const settings=readXianwangApiSettings(this.hostWindow??window);if(settings.autoAiReply){comments=[...comments,...await generateForumReplies(settings,{...post,comments},content)];this.forumPosts=this.forumPosts.map(item=>item.id===id?{...item,comments:comments.slice(-20)}:item);data=parseForumData(this.repository.getData('daoyuan_forum_data'));await this.repository.write('daoyuan_forum_data',{...data,posts:this.forumPosts});}this.appData=this.repository.project();this.frame?.contentWindow?.postMessage(makeBridgeMessage('event','FORUM_COMMENT_STATUS',{ok:true,id}),'*');this.sendContext();}catch(error){this.frame?.contentWindow?.postMessage(makeBridgeMessage('event','FORUM_COMMENT_STATUS',{ok:false,error:`评论已保存；AI 回复失败：${error instanceof Error?error.message:String(error)}`}),'*');}}
+
   private async xianwangGenerationInput(sourceMessageId?: string): Promise<{ worldTime:string; location:string; recentStory:string; worldFacts:string; lore:string; existingTitles:string[]; sourceMessageId?:string }> {
     if (!this.hostWindow) throw new Error('酒馆运行上下文不可用');
     const chat = this.hostWindow.SillyTavern?.getContext?.()?.chat;
     const recentStory = (Array.isArray(chat) ? chat : []).slice(-6).map(message => typeof (message as {mes?:unknown}).mes === 'string' ? (message as {mes:string}).mes : '').filter(Boolean).join('\n\n');
     const loreWindow = typeof runtime.getCharWorldbookNames === 'function' && typeof runtime.getWorldbook === 'function' ? runtime as unknown as Window : this.hostWindow;
-    const loreEntries = await readYujianLore(loreWindow);
-    return { worldTime:this.worldStatus.time, location:this.worldStatus.location, recentStory, worldFacts:this.worldData ? JSON.stringify(this.worldData).slice(0,12000) : '', lore:loreEntries.slice(0,30).map(entry=>`【${entry.name}】\n${entry.content}`).join('\n\n'), existingTitles:[], sourceMessageId };
+    const loreEntries = await readXianwangRuleLore(loreWindow);
+    return { worldTime:this.worldStatus.time, location:this.worldStatus.location, recentStory, worldFacts:this.worldData ? serializeXianwangWorldFacts(this.worldData) : '', lore:buildXianwangLore(loreEntries), existingTitles:[], sourceMessageId };
   }
 
   private async generateForumContent(sourceMessageId = this.session.messageId ?? undefined, replaceSource = false, manual = false): Promise<void> {
@@ -1222,16 +1308,17 @@ class FeatureShell {
         const firstTrigger = isNewFloor && counter >= trendSettings.autoInterval;
         const rerollTrigger = !isNewFloor && trendsData.triggeredMessageIds.includes(messageId);
         const triggeredMessageIds = firstTrigger ? [...trendsData.triggeredMessageIds, messageId].slice(-200) : trendsData.triggeredMessageIds;
-        await this.repository.write('daoyuan_web_trends_data', { ...trendsData, autoCounter: firstTrigger ? 0 : counter, processedMessageIds, processedSwipeKeys, triggeredMessageIds });
+        const triggeredSwipeKeys = firstTrigger ? [...trendsData.triggeredSwipeKeys, swipeKey].slice(-200) : trendsData.triggeredSwipeKeys;
+        await this.repository.write('daoyuan_web_trends_data', { ...trendsData, autoCounter: firstTrigger ? 0 : counter, processedMessageIds, processedSwipeKeys, triggeredMessageIds, triggeredSwipeKeys });
         counterStateChanged = true;
         if (firstTrigger || rerollTrigger) void this.generateTrendPosts(messageId, rerollTrigger);
       }
     }
 
     const forumData=parseForumData(this.repository.getData('daoyuan_forum_data'));
-    if(trendSettings.forumAutoEnabled&&trendSettings.forumAutoInterval>0){const isNewFloor=!forumData.processedMessageIds.includes(messageId),isNewSwipe=!forumData.processedSwipeKeys.includes(swipeKey);if(isNewFloor||(rerollCompatible&&isNewSwipe)){const processedMessageIds=isNewFloor?[...forumData.processedMessageIds,messageId].slice(-200):forumData.processedMessageIds,processedSwipeKeys=[...forumData.processedSwipeKeys,swipeKey].slice(-400),counter=isNewFloor?forumData.autoCounter+1:forumData.autoCounter,firstTrigger=isNewFloor&&counter>=trendSettings.forumAutoInterval,rerollTrigger=!isNewFloor&&forumData.triggeredMessageIds.includes(messageId),triggeredMessageIds=firstTrigger?[...forumData.triggeredMessageIds,messageId].slice(-200):forumData.triggeredMessageIds;await this.repository.write('daoyuan_forum_data',{...forumData,autoCounter:firstTrigger?0:counter,processedMessageIds,processedSwipeKeys,triggeredMessageIds});counterStateChanged=true;if(firstTrigger||rerollTrigger)void this.generateForumContent(messageId,rerollTrigger);}}
+    if(trendSettings.forumAutoEnabled&&trendSettings.forumAutoInterval>0){const isNewFloor=!forumData.processedMessageIds.includes(messageId),isNewSwipe=!forumData.processedSwipeKeys.includes(swipeKey);if(isNewFloor||(rerollCompatible&&isNewSwipe)){const processedMessageIds=isNewFloor?[...forumData.processedMessageIds,messageId].slice(-200):forumData.processedMessageIds,processedSwipeKeys=[...forumData.processedSwipeKeys,swipeKey].slice(-400),counter=isNewFloor?forumData.autoCounter+1:forumData.autoCounter,firstTrigger=isNewFloor&&counter>=trendSettings.forumAutoInterval,rerollTrigger=!isNewFloor&&forumData.triggeredSwipeKeys.some(key=>key.endsWith(`:${storyFingerprint(story)}`)),triggeredMessageIds=firstTrigger?[...forumData.triggeredMessageIds,messageId].slice(-200):forumData.triggeredMessageIds,triggeredSwipeKeys=firstTrigger?[...forumData.triggeredSwipeKeys,swipeKey].slice(-200):forumData.triggeredSwipeKeys;await this.repository.write('daoyuan_forum_data',{...forumData,autoCounter:firstTrigger?0:counter,processedMessageIds,processedSwipeKeys,triggeredMessageIds,triggeredSwipeKeys});counterStateChanged=true;if(firstTrigger||rerollTrigger)void this.generateForumContent(messageId,rerollTrigger);}}
     const newsData=parseNewsData(this.repository.getData('daoyuan_news_data'));
-    if(trendSettings.newsAutoEnabled&&trendSettings.newsAutoInterval>0){const isNewFloor=!newsData.processedMessageIds.includes(messageId),isNewSwipe=!newsData.processedSwipeKeys.includes(swipeKey);if(isNewFloor||(rerollCompatible&&isNewSwipe)){const processedMessageIds=isNewFloor?[...newsData.processedMessageIds,messageId].slice(-200):newsData.processedMessageIds,processedSwipeKeys=[...newsData.processedSwipeKeys,swipeKey].slice(-400),counter=isNewFloor?newsData.autoCounter+1:newsData.autoCounter,firstTrigger=isNewFloor&&counter>=trendSettings.newsAutoInterval,rerollTrigger=!isNewFloor&&newsData.triggeredMessageIds.includes(messageId),triggeredMessageIds=firstTrigger?[...newsData.triggeredMessageIds,messageId].slice(-200):newsData.triggeredMessageIds;await this.repository.write('daoyuan_news_data',{...newsData,autoCounter:firstTrigger?0:counter,processedMessageIds,processedSwipeKeys,triggeredMessageIds});counterStateChanged=true;if(firstTrigger||rerollTrigger)void this.generateNewsContent(messageId,rerollTrigger);}}
+    if(trendSettings.newsAutoEnabled&&trendSettings.newsAutoInterval>0){const isNewFloor=!newsData.processedMessageIds.includes(messageId),isNewSwipe=!newsData.processedSwipeKeys.includes(swipeKey);if(isNewFloor||(rerollCompatible&&isNewSwipe)){const processedMessageIds=isNewFloor?[...newsData.processedMessageIds,messageId].slice(-200):newsData.processedMessageIds,processedSwipeKeys=[...newsData.processedSwipeKeys,swipeKey].slice(-400),counter=isNewFloor?newsData.autoCounter+1:newsData.autoCounter,firstTrigger=isNewFloor&&counter>=trendSettings.newsAutoInterval,rerollTrigger=!isNewFloor&&newsData.triggeredSwipeKeys.some(key=>key.endsWith(`:${storyFingerprint(story)}`)),triggeredMessageIds=firstTrigger?[...newsData.triggeredMessageIds,messageId].slice(-200):newsData.triggeredMessageIds,triggeredSwipeKeys=firstTrigger?[...newsData.triggeredSwipeKeys,swipeKey].slice(-200):newsData.triggeredSwipeKeys;await this.repository.write('daoyuan_news_data',{...newsData,autoCounter:firstTrigger?0:counter,processedMessageIds,processedSwipeKeys,triggeredMessageIds,triggeredSwipeKeys});counterStateChanged=true;if(firstTrigger||rerollTrigger)void this.generateNewsContent(messageId,rerollTrigger);}}
 
     const beautySettings = readBeautyApiSettings(this.hostWindow);
     const beautyData = this.repository.getData('daoyuan_web_beauty_data');
@@ -1420,6 +1507,7 @@ class FeatureShell {
       xianwangApiSettings: this.hostWindow ? readXianwangApiSettings(this.hostWindow) : {},
       promptInjectionSettings: this.hostWindow ? readPromptInjectionSettings(this.hostWindow) : DEFAULT_PROMPT_INJECTION_SETTINGS,
       rerollCompatibilityEnabled: this.hostWindow ? readRerollCompatibility(this.hostWindow) : false,
+      petSize: this.hostWindow ? readPetSize(this.hostWindow) : 'large',
     }, this.session.contextRevision), '*');
     this.refreshPromptInjection();
   }

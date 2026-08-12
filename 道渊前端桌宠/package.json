@@ -1,6 +1,6 @@
 {
   "name": "daoyuan-zhiwei-live2d-pet",
-  "version": "0.1.0",
+  "version": "0.7.0",
   "private": true,
   "description": "紫薇 PNG 序列帧桌宠前端壳与玉简交互原型",
   "scripts": {

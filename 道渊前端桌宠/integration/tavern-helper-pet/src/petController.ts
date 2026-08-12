@@ -1,5 +1,7 @@
 import { PET_FRAME_DURATION, PET_SEQUENCES, type PetState } from './petAssets';
 
+export type PetSize = 'small' | 'medium' | 'large';
+
 export class ZiweiPetController {
   private state: PetState = 'Idle';
   private frameTimer: number | null = null;
@@ -15,6 +17,10 @@ export class ZiweiPetController {
   }
 
   getState(): PetState { return this.state; }
+
+  setSize(size: PetSize): void {
+    this.root.dataset.petSize = size;
+  }
 
   openPhone(): void {
     if (this.state !== 'Idle') return;

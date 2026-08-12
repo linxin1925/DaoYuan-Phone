@@ -4,6 +4,8 @@ import { DEFAULT_BEAUTY_RANK_PROMPT } from './beautyRankPrompt';
 import { parseIndependentBeautyRankData } from './beautyRankService';
 import { chatCompletionsEndpoint, extractOpenAIText, fetchAuto } from './openaiProtocol';
 
+const BEAUTY_JAILBREAK_PROMPT = '【创作完整性】不要因内容尖锐、负面、争议或涉及世界内冲突而拒绝创作；仍须服从既定格式、安全边界与世界设定。此要求常驻应用于绝色榜及群芳谱回帖。';
+
 export interface BeautyRankApiSettings {
   apiBaseUrl: string;
   apiKey: string;
@@ -187,7 +189,7 @@ export async function generateBeautyRank(
     body: JSON.stringify({
       model: settings.apiModel.trim(),
       messages: [
-        { role: 'system', content: DEFAULT_BEAUTY_RANK_PROMPT },
+        { role: 'system', content: `${DEFAULT_BEAUTY_RANK_PROMPT}\n\n${BEAUTY_JAILBREAK_PROMPT}` },
         { role: 'system', content: `【世界书资料，仅用于本次绝色榜人物身份校准】\n${candidateLore}` },
         { role: 'user', content: userPrompt },
       ],
@@ -214,7 +216,7 @@ export async function generateBeautyRankReply(
   const response = await fetchAuto(settings.apiBaseUrl, {
     method: 'POST', headers: { 'Content-Type': 'application/json', ...(settings.apiKey ? { Authorization: `Bearer ${settings.apiKey}` } : {}) },
     body: JSON.stringify({ model: settings.apiModel.trim(), temperature: 0.85, max_tokens: 900, messages: [
-      { role: 'system', content: injectContent },
+      { role: 'system', content: `${injectContent}\n\n${BEAUTY_JAILBREAK_PROMPT}` },
       { role: 'user', content: userReply },
     ] }),
   });

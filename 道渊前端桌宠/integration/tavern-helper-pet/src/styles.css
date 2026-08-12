@@ -391,6 +391,8 @@ button:focus-visible, select:focus-visible, input:focus-visible {
 .news-paper-snippets { display: grid; gap: 4px; margin-top: 9px; color: var(--c-text-muted); font-size: 12px; }
 .news-paper-footer { display: flex; justify-content: space-between; gap: 8px; margin-top: 12px; padding-top: 9px; border-top: 1px solid var(--c-border); color: var(--c-text-muted); font-size: 12px; }
 .news-paper-likes { color: var(--c-danger); font-size: 14px; }
+.forum-like,.news-paper-likes{border:0;background:transparent;padding:2px 4px;color:var(--c-muted);cursor:pointer}.forum-like.is-liked,.news-paper-likes.is-liked{color:var(--c-danger)}
+.forum-reply-composer{display:grid;gap:8px;margin-top:12px}.forum-reply-composer textarea{box-sizing:border-box;width:100%;min-height:82px;resize:vertical;border:1px solid var(--c-border);border-radius:10px;padding:10px;background:var(--c-surface);color:var(--c-text)}
 .news-boundary { margin-top: 12px; }
 .news-detail-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
 .news-back-button, .news-delete-button { border: 0; background: transparent; color: var(--c-text-muted); cursor: pointer; font-size: 14px; }
@@ -474,6 +476,12 @@ button:focus-visible, select:focus-visible, input:focus-visible {
 .prompt-injection-settings-panel > .notice { margin-top: 14px; }
 .prompt-injection-settings-panel > .primary-button { display: block; width: fit-content; max-width: 100%; margin-top: 16px; }
 .reroll-settings-panel > .primary-button { display: block; width: fit-content; max-width: 100%; margin-top: 16px; }
+.reroll-settings-panel { margin-top: 18px; }
+.pet-size-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
+.pet-size-option { display: grid; gap: 4px; justify-items: center; padding: 10px 6px; border: 1px solid var(--c-border); border-radius: 5px; background: rgba(0,0,0,.16); color: var(--c-text); cursor: pointer; text-align: center; }
+.pet-size-option:has(input:checked) { border-color: var(--c-primary); background: rgba(216,193,136,.12); color: var(--c-primary); }
+.pet-size-option input { margin: 0; accent-color: var(--c-primary); }
+.pet-size-option small { color: var(--c-text-dim); font-size: 10px; }
 
 .map-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
 .map-location-status { display: flex; min-width: 0; align-items: center; gap: 7px; margin-top: 12px; padding: 8px 10px; border: 1px solid var(--c-border); border-radius: 4px; background: rgba(0,0,0,.2); color: var(--c-text-muted); font-size: 11px; line-height: 1.45; }

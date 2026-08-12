@@ -61,6 +61,8 @@
   overflow: visible;
   transition: filter .2s ease, transform .2s ease;
 }
+#daoyuan-feature-orb[data-pet-size="small"] { width: clamp(82px, 9.5vw, 121px); height: clamp(95px, 11.6vw, 146px); }
+#daoyuan-feature-orb[data-pet-size="medium"] { width: clamp(100px, 11.5vw, 147px); height: clamp(115px, 14vw, 178px); }
 #daoyuan-feature-orb:hover { filter: drop-shadow(0 8px 15px rgba(70, 34, 110, .38)); transform: translateY(-3px); }
 #daoyuan-feature-orb:active { transform: translateY(0); }
 #daoyuan-feature-orb:disabled { cursor: default; opacity: 1; }
@@ -68,7 +70,11 @@
 @media (max-width: 600px), (pointer: coarse) {
   #daoyuan-feature-hud { border-radius: 0; }
   #daoyuan-feature-orb { width: 72px; height: 89px; }
+  #daoyuan-feature-orb[data-pet-size="small"] { width: 52px; height: 64px; }
+  #daoyuan-feature-orb[data-pet-size="medium"] { width: 62px; height: 76px; }
 }
 @media (max-height: 560px) and (pointer: coarse) {
   #daoyuan-feature-orb { width: 59px; height: 72px; }
+  #daoyuan-feature-orb[data-pet-size="small"] { width: 43px; height: 52px; }
+  #daoyuan-feature-orb[data-pet-size="medium"] { width: 51px; height: 62px; }
 }

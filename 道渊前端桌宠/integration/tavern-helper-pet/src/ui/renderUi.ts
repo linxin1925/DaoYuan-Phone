@@ -39,10 +39,11 @@ interface WorldStatus { time: string; location: string; energy: string; }
 interface YujianSettingsDraft { customPrompt: string; apiBaseUrl: string; apiKey: string; apiModel: string; storyParseEnabled: boolean; }
 interface BeautyApiSettingsDraft { apiBaseUrl: string; apiKey: string; apiModel: string; autoEnabled: boolean; autoInterval: number; }
 type ApiSettingsDraft = Pick<BeautyApiSettingsDraft, 'apiBaseUrl' | 'apiKey' | 'apiModel'>;
-interface XianwangSettingsDraft extends ApiSettingsDraft { trendsAutoEnabled:boolean; autoInterval: number; batchMin: number; batchMax: number; maxPosts: number; forumAutoEnabled:boolean; forumAutoInterval:number; forumBatchSize:number; forumMaxPosts:number; newsAutoEnabled:boolean; newsAutoInterval:number; newsBatchSize:number; newsMaxPapers:number; }
-type XianwangNumberSetting = 'autoInterval'|'batchMin'|'batchMax'|'maxPosts'|'forumAutoInterval'|'forumBatchSize'|'forumMaxPosts'|'newsAutoInterval'|'newsBatchSize'|'newsMaxPapers';
+interface XianwangSettingsDraft extends ApiSettingsDraft { trendsAutoEnabled:boolean; autoInterval: number; batchMin: number; batchMax: number; maxPosts: number; forumAutoEnabled:boolean; forumAutoInterval:number; forumBatchSize:number; forumMaxPosts:number; newsAutoEnabled:boolean; newsAutoInterval:number; newsBatchSize:number; newsMaxPapers:number; decentralizedMode:boolean; autoAiReply:boolean; showHeat:boolean; showCommentPreview:boolean; jailbreakPrompt:boolean; generatedCommentCount:number; }
+type XianwangNumberSetting = 'autoInterval'|'batchMin'|'batchMax'|'maxPosts'|'forumAutoInterval'|'forumBatchSize'|'forumMaxPosts'|'newsAutoInterval'|'newsBatchSize'|'newsMaxPapers'|'generatedCommentCount';
 interface PromptInjectionSettingsDraft { yujian: boolean; trends: boolean; forum: boolean; news: boolean; }
 type SettingsSection = 'home' | 'yujian' | 'beauty' | 'xianwang' | 'injection';
+type PetSize = 'small' | 'medium' | 'large';
 interface YujianLoreEntry { uid: string; name: string; content: string; keys: string[]; }
 
 const mapFactionPortraits: Record<string, string[]> = {
@@ -279,7 +280,7 @@ function appendForumPost(
   doc: Document,
   list: HTMLElement,
   post: ForumPostPreview,
-  options: { key: string; expanded: boolean; deleteId?: string; fullContent?: boolean },
+  options: { key: string; expanded: boolean; deleteId?: string; fullContent?: boolean; showHeat?:boolean; liked?:boolean; likeAction?:'trend-like'|'forum-like' },
 ): HTMLElement {
   const card = element(doc, 'article', 'forum-post-card');
   const title = element(doc, 'h2', 'forum-post-title');
@@ -289,7 +290,8 @@ function appendForumPost(
   const meta = element(doc, 'div', 'forum-post-meta');
   meta.append(element(doc, 'span', 'forum-post-author', post.author));
   const stats = element(doc, 'span', 'forum-post-stats');
-  stats.append(element(doc, 'span', 'forum-like', `♥ ${post.likes}`), element(doc, 'span', 'forum-comment-count', `● ${post.comments}`), element(doc, 'span', 'forum-post-time', post.time));
+  if(options.showHeat!==false){const like=button(doc,`forum-like${options.liked?' is-liked':''}`,`♥ ${post.likes}`,options.likeAction??'forum-like',options.key);like.setAttribute('aria-pressed',String(options.liked===true));stats.append(like);}
+  stats.append(element(doc, 'span', 'forum-comment-count', `● ${post.comments}`), element(doc, 'span', 'forum-post-time', post.time));
   meta.append(stats);
   card.append(meta);
 
@@ -385,7 +387,7 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
   let mapImageFailed = false;
   let yujianSettings: YujianSettingsDraft = { customPrompt: '', apiBaseUrl: '', apiKey: '', apiModel: '', storyParseEnabled: false };
   let beautyApiSettings: BeautyApiSettingsDraft = { apiBaseUrl: '', apiKey: '', apiModel: '', autoEnabled: true, autoInterval: 1 };
-  let xianwangApiSettings: XianwangSettingsDraft = { apiBaseUrl: '', apiKey: '', apiModel: '', trendsAutoEnabled:true, autoInterval: 3, batchMin: 2, batchMax: 3, maxPosts: 30, forumAutoEnabled:true, forumAutoInterval:3, forumBatchSize:2, forumMaxPosts:30, newsAutoEnabled:true, newsAutoInterval:5, newsBatchSize:1, newsMaxPapers:12 };
+  let xianwangApiSettings: XianwangSettingsDraft = { apiBaseUrl: '', apiKey: '', apiModel: '', trendsAutoEnabled:true, autoInterval: 3, batchMin: 2, batchMax: 3, maxPosts: 30, forumAutoEnabled:true, forumAutoInterval:3, forumBatchSize:2, forumMaxPosts:30, newsAutoEnabled:true, newsAutoInterval:5, newsBatchSize:1, newsMaxPapers:12, decentralizedMode:false, autoAiReply:true, showHeat:true, showCommentPreview:true, jailbreakPrompt:true, generatedCommentCount:3 };
   let promptInjectionSettings: PromptInjectionSettingsDraft = { yujian: false, trends: false, forum: false, news: false };
   let loreEntries: YujianLoreEntry[] = [];
   let loreSelected: Array<{ uid: string; content: string }> = [];
@@ -399,6 +401,7 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
   let xianwangModelOptions: string[] = [];
   let fetchingXianwangModels = false;
   let rerollCompatibilityEnabled = false;
+  let petSize: PetSize = 'large';
   let settingsSection: SettingsSection = 'home';
   let beautyApiSettingsOpen = false;
   let beautyGenerating = false;
@@ -696,7 +699,21 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
     rerollCopy.append(element(doc, 'strong', undefined, '兼容仙网重 Roll'), element(doc, 'small', undefined, '会产生额外 API 调用与费用。玉简不受此开关控制：每次不同重 Roll 都必定重新解析。'));
     rerollToggle.append(rerollInput, rerollCopy);
     rerollPanel.append(rerollToggle, button(doc, 'primary-button', '保存重 Roll 设置', 'reroll-settings-save'));
-    content.append(grid, rerollPanel, element(doc, 'p', 'notice muted', 'API 密钥仅保存在当前浏览器本地设置中，不写入聊天变量或模型提示词。'));
+    const petPanel = appendPanel(doc, content, '紫薇桌宠大小', '桌宠尺寸只影响页面上的紫薇，不影响玉简窗口；设置会保存在当前浏览器本地。');
+    const petSizeRow = element(doc, 'div', 'pet-size-options');
+    const petSizeEntries: Array<{ value: PetSize; label: string; note: string }> = [
+      { value: 'small', label: '小', note: '最省空间' },
+      { value: 'medium', label: '中', note: '适中尺寸' },
+      { value: 'large', label: '大', note: '当前默认' },
+    ];
+    for (const entry of petSizeEntries) {
+      const label = element(doc, 'label', 'pet-size-option');
+      const input = doc.createElement('input'); input.type = 'radio'; input.name = 'daoyuan-pet-size'; input.value = entry.value; input.checked = petSize === entry.value;
+      input.addEventListener('change', () => { if (input.checked) { petSize = entry.value; sendAction('SET_PET_SIZE', { size: entry.value }); announcement = `紫薇桌宠已调整为${entry.label}号。`; render(); } });
+      label.append(input, element(doc, 'span', undefined, entry.label), element(doc, 'small', undefined, entry.note)); petSizeRow.append(label);
+    }
+    petPanel.append(petSizeRow);
+    content.append(grid, rerollPanel, petPanel, element(doc, 'p', 'notice muted', 'API 密钥仅保存在当前浏览器本地设置中，不写入聊天变量或模型提示词。'));
   }
 
   function renderPromptInjectionSettings(content: HTMLElement): void {
@@ -795,6 +812,17 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
       copy.append(element(doc, 'strong', undefined, label), element(doc, 'small', undefined, note));
       wrap.append(input, copy); panel.append(wrap);
     };
+    const featureToggle = (label:string, note:string, key:'decentralizedMode'|'autoAiReply'|'showHeat'|'showCommentPreview'|'jailbreakPrompt'):void => {
+      const wrap=element(doc,'label','settings-auto-toggle'); const input=doc.createElement('input'); input.type='checkbox'; input.checked=xianwangApiSettings[key]; input.dataset.xianwangFeatureSetting=key;
+      const copy=element(doc,'span','settings-auto-toggle-copy'); copy.append(element(doc,'strong',undefined,label),element(doc,'small',undefined,note)); wrap.append(input,copy); panel.append(wrap);
+    };
+    panel.append(element(doc,'h3','settings-subtitle','仙网互动与生成'));
+    numericField('每帖生成评论数（0 为不生成）','generatedCommentCount',0,10);
+    featureToggle('去中心化模式','开启后提示 AI 不要围绕主角生成内容。','decentralizedMode');
+    featureToggle('自动 AI 回复','用户发表评论后，自动生成仙网道友回复。','autoAiReply');
+    featureToggle('显示点赞数（热度）','显示 AI 生成的热度，并允许用户手动点赞。','showHeat');
+    featureToggle('列表中显示评论预览','开启后帖子列表默认展开评论。','showCommentPreview');
+    featureToggle('启用破甲提示词','在系统提示词末尾附加创作完整性指令。','jailbreakPrompt');
     panel.append(
       element(doc, 'h3', 'settings-subtitle', '仙网风闻'),
       element(doc, 'p', 'settings-section-note', '按 AI 正文层计数触发；每次生成数量会在设定的最少与最多条数之间随机取值。'),
@@ -1056,8 +1084,7 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
       visiblePosts.forEach((post, index) => {
         if ('storyTime' in post) {
           appendForumPost(doc, posts, { tag: post.type, title: post.title, excerpt: post.description, author: post.source, likes: post.heat, comments: post.comments.length, time: post.storyTime, replies: post.comments }, {
-            key: post.id,
-            expanded: !collapsedForumComments.has(post.id),
+            key: post.id, expanded: xianwangApiSettings.showCommentPreview&&!collapsedForumComments.has(post.id), showHeat:xianwangApiSettings.showHeat, liked:post.liked, likeAction:'trend-like',
             deleteId: post.id,
             fullContent: true,
           });
@@ -1233,7 +1260,8 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
       const selected=forumPosts.find(post=>post.id===selectedForumId);
       if(selected){
         const bar=element(doc,'div','news-detail-bar');bar.append(button(doc,'news-back-button','← 返回列表','forum-back'),button(doc,'news-delete-button','删除帖子','forum-delete',selected.id));forumPage.append(bar);
-        appendForumPost(doc,forumPage,{tag:selected.tag,title:selected.title,excerpt:selected.content,author:selected.author,likes:selected.likes,comments:selected.comments.length,time:selected.storyTime,replies:selected.comments},{key:selected.id,expanded:!collapsedForumComments.has(selected.id),fullContent:true});content.append(forumPage);return;
+        appendForumPost(doc,forumPage,{tag:selected.tag,title:selected.title,excerpt:selected.content,author:selected.author,likes:selected.likes,comments:selected.comments.length,time:selected.storyTime,replies:selected.comments},{key:selected.id,expanded:!collapsedForumComments.has(selected.id),fullContent:true,showHeat:xianwangApiSettings.showHeat,liked:selected.liked,likeAction:'forum-like'});
+        const composer=element(doc,'div','forum-reply-composer');const input=doc.createElement('textarea');input.placeholder=xianwangApiSettings.autoAiReply?'发表评论，仙网道友会自动回复…':'发表评论…';input.maxLength=3000;input.dataset.forumCommentInput=selected.id;const send=button(doc,'primary-button','发表评论','forum-comment-submit',selected.id);composer.append(input,send);forumPage.append(composer);content.append(forumPage);return;
       }
       const actions = element(doc, 'div', 'forum-action-bar');
       actions.append(button(doc, 'forum-parent-back-button', '← 返回上一级', 'app', 'home'), button(doc, 'forum-ai-button', forumGenerating?'推演中…':'◌ 推演论帖', 'forum-generate'));
@@ -1242,7 +1270,7 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
       actions.append(element(doc, 'span', 'xianwang-counter-line', forumRemaining === null ? '自动论坛已关闭' : forumRemaining === 0 ? '本轮将开始生成仙网论坛' : `还有 ${forumRemaining} 轮对话后生成仙网论坛`));
       forumPage.append(actions);
       const posts = element(doc, 'div', 'forum-post-list');
-      [...forumPosts].sort((a,b)=>b.createdAt.localeCompare(a.createdAt)).forEach(post=>{const card=appendForumPost(doc,posts,{tag:post.tag,title:post.title,excerpt:post.content,author:post.author,likes:post.likes,comments:post.comments.length,time:post.storyTime,replies:post.comments.slice(0,2)},{key:post.id,expanded:!collapsedForumComments.has(post.id)});card.dataset.action='forum-open';card.dataset.key=post.id;card.tabIndex=0;});
+      [...forumPosts].sort((a,b)=>b.createdAt.localeCompare(a.createdAt)).forEach(post=>{const card=appendForumPost(doc,posts,{tag:post.tag,title:post.title,excerpt:post.content,author:post.author,likes:post.likes,comments:post.comments.length,time:post.storyTime,replies:post.comments.slice(0,2)},{key:post.id,expanded:xianwangApiSettings.showCommentPreview&&!collapsedForumComments.has(post.id),showHeat:xianwangApiSettings.showHeat,liked:post.liked,likeAction:'forum-like'});card.dataset.action='forum-open';card.dataset.key=post.id;card.tabIndex=0;});
       forumPage.append(posts, element(doc,'p','notice muted forum-boundary',forumPosts.length?`共 ${forumPosts.length} 个帖子 · 新帖置顶 · 点击帖子查看全文`:'暂无帖子，可点击上方按钮生成。'));
       content.append(forumPage);
       return;
@@ -1266,7 +1294,7 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
           const snippets = element(doc, 'div', 'news-paper-snippets');
           item.articles.slice(1, 3).forEach(article => snippets.append(element(doc, 'span', undefined, `${article.tag}　${article.title}`)));
           const footer = element(doc, 'div', 'news-paper-footer');
-          footer.append(element(doc, 'span', undefined, `主编：${item.editor}`), element(doc, 'span', 'news-paper-likes', `♥ ${item.likes}`));
+          footer.append(element(doc, 'span', undefined, `主编：${item.editor}`)); if(xianwangApiSettings.showHeat){const like=button(doc,`news-paper-likes${item.liked?' is-liked':''}`,`♥ ${item.likes}`,'news-like',item.id);like.setAttribute('aria-pressed',String(item.liked===true));footer.append(like);}
           paper.append(paperHead, lead, snippets, footer);
           paperList.append(paper);
         }
@@ -1307,7 +1335,8 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
     content.append(grid);
   };
 
-  function render(): void {
+  function render(preserveScroll = true): void {
+    const previousScrollTop = preserveScroll ? root.querySelector<HTMLElement>('.content')?.scrollTop ?? 0 : 0;
     root.dataset.layout = layout;
     root.replaceChildren();
     const topbar = element(doc, 'header', 'topbar');
@@ -1340,6 +1369,12 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
     (['home', 'yujian', 'forum', 'settings'] as AppKey[]).forEach(key => mobile.append(button(doc, `mobile-nav-button${active === key ? ' active' : ''}`, `${key === 'home' ? '⌂ 桌面' : key === 'yujian' ? '⌁ 传讯' : key === 'forum' ? '☷ 论坛' : '⚙ 设置'}`, 'app', key)));
     root.append(topbar, workspace, mobile);
     applyContactFilter();
+    if (preserveScroll && previousScrollTop > 0) {
+      uiView.requestAnimationFrame(() => {
+        const nextContent = root.querySelector<HTMLElement>('.content');
+        if (nextContent) nextContent.scrollTop = previousScrollTop;
+      });
+    }
   }
 
   const onClick = (event: Event): void => {
@@ -1352,7 +1387,7 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
     if (action === 'map-faction-portrait-zoom-close' && actionNode.classList.contains('map-faction-image-overlay') && target !== actionNode) return;
     if (action === 'app') {
       const next = actionNode.dataset.key as AppKey | undefined;
-      if (next) { markAppRead(next); active = next; if (next === 'settings') settingsSection = 'home'; selectedNewsId = null; selectedContactName = null; announcement = ''; saveUiPreferences({ layoutMode: 'phone', lastApp: active }); sendAction('SET_ACTIVE_APP', { app: active }); render(); }
+      if (next) { markAppRead(next); active = next; if (next === 'settings') settingsSection = 'home'; selectedNewsId = null; selectedContactName = null; announcement = ''; saveUiPreferences({ layoutMode: 'phone', lastApp: active }); sendAction('SET_ACTIVE_APP', { app: active }); render(false); }
     } else if (action === 'map-realm') {
       const selectedRealm: MapRealm = actionNode.dataset.key === '仙界' ? '仙界' : '玄天界';
       const selectedNode = normalizeMapNode(selectedRealm, data.map.selectedNode);
@@ -1566,6 +1601,9 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
         const key = node.dataset.xianwangAutoSetting as 'trendsAutoEnabled'|'forumAutoEnabled'|'newsAutoEnabled';
         if (key) xianwangApiSettings[key] = node.checked;
       });
+      root.querySelectorAll<HTMLInputElement>('[data-xianwang-feature-setting]').forEach(node => {
+        const key=node.dataset.xianwangFeatureSetting as 'decentralizedMode'|'autoAiReply'|'showHeat'|'showCommentPreview'|'jailbreakPrompt'; if(key)xianwangApiSettings[key]=node.checked;
+      });
       sendAction('SAVE_XIANWANG_SETTINGS', { ...xianwangApiSettings });
       announcement = '仙网内容 API 设置已保存'; render();
     } else if (action === 'xianwang-models-fetch') {
@@ -1601,6 +1639,10 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
     } else if(action==='forum-open'){selectedForumId=actionNode.dataset.key??null;announcement='';render();
     } else if(action==='forum-back'){selectedForumId=null;render();
     } else if(action==='forum-delete'){const id=actionNode.dataset.key??'';if(id&&view.confirm('删除这个帖子？'))sendAction('DELETE_FORUM_POST',{id});
+    } else if(action==='trend-like'){sendAction('TOGGLE_TREND_LIKE',{id:actionNode.dataset.key??''});
+    } else if(action==='forum-like'){sendAction('TOGGLE_FORUM_LIKE',{id:actionNode.dataset.key??''});
+    } else if(action==='news-like'){sendAction('TOGGLE_NEWS_LIKE',{id:actionNode.dataset.key??''});
+    } else if(action==='forum-comment-submit'){const id=actionNode.dataset.key??'',input=root.querySelector<HTMLTextAreaElement>(`[data-forum-comment-input="${CSS.escape(id)}"]`),content=input?.value.trim()??'';if(!content)return;sendAction('SUBMIT_FORUM_COMMENT',{id,content});announcement=xianwangApiSettings.autoAiReply?'正在发布并等待仙网友回复…':'正在发表评论…';
     } else if(action==='news-generate'){if(newsGenerating)return;newsGenerating=true;announcement='正在推演天机日报…';render();sendAction('GENERATE_NEWS');
     } else if(action==='news-delete'){const id=actionNode.dataset.key??'';if(id&&view.confirm('删除这期报纸？'))sendAction('DELETE_NEWS_PAPER',{id});
     } else if (action === 'forum-comments-toggle') {
@@ -1737,6 +1779,7 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
       if (message.payload.xianwangApiSettings && typeof message.payload.xianwangApiSettings === 'object') xianwangApiSettings = { ...xianwangApiSettings, ...(message.payload.xianwangApiSettings as Partial<ApiSettingsDraft>) };
       if (message.payload.promptInjectionSettings && typeof message.payload.promptInjectionSettings === 'object') promptInjectionSettings = { ...promptInjectionSettings, ...(message.payload.promptInjectionSettings as Partial<PromptInjectionSettingsDraft>) };
       rerollCompatibilityEnabled = message.payload.rerollCompatibilityEnabled === true;
+      if (message.payload.petSize === 'small' || message.payload.petSize === 'medium' || message.payload.petSize === 'large') petSize = message.payload.petSize;
       loreSelected = readLoreSelected();
       if (Array.isArray(message.payload.yujianContacts)) {
         worldContacts = (message.payload.yujianContacts as WorldYujianContact[]).filter(contact => typeof contact?.name === 'string').map((contact, index) => ({
@@ -1836,6 +1879,7 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
       render();
     }
     if(message.action==='FORUM_GENERATION_STATUS'){forumGenerating=false;announcement=message.payload.ok===true?`已推演 ${Number(message.payload.posts)||0} 篇仙网论帖`:`仙网论坛推演失败：${typeof message.payload.error==='string'?message.payload.error:'未知错误'}`;render();}
+    if(message.action==='FORUM_COMMENT_STATUS'){announcement=message.payload.ok===true?'评论已发布':`评论失败：${typeof message.payload.error==='string'?message.payload.error:'未知错误'}`;render();}
     if(message.action==='FORUM_DELETE_STATUS'){if(message.payload.ok===true)selectedForumId=null;announcement=message.payload.ok===true?'帖子已删除':`删除失败：${typeof message.payload.error==='string'?message.payload.error:'未知错误'}`;render();}
     if(message.action==='NEWS_GENERATION_STATUS'){newsGenerating=false;announcement=message.payload.ok===true?`已推演 ${Number(message.payload.papers)||0} 期天机日报`:`天机日报推演失败：${typeof message.payload.error==='string'?message.payload.error:'未知错误'}`;render();}
     if(message.action==='NEWS_DELETE_STATUS'){if(message.payload.ok===true)selectedNewsId=null;announcement=message.payload.ok===true?'报纸已删除':`删除失败：${typeof message.payload.error==='string'?message.payload.error:'未知错误'}`;render();}
