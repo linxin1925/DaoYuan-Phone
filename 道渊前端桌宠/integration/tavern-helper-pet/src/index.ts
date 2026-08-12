@@ -717,11 +717,11 @@ class FeatureShell {
     if (action === 'REQUEST_XIANWANG_MODELS') void this.sendXianwangModels(payload);
     if (action === 'SAVE_XIANWANG_SETTINGS') this.saveXianwangSettings(payload);
     if (action === 'SAVE_PROMPT_INJECTION_SETTINGS') this.savePromptInjectionSettings(payload);
-    if (action === 'GENERATE_TRENDS') void this.generateTrendPosts();
+    if (action === 'GENERATE_TRENDS') void this.generateTrendPosts(undefined, false, true);
     if (action === 'DELETE_TREND') void this.deleteTrendPost(payload);
-    if (action === 'GENERATE_FORUM') void this.generateForumContent();
+    if (action === 'GENERATE_FORUM') void this.generateForumContent(undefined, false, true);
     if (action === 'DELETE_FORUM_POST') void this.deleteForumPost(payload);
-    if (action === 'GENERATE_NEWS') void this.generateNewsContent();
+    if (action === 'GENERATE_NEWS') void this.generateNewsContent(undefined, false, true);
     if (action === 'DELETE_NEWS_PAPER') void this.deleteNewsPaper(payload);
     if (action === 'GENERATE_BEAUTY_RANK') void this.generateBeautyRank();
     if (action === 'GENERATE_BEAUTY_REPLY') void this.generateBeautyReply(payload);
@@ -1041,7 +1041,7 @@ class FeatureShell {
     }
   }
 
-  private async generateTrendPosts(sourceMessageId = this.session.messageId ?? undefined, replaceSource = false): Promise<void> {
+  private async generateTrendPosts(sourceMessageId = this.session.messageId ?? undefined, replaceSource = false, manual = false): Promise<void> {
     if (this.trendsGenerationInFlight) return;
     this.trendsGenerationInFlight = true;
     const frame = this.frame;
@@ -1077,7 +1077,7 @@ class FeatureShell {
         : this.trendPosts;
       this.trendPosts = retainTrendPosts([...retained, ...sourcedPosts], settings.maxPosts);
       const existing = parseTrendsData(this.repository.getData('daoyuan_web_trends_data'));
-      await this.repository.write('daoyuan_web_trends_data', { ...existing, posts: this.trendPosts });
+      await this.repository.write('daoyuan_web_trends_data', { ...existing, posts: this.trendPosts, ...(manual ? { autoCounter: 0 } : {}) });
       this.appData = this.repository.project();
       frame?.contentWindow?.postMessage(makeBridgeMessage('event', 'TRENDS_GENERATION_STATUS', { ok: true, posts: posts.length }), '*');
       this.sendContext();
@@ -1112,16 +1112,16 @@ class FeatureShell {
     return { worldTime:this.worldStatus.time, location:this.worldStatus.location, recentStory, worldFacts:this.worldData ? JSON.stringify(this.worldData).slice(0,12000) : '', lore:loreEntries.slice(0,30).map(entry=>`【${entry.name}】\n${entry.content}`).join('\n\n'), existingTitles:[], sourceMessageId };
   }
 
-  private async generateForumContent(sourceMessageId = this.session.messageId ?? undefined, replaceSource = false): Promise<void> {
+  private async generateForumContent(sourceMessageId = this.session.messageId ?? undefined, replaceSource = false, manual = false): Promise<void> {
     if (this.forumGenerationInFlight) return; this.forumGenerationInFlight=true;
-    try { const settings=readXianwangApiSettings(this.hostWindow ?? window); const input=await this.xianwangGenerationInput(sourceMessageId === undefined ? undefined : String(sourceMessageId)); input.existingTitles=this.forumPosts.map(p=>p.title); const posts=await generateForumPosts(settings,input,settings.forumBatchSize); const chat=this.hostWindow?.SillyTavern?.getContext?.()?.chat; const sourceFingerprint=sourceMessageId===undefined||!Array.isArray(chat)?undefined:storyFingerprint(typeof (chat[Number(sourceMessageId)] as {mes?:unknown}|undefined)?.mes==='string'?(chat[Number(sourceMessageId)] as {mes:string}).mes:''); const sourcedPosts=posts.map(p=>({...p,sourceFingerprint})); const retained=replaceSource&&sourceMessageId!==undefined?this.forumPosts.filter(p=>p.sourceMessageId!==String(sourceMessageId)):this.forumPosts; this.forumPosts=retainNewest([...retained,...sourcedPosts],settings.forumMaxPosts); const existing=parseForumData(this.repository.getData('daoyuan_forum_data')); await this.repository.write('daoyuan_forum_data',{...existing,posts:this.forumPosts}); this.appData=this.repository.project(); this.frame?.contentWindow?.postMessage(makeBridgeMessage('event','FORUM_GENERATION_STATUS',{ok:true,posts:posts.length}),'*'); this.sendContext(); }
+    try { const settings=readXianwangApiSettings(this.hostWindow ?? window); const input=await this.xianwangGenerationInput(sourceMessageId === undefined ? undefined : String(sourceMessageId)); input.existingTitles=this.forumPosts.map(p=>p.title); const posts=await generateForumPosts(settings,input,settings.forumBatchSize); const chat=this.hostWindow?.SillyTavern?.getContext?.()?.chat; const sourceFingerprint=sourceMessageId===undefined||!Array.isArray(chat)?undefined:storyFingerprint(typeof (chat[Number(sourceMessageId)] as {mes?:unknown}|undefined)?.mes==='string'?(chat[Number(sourceMessageId)] as {mes:string}).mes:''); const sourcedPosts=posts.map(p=>({...p,sourceFingerprint})); const retained=replaceSource&&sourceMessageId!==undefined?this.forumPosts.filter(p=>p.sourceMessageId!==String(sourceMessageId)):this.forumPosts; this.forumPosts=retainNewest([...retained,...sourcedPosts],settings.forumMaxPosts); const existing=parseForumData(this.repository.getData('daoyuan_forum_data')); await this.repository.write('daoyuan_forum_data',{...existing,posts:this.forumPosts,...(manual?{autoCounter:0}:{})}); this.appData=this.repository.project(); this.frame?.contentWindow?.postMessage(makeBridgeMessage('event','FORUM_GENERATION_STATUS',{ok:true,posts:posts.length}),'*'); this.sendContext(); }
     catch(error){ this.frame?.contentWindow?.postMessage(makeBridgeMessage('event','FORUM_GENERATION_STATUS',{ok:false,error:error instanceof Error?error.message:String(error)}),'*'); }
     finally { this.forumGenerationInFlight=false; }
   }
   private async deleteForumPost(payload:Record<string,unknown>):Promise<void>{ const id=typeof payload.id==='string'?payload.id:''; if(!id)return; try{this.forumPosts=this.forumPosts.filter(p=>p.id!==id);const existing=parseForumData(this.repository.getData('daoyuan_forum_data'));await this.repository.write('daoyuan_forum_data',{...existing,posts:this.forumPosts});this.appData=this.repository.project();this.frame?.contentWindow?.postMessage(makeBridgeMessage('event','FORUM_DELETE_STATUS',{ok:true,id}),'*');this.sendContext();}catch(error){this.frame?.contentWindow?.postMessage(makeBridgeMessage('event','FORUM_DELETE_STATUS',{ok:false,error:error instanceof Error?error.message:String(error)}),'*');}}
-  private async generateNewsContent(sourceMessageId = this.session.messageId ?? undefined, replaceSource = false): Promise<void> {
+  private async generateNewsContent(sourceMessageId = this.session.messageId ?? undefined, replaceSource = false, manual = false): Promise<void> {
     if(this.newsGenerationInFlight)return;this.newsGenerationInFlight=true;
-    try{const settings=readXianwangApiSettings(this.hostWindow??window);const input=await this.xianwangGenerationInput(sourceMessageId===undefined?undefined:String(sourceMessageId));input.existingTitles=this.newsPapers.flatMap(p=>p.articles.map(a=>a.title));const papers=await generateNewsPapers(settings,input,settings.newsBatchSize);const chat=this.hostWindow?.SillyTavern?.getContext?.()?.chat;const sourceFingerprint=sourceMessageId===undefined||!Array.isArray(chat)?undefined:storyFingerprint(typeof (chat[Number(sourceMessageId)] as {mes?:unknown}|undefined)?.mes==='string'?(chat[Number(sourceMessageId)] as {mes:string}).mes:'');const sourcedPapers=papers.map(p=>({...p,sourceFingerprint}));const retained=replaceSource&&sourceMessageId!==undefined?this.newsPapers.filter(p=>p.sourceMessageId!==String(sourceMessageId)):this.newsPapers;this.newsPapers=retainNewest(normalizeNewsIssueSequence([...retained,...sourcedPapers]),settings.newsMaxPapers);const existing=parseNewsData(this.repository.getData('daoyuan_news_data'));await this.repository.write('daoyuan_news_data',{...existing,papers:this.newsPapers});this.appData=this.repository.project();this.frame?.contentWindow?.postMessage(makeBridgeMessage('event','NEWS_GENERATION_STATUS',{ok:true,papers:papers.length}),'*');this.sendContext();}
+    try{const settings=readXianwangApiSettings(this.hostWindow??window);const input=await this.xianwangGenerationInput(sourceMessageId===undefined?undefined:String(sourceMessageId));input.existingTitles=this.newsPapers.flatMap(p=>p.articles.map(a=>a.title));const papers=await generateNewsPapers(settings,input,settings.newsBatchSize);const chat=this.hostWindow?.SillyTavern?.getContext?.()?.chat;const sourceFingerprint=sourceMessageId===undefined||!Array.isArray(chat)?undefined:storyFingerprint(typeof (chat[Number(sourceMessageId)] as {mes?:unknown}|undefined)?.mes==='string'?(chat[Number(sourceMessageId)] as {mes:string}).mes:'');const sourcedPapers=papers.map(p=>({...p,sourceFingerprint}));const retained=replaceSource&&sourceMessageId!==undefined?this.newsPapers.filter(p=>p.sourceMessageId!==String(sourceMessageId)):this.newsPapers;this.newsPapers=retainNewest(normalizeNewsIssueSequence([...retained,...sourcedPapers]),settings.newsMaxPapers);const existing=parseNewsData(this.repository.getData('daoyuan_news_data'));await this.repository.write('daoyuan_news_data',{...existing,papers:this.newsPapers,...(manual?{autoCounter:0}:{})});this.appData=this.repository.project();this.frame?.contentWindow?.postMessage(makeBridgeMessage('event','NEWS_GENERATION_STATUS',{ok:true,papers:papers.length}),'*');this.sendContext();}
     catch(error){this.frame?.contentWindow?.postMessage(makeBridgeMessage('event','NEWS_GENERATION_STATUS',{ok:false,error:error instanceof Error?error.message:String(error)}),'*');}finally{this.newsGenerationInFlight=false;}
   }
   private async deleteNewsPaper(payload:Record<string,unknown>):Promise<void>{const id=typeof payload.id==='string'?payload.id:'';if(!id)return;try{this.newsPapers=this.newsPapers.filter(p=>p.id!==id);const existing=parseNewsData(this.repository.getData('daoyuan_news_data'));await this.repository.write('daoyuan_news_data',{...existing,papers:this.newsPapers});this.appData=this.repository.project();this.frame?.contentWindow?.postMessage(makeBridgeMessage('event','NEWS_DELETE_STATUS',{ok:true,id}),'*');this.sendContext();}catch(error){this.frame?.contentWindow?.postMessage(makeBridgeMessage('event','NEWS_DELETE_STATUS',{ok:false,error:error instanceof Error?error.message:String(error)}),'*');}}
