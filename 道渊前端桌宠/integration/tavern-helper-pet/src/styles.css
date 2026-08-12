@@ -365,6 +365,7 @@ button:focus-visible, select:focus-visible, input:focus-visible {
 .trend-delete-button:hover { border-color: var(--c-danger); background: rgba(201, 92, 76, .2); }
 .forum-boundary { margin-top: 12px; }
 .forum-action-bar { display: grid; grid-template-columns: minmax(0, .72fr) minmax(0, 1.28fr); align-items: stretch; gap: 10px; margin: 0 0 16px; padding: 0 0 14px; border-bottom: 1px solid var(--c-border); }
+.xianwang-counter-line { grid-column: 1 / -1; display: block; min-height: 1.2em; margin: -2px 2px 0; color: var(--c-muted); font-size: .88rem; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .forum-parent-back-button { min-height: 42px; padding: 0 12px; border: 1px solid var(--c-border); border-radius: 5px; background: var(--c-surface-alt); color: var(--c-text-muted); cursor: pointer; font-size: 13px; white-space: nowrap; text-align: left; }
 .forum-parent-back-button:hover { border-color: var(--c-primary-dim); color: var(--c-primary); }
 .top-parent-back-button { display: block; width: max-content; min-height: 42px; margin: 0 0 16px; padding: 0 12px; border: 1px solid var(--c-border); border-radius: 5px; background: var(--c-surface-alt); color: var(--c-text-muted); cursor: pointer; font-size: 13px; text-align: left; }

@@ -1048,7 +1048,7 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
       actions.append(generate);
       const interval = xianwangApiSettings.autoInterval;
       const remaining = xianwangApiSettings.trendsAutoEnabled && interval > 0 ? Math.max(0, interval - xianwangCounters.trends) : null;
-      actions.append(element(doc, 'span', 'notice muted', remaining === null ? '自动风闻已关闭' : remaining === 0 ? '本轮将开始生成仙网风闻' : `还有 ${remaining} 轮对话开始生成仙网风闻`));
+      actions.append(element(doc, 'span', 'xianwang-counter-line', remaining === null ? '自动风闻已关闭' : remaining === 0 ? '本轮将开始生成仙网风闻' : `还有 ${remaining} 轮对话后生成仙网风闻`));
       const posts = element(doc, 'div', 'forum-post-list');
       const visiblePosts = trendPosts.length
         ? [...trendPosts].sort((left, right) => right.createdAt.localeCompare(left.createdAt))
