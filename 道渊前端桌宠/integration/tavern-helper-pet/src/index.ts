@@ -1198,6 +1198,7 @@ class FeatureShell {
 
     const trendsData = parseTrendsData(this.repository.getData('daoyuan_web_trends_data'));
     const trendSettings = readXianwangApiSettings(this.hostWindow);
+    let counterStateChanged = false;
     if (trendSettings.trendsAutoEnabled && trendSettings.autoInterval > 0) {
       const isNewFloor = !trendsData.processedMessageIds.includes(messageId);
       const isNewSwipe = !trendsData.processedSwipeKeys.includes(swipeKey);
@@ -1209,14 +1210,15 @@ class FeatureShell {
         const rerollTrigger = !isNewFloor && trendsData.triggeredMessageIds.includes(messageId);
         const triggeredMessageIds = firstTrigger ? [...trendsData.triggeredMessageIds, messageId].slice(-200) : trendsData.triggeredMessageIds;
         await this.repository.write('daoyuan_web_trends_data', { ...trendsData, autoCounter: firstTrigger ? 0 : counter, processedMessageIds, processedSwipeKeys, triggeredMessageIds });
+        counterStateChanged = true;
         if (firstTrigger || rerollTrigger) void this.generateTrendPosts(messageId, rerollTrigger);
       }
     }
 
     const forumData=parseForumData(this.repository.getData('daoyuan_forum_data'));
-    if(trendSettings.forumAutoEnabled&&trendSettings.forumAutoInterval>0){const isNewFloor=!forumData.processedMessageIds.includes(messageId),isNewSwipe=!forumData.processedSwipeKeys.includes(swipeKey);if(isNewFloor||(rerollCompatible&&isNewSwipe)){const processedMessageIds=isNewFloor?[...forumData.processedMessageIds,messageId].slice(-200):forumData.processedMessageIds,processedSwipeKeys=[...forumData.processedSwipeKeys,swipeKey].slice(-400),counter=isNewFloor?forumData.autoCounter+1:forumData.autoCounter,firstTrigger=isNewFloor&&counter>=trendSettings.forumAutoInterval,rerollTrigger=!isNewFloor&&forumData.triggeredMessageIds.includes(messageId),triggeredMessageIds=firstTrigger?[...forumData.triggeredMessageIds,messageId].slice(-200):forumData.triggeredMessageIds;await this.repository.write('daoyuan_forum_data',{...forumData,autoCounter:firstTrigger?0:counter,processedMessageIds,processedSwipeKeys,triggeredMessageIds});if(firstTrigger||rerollTrigger)void this.generateForumContent(messageId,rerollTrigger);}}
+    if(trendSettings.forumAutoEnabled&&trendSettings.forumAutoInterval>0){const isNewFloor=!forumData.processedMessageIds.includes(messageId),isNewSwipe=!forumData.processedSwipeKeys.includes(swipeKey);if(isNewFloor||(rerollCompatible&&isNewSwipe)){const processedMessageIds=isNewFloor?[...forumData.processedMessageIds,messageId].slice(-200):forumData.processedMessageIds,processedSwipeKeys=[...forumData.processedSwipeKeys,swipeKey].slice(-400),counter=isNewFloor?forumData.autoCounter+1:forumData.autoCounter,firstTrigger=isNewFloor&&counter>=trendSettings.forumAutoInterval,rerollTrigger=!isNewFloor&&forumData.triggeredMessageIds.includes(messageId),triggeredMessageIds=firstTrigger?[...forumData.triggeredMessageIds,messageId].slice(-200):forumData.triggeredMessageIds;await this.repository.write('daoyuan_forum_data',{...forumData,autoCounter:firstTrigger?0:counter,processedMessageIds,processedSwipeKeys,triggeredMessageIds});counterStateChanged=true;if(firstTrigger||rerollTrigger)void this.generateForumContent(messageId,rerollTrigger);}}
     const newsData=parseNewsData(this.repository.getData('daoyuan_news_data'));
-    if(trendSettings.newsAutoEnabled&&trendSettings.newsAutoInterval>0){const isNewFloor=!newsData.processedMessageIds.includes(messageId),isNewSwipe=!newsData.processedSwipeKeys.includes(swipeKey);if(isNewFloor||(rerollCompatible&&isNewSwipe)){const processedMessageIds=isNewFloor?[...newsData.processedMessageIds,messageId].slice(-200):newsData.processedMessageIds,processedSwipeKeys=[...newsData.processedSwipeKeys,swipeKey].slice(-400),counter=isNewFloor?newsData.autoCounter+1:newsData.autoCounter,firstTrigger=isNewFloor&&counter>=trendSettings.newsAutoInterval,rerollTrigger=!isNewFloor&&newsData.triggeredMessageIds.includes(messageId),triggeredMessageIds=firstTrigger?[...newsData.triggeredMessageIds,messageId].slice(-200):newsData.triggeredMessageIds;await this.repository.write('daoyuan_news_data',{...newsData,autoCounter:firstTrigger?0:counter,processedMessageIds,processedSwipeKeys,triggeredMessageIds});if(firstTrigger||rerollTrigger)void this.generateNewsContent(messageId,rerollTrigger);}}
+    if(trendSettings.newsAutoEnabled&&trendSettings.newsAutoInterval>0){const isNewFloor=!newsData.processedMessageIds.includes(messageId),isNewSwipe=!newsData.processedSwipeKeys.includes(swipeKey);if(isNewFloor||(rerollCompatible&&isNewSwipe)){const processedMessageIds=isNewFloor?[...newsData.processedMessageIds,messageId].slice(-200):newsData.processedMessageIds,processedSwipeKeys=[...newsData.processedSwipeKeys,swipeKey].slice(-400),counter=isNewFloor?newsData.autoCounter+1:newsData.autoCounter,firstTrigger=isNewFloor&&counter>=trendSettings.newsAutoInterval,rerollTrigger=!isNewFloor&&newsData.triggeredMessageIds.includes(messageId),triggeredMessageIds=firstTrigger?[...newsData.triggeredMessageIds,messageId].slice(-200):newsData.triggeredMessageIds;await this.repository.write('daoyuan_news_data',{...newsData,autoCounter:firstTrigger?0:counter,processedMessageIds,processedSwipeKeys,triggeredMessageIds});counterStateChanged=true;if(firstTrigger||rerollTrigger)void this.generateNewsContent(messageId,rerollTrigger);}}
 
     const beautySettings = readBeautyApiSettings(this.hostWindow);
     const beautyData = this.repository.getData('daoyuan_web_beauty_data');
@@ -1238,6 +1240,7 @@ class FeatureShell {
         void this.generateBeautyRank();
       }
     }
+    if (counterStateChanged) this.sendContext();
     } finally {
       this.autoSchedulerInFlight = false;
     }
