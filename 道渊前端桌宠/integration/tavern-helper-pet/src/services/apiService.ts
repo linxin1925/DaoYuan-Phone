@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { chatCompletionsEndpoint, extractOpenAIText } from './openaiProtocol';
+import { chatCompletionsEndpoint, extractOpenAIText, fetchAuto } from './openaiProtocol';
 
 export const ApiModeSchema = z.enum(['current', 'tavern-helper-custom-api', 'openai-compatible-direct']);
 export type ApiMode = z.infer<typeof ApiModeSchema>;
@@ -50,7 +50,7 @@ export class ApiService {
         return await this.runtime.generateRaw(prompt, { signal: timed.signal, custom_api: { apiUrl: settings.apiUrl, apiKey: settings.apiKey, apiSource: settings.apiSource, model: settings.model } });
       }
       if (!settings.apiUrl) throw new Error('direct API URL is required');
-      const response = await fetch(chatCompletionsEndpoint(settings.apiUrl), {
+      const response = await fetchAuto(settings.apiUrl, {
         method: 'POST',
         headers: { 'content-type': 'application/json', ...(settings.apiKey ? { authorization: `Bearer ${settings.apiKey}` } : {}) },
         body: JSON.stringify({ model: settings.model, temperature: settings.temperature, max_tokens: settings.maxTokens, messages: [{ role: 'user', content: prompt }] }),

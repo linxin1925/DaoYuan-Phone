@@ -1,4 +1,4 @@
-import { extractOpenAIText, modelsEndpoint } from './openaiProtocol';
+import { extractOpenAIText, fetchAuto, modelsEndpoint } from './openaiProtocol';
 
 interface YujianRuntimeHost {
   Mvu?: {
@@ -409,7 +409,7 @@ export function sendYujianMessageWithProgress(
     if (settings.apiBaseUrl && settings.apiModel) {
       let endpoint = settings.apiBaseUrl.replace(/\/+$/, '');
       if (!endpoint.endsWith('/chat/completions')) endpoint += '/chat/completions';
-      const response = await fetch(endpoint, {
+      const response = await fetchAuto(settings.apiBaseUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(settings.apiKey ? { Authorization: `Bearer ${settings.apiKey}` } : {}) },
         body: JSON.stringify({ model: settings.apiModel, messages: [{ role: 'system', content: prompt }, { role: 'user', content: text }], temperature: 0.7, max_tokens: 2000 }),
@@ -462,7 +462,7 @@ export async function extractStoryYujianEvents(hostWindow: Window, story: string
   if (settings.apiBaseUrl && settings.apiModel) {
     let endpoint = settings.apiBaseUrl.replace(/\/+$/, '');
     if (!endpoint.endsWith('/chat/completions')) endpoint += '/chat/completions';
-    const response = await fetch(endpoint, {
+    const response = await fetchAuto(settings.apiBaseUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...(settings.apiKey ? { Authorization: `Bearer ${settings.apiKey}` } : {}) },
       body: JSON.stringify({ model: settings.apiModel, temperature: 0, max_tokens: 2400, messages: [{ role: 'system', content: STORY_PARSE_PROMPT }, { role: 'user', content: story.slice(0, 16000) }] }),

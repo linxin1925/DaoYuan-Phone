@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { TrendPostSchema, type TrendPost } from '../contract/appData';
-import { chatCompletionsEndpoint, extractOpenAIText } from './openaiProtocol';
+import { chatCompletionsEndpoint, extractOpenAIText, fetchAuto } from './openaiProtocol';
 
 export interface XianwangApiSettings {
   apiBaseUrl: string;
@@ -132,7 +132,7 @@ ${input.lore.slice(0, 16000) || '无'}
 ${input.existingTitles.slice(-40).join('\n') || '无'}
 
 返回前检查数量、字段、时间线、主题差异和观点冲突。`;
-  const response = await fetch(chatCompletionsEndpoint(settings.apiBaseUrl), {
+  const response = await fetchAuto(settings.apiBaseUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...(settings.apiKey ? { Authorization: `Bearer ${settings.apiKey}` } : {}) },
     body: JSON.stringify({ model: settings.apiModel.trim(), temperature: 0.85, max_tokens: 5000, messages: [

@@ -8,6 +8,36 @@ export function modelsEndpoint(url: string): string {
   return normalized.endsWith('/models') ? normalized : `${normalized}/models`;
 }
 
+function protocolFor(url: string): 'anthropic' | 'responses' | 'chat' {
+  const value = url.toLowerCase();
+  if (value.includes('/api/coding/v3')) return 'responses';
+  if (value.includes('/api/coding')) return 'anthropic';
+  return 'chat';
+}
+
+export async function fetchAuto(url: string, init: RequestInit & { body?: string }): Promise<Response> {
+  const protocol = protocolFor(url);
+  const source = init.body ? JSON.parse(init.body) as Record<string, unknown> : {};
+  const messages = Array.isArray(source.messages) ? source.messages as Array<Record<string, unknown>> : [];
+  const model = typeof source.model === 'string' ? source.model : '';
+  const system = messages.filter(message => message.role === 'system').map(message => String(message.content ?? '')).join('\n\n');
+  const input = messages.filter(message => message.role !== 'system').map(message => ({ role: message.role, content: message.content }));
+  const headers = new Headers(init.headers);
+  headers.set('Content-Type', 'application/json');
+  if (protocol === 'anthropic') {
+    headers.delete('Authorization');
+    const key = headers.get('x-api-key') || headers.get('authorization')?.replace(/^Bearer\s+/i, '');
+    if (key) headers.set('x-api-key', key);
+    headers.delete('authorization');
+    return fetch(url.replace(/\/+$/, ''), { ...init, headers, body: JSON.stringify({ model, max_tokens: source.max_tokens ?? 4096, temperature: source.temperature, ...(system ? { system } : {}), messages: input }) });
+  }
+  if (protocol === 'responses') {
+    const responseInput = [...(system ? [{ role: 'system', content: system }] : []), ...input];
+    return fetch(url.replace(/\/+$/, ''), { ...init, headers, body: JSON.stringify({ model, input: responseInput, temperature: source.temperature, max_output_tokens: source.max_tokens ?? 4096 }) });
+  }
+  return fetch(chatCompletionsEndpoint(url), { ...init, headers, body: init.body });
+}
+
 export function extractOpenAIText(value: unknown): string {
   if (typeof value === 'string') return value.trim();
   if (!value || typeof value !== 'object') return '';
@@ -24,5 +54,10 @@ export function extractOpenAIText(value: unknown): string {
     return typeof row.text === 'string' ? row.text : typeof row.content === 'string' ? row.content : '';
   }).join('').trim();
   for (const key of ['text', 'response', 'message']) if (typeof record[key] === 'string') return String(record[key]).trim();
+  if (typeof record.output_text === 'string') return record.output_text.trim();
+  const output = Array.isArray(record.output) ? record.output : [];
+  const responseText = output.flatMap(item => item && typeof item === 'object' ? ((item as Record<string, unknown>).content as unknown[] ?? []) : []).map(item => item && typeof item === 'object' ? String((item as Record<string, unknown>).text ?? '') : '').join('').trim();
+  if (responseText) return responseText;
+  if (Array.isArray(record.content)) return record.content.map(item => item && typeof item === 'object' ? String((item as Record<string, unknown>).text ?? '') : '').join('').trim();
   return '';
 }
