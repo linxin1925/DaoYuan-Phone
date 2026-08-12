@@ -138,6 +138,16 @@ function readSelectedLoreFromRuntime(runtime: YujianRuntimeHost): string[] {
 
 export async function fetchYujianModels(apiBaseUrl: string, apiKey: string): Promise<string[]> {
   if (!apiBaseUrl.trim()) throw new Error('请先填写基础 URL');
+  const tavern = typeof window !== 'undefined' ? (window as unknown as { SillyTavern?: { getContext?: () => { getRequestHeaders?: () => Record<string, string> } } }).SillyTavern : undefined;
+  const requestHeaders = tavern?.getContext?.()?.getRequestHeaders?.();
+  if (requestHeaders) {
+    const base = apiBaseUrl.trim().replace(/\/+$/, '').replace(/\/(?:chat\/completions|responses|messages|models)$/i, '');
+    const response = await fetch('/api/backends/chat-completions/status', { method: 'POST', headers: { ...requestHeaders, 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_completion_source: 'openai', reverse_proxy: base, proxy_password: apiKey || '' }) });
+    if (!response.ok) throw new Error(`获取模型列表失败：${response.status}`);
+    const models = extractModelIds(await response.json());
+    if (models.length) return models;
+    throw new Error('酒馆代理返回中没有模型');
+  }
   let lastError = '';
   for (const endpoint of modelEndpoints(apiBaseUrl)) {
     try {

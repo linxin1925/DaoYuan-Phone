@@ -39,6 +39,13 @@ export async function fetchAuto(url: string, init: RequestInit & { body?: string
   const input = messages.filter(message => message.role !== 'system').map(message => ({ role: message.role, content: message.content }));
   const headers = new Headers(init.headers);
   headers.set('Content-Type', 'application/json');
+  const tavern = typeof window !== 'undefined' ? (window as unknown as { SillyTavern?: { getContext?: () => { getRequestHeaders?: () => Record<string, string> } } }).SillyTavern : undefined;
+  const requestHeaders = tavern?.getContext?.()?.getRequestHeaders?.();
+  if (requestHeaders && typeof requestHeaders === 'object') {
+    const base = url.trim().replace(/\/+$/, '').replace(/\/(?:chat\/completions|responses|messages)$/i, '');
+    const proxyPayload = { chat_completion_source: 'openai', reverse_proxy: base, proxy_password: headers.get('Authorization')?.replace(/^Bearer\s+/i, '') || '', ...source, stream: false };
+    return fetch('/api/backends/chat-completions/generate', { method: 'POST', headers: { ...requestHeaders, 'Content-Type': 'application/json' }, body: JSON.stringify(proxyPayload) });
+  }
   if (protocol === 'anthropic') {
     headers.delete('Authorization');
     const key = headers.get('x-api-key') || headers.get('authorization')?.replace(/^Bearer\s+/i, '');

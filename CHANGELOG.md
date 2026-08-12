@@ -35,6 +35,7 @@
 - 统一直连 API 的 Chat Completions 地址、模型列表地址和响应内容解析，兼容 `message.content` 字符串与内容数组；Responses API 暂不纳入直连兼容范围。
 - 直连 API 改为按 Coding 地址自动适配 Anthropic Messages 与 OpenAI Responses 请求格式，用户无需选择协议；普通地址继续使用 Chat Completions。
 - 兼容 OpenCode Zen 提供的完整 `/v1/chat/completions`、`/v1/responses` 和 `/v1/messages` 端点，避免重复拼接请求路径。
+- 直连 API 在酒馆环境中优先通过酒馆后端 OpenAI 代理请求，绕过第三方服务的浏览器 CORS 限制；模型列表同步通过酒馆代理状态接口获取。
 - 修复重 Roll 与楼层删除导致的自动内容重复、累积或来源楼层错位问题。
 
 ### 已知限制
