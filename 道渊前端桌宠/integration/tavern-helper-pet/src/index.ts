@@ -656,9 +656,11 @@ class FeatureShell {
     const hostEventSource = hostRuntime.SillyTavern?.getContext?.()?.eventSource;
     const eventOn = runtime.eventOn ?? hostRuntime.eventOn;
     const onChatChanged = (): void => {
+      if (!this.hostWindow) return;
       this.clearPromptInjection();
       resetYujianRuntimeContext();
       this.syncChatContext();
+      this.repository = new ChatVariableRepository(createTavernChatVariableAdapter(this.hostWindow));
       changeContext(this.session);
       this.appData = emptyAppData;
       this.beautyRanks = [];
@@ -1139,19 +1141,23 @@ class FeatureShell {
       const settings = readXianwangApiSettings(this.hostWindow);
       const context = this.hostWindow.SillyTavern?.getContext?.();
       const chat = Array.isArray(context?.chat) ? context.chat : [];
-      const recentStory = chat.slice(-6).map(message => {
+      const assistantFloorCount = chat.filter(message => {
+        const row = message as { is_user?: unknown; is_system?: unknown };
+        return row.is_user === false && row.is_system !== true;
+      }).length;
+      const recentStory = assistantFloorCount > 20 ? chat.slice(-5).map(message => {
         const row = message as { mes?: unknown };
         return typeof row.mes === 'string' ? row.mes : '';
-      }).filter(Boolean).join('\n\n');
+      }).filter(Boolean).join('\n\n') : '';
       const loreWindow = typeof runtime.getCharWorldbookNames === 'function' && typeof runtime.getWorldbook === 'function'
         ? runtime as unknown as Window : this.hostWindow;
       const loreEntries = await readXianwangRuleLore(loreWindow);
       const lore = buildXianwangLore(loreEntries);
       const posts = await generateTrends(settings, {
         worldTime: this.worldStatus.time,
-        location: this.worldStatus.location,
+        location: '',
         recentStory,
-        worldFacts: this.worldData ? serializeXianwangWorldFacts(this.worldData) : '',
+        worldFacts: '',
         lore,
         existingTitles: this.trendPosts.map(post => post.title),
         sourceMessageId: sourceMessageId === undefined ? undefined : String(sourceMessageId),
@@ -1205,10 +1211,14 @@ class FeatureShell {
   private async xianwangGenerationInput(sourceMessageId?: string): Promise<{ worldTime:string; location:string; recentStory:string; worldFacts:string; lore:string; existingTitles:string[]; sourceMessageId?:string }> {
     if (!this.hostWindow) throw new Error('酒馆运行上下文不可用');
     const chat = this.hostWindow.SillyTavern?.getContext?.()?.chat;
-    const recentStory = (Array.isArray(chat) ? chat : []).slice(-6).map(message => typeof (message as {mes?:unknown}).mes === 'string' ? (message as {mes:string}).mes : '').filter(Boolean).join('\n\n');
+    const assistantFloorCount = Array.isArray(chat) ? chat.filter(message => {
+      const row = message as { is_user?: unknown; is_system?: unknown };
+      return row.is_user === false && row.is_system !== true;
+    }).length : 0;
+    const recentStory = assistantFloorCount > 20 ? (Array.isArray(chat) ? chat : []).slice(-5).map(message => typeof (message as {mes?:unknown}).mes === 'string' ? (message as {mes:string}).mes : '').filter(Boolean).join('\n\n') : '';
     const loreWindow = typeof runtime.getCharWorldbookNames === 'function' && typeof runtime.getWorldbook === 'function' ? runtime as unknown as Window : this.hostWindow;
     const loreEntries = await readXianwangRuleLore(loreWindow);
-    return { worldTime:this.worldStatus.time, location:this.worldStatus.location, recentStory, worldFacts:this.worldData ? serializeXianwangWorldFacts(this.worldData) : '', lore:buildXianwangLore(loreEntries), existingTitles:[], sourceMessageId };
+    return { worldTime:this.worldStatus.time, location:'', recentStory, worldFacts:'', lore:buildXianwangLore(loreEntries), existingTitles:[], sourceMessageId };
   }
 
   private async generateForumContent(sourceMessageId = this.session.messageId ?? undefined, replaceSource = false, manual = false): Promise<void> {

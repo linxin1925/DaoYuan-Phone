@@ -122,12 +122,6 @@ const previewForumPosts: ForumPostPreview[] = [
   { tag: '吐槽', title: '元会历3727年的第一天，我被家里的噬金兽尿了一床', excerpt: '本来想着新年讨个好彩头，结果一睁眼发现灵石和被褥全没了。各位道友有没有驯养灵兽的好办法？在线等，挺急的。', author: '灵石保卫战', likes: 128, comments: 6, time: '元会历3727年·初一·清晨', replies: [{ author: '养兽三百年', content: '先把它从储物袋里请出来，噬金兽不是这么养的。' }, { author: '青冥海钓鱼佬', content: '建议换成不含灵气的普通棉被。' }] },
 ];
 
-const previewTrendPosts: ForumPostPreview[] = [
-  { tag: '爆料', title: '我师尊其实每天晚上都会对着祖师爷的画像做那种事……', excerpt: '我一直以为我的师尊是那种太上忘情、清冷孤傲的仙子。直到昨晚我奉命送灵茶，推开门看到她正跪在祖师爷的遗像前，浑身赤裸，手里还拿着一根散发……', author: '某峰入室弟子', likes: 876, comments: 3, time: '深夜·没睡着', replies: [{ author: '匿名用户#0007', content: '别爬了，你身上肯定已经被下了追踪印记。听我的，回去跪地……' }, { author: '煎饼果子来一套', content: '卧槽，大瓜！哪个峰的？是不是那个整天穿素衣的那个？平时……' }, { author: '匿名用户#1111', content: '这叫“思凡”成疾，修行久了压抑太深都会这样。楼主保重，若是……' }] },
-  { tag: '树洞', title: '真的很讨厌宗门里那种生下来就是天灵根的妖精。', excerpt: '我辛辛苦苦打理灵田十年，攒的贡献点才够换一颗下品筑基丹。可那个刚入宗的天灵根师妹，就因为长得好看资质好，宗主直接赏了她一整瓶极品凝金丹！……', author: '一个普通的外门女子', likes: 215, comments: 3, time: '周一·想下山', replies: [{ author: '路人甲2024', content: '你这不叫疯，这叫阶级自觉。这世道本来就是不公平的，凭什么她……' }, { author: '匿名用户#9921', content: '你死定了。天灵根的本命灵根都是有印记的，执法堂的搜魂术……' }, { author: 'dark\\lord', content: '弱者的悲鸣。如果你够强，直接杀了她夺了她的灵根，在这里发帖……' }] },
-  { tag: '求证', title: '青冥海最近出现的陌生舟影，究竟是不是仙朝的巡海使？', excerpt: '昨夜子时，青冥海沿岸有三道无灯舟影逆流而上，所过之处潮声尽止。附近渔户说看见船头挂着黑色幡旗，但没人敢靠近确认……', author: '青冥海钓鱼佬', likes: 438, comments: 4, time: '今日·辰时', replies: [{ author: '潮生观潮客', content: '别去看，去年也有人跟过去，回来时连自己的道号都记不住了。' }, { author: '卖地图的老周', content: '黑幡不是仙朝制式，更像是旧海盟的标记。' }] },
-];
-
 const previewNews: NewsPreview[] = [
   {
     id: 'news-3727-first',
@@ -1078,9 +1072,7 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
       const remaining = xianwangApiSettings.trendsAutoEnabled && interval > 0 ? Math.max(0, interval - xianwangCounters.trends) : null;
       actions.append(element(doc, 'span', 'xianwang-counter-line', remaining === null ? '自动风闻已关闭' : remaining === 0 ? '本轮将开始生成仙网风闻' : `还有 ${remaining} 轮对话后生成仙网风闻`));
       const posts = element(doc, 'div', 'forum-post-list');
-      const visiblePosts = trendPosts.length
-        ? [...trendPosts].sort((left, right) => right.createdAt.localeCompare(left.createdAt))
-        : previewTrendPosts;
+      const visiblePosts = [...trendPosts].sort((left, right) => right.createdAt.localeCompare(left.createdAt));
       visiblePosts.forEach((post, index) => {
         if ('storyTime' in post) {
           appendForumPost(doc, posts, { tag: post.type, title: post.title, excerpt: post.description, author: post.source, likes: post.heat, comments: post.comments.length, time: post.storyTime, replies: post.comments }, {
@@ -1093,9 +1085,10 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
           appendForumPost(doc, posts, post, { key, expanded: !collapsedForumComments.has(key) });
         }
       });
+      if (!trendPosts.length) posts.append(element(doc, 'div', 'notice muted', '当前聊天暂无仙网风闻，可点击上方按钮推演。'));
       trendsPage.append(actions, posts, element(doc, 'p', 'notice muted trends-boundary', trendPosts.length
         ? `当前保存 ${trendPosts.length} 条仙网风闻；${data.webTrends.label}，不等同于世界事实。`
-        : `当前为 ${previewTrendPosts.length} 条预览风闻；生成后将切换为当前聊天的真实数据。`));
+        : '仙网风闻只保存当前聊天数据，不使用预设内容。'));
       content.append(trendsPage);
       return;
     }
