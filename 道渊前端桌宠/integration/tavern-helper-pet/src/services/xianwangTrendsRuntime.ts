@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { TrendPostSchema, type TrendPost } from '../contract/appData';
+import { chatCompletionsEndpoint, extractOpenAIText } from './openaiProtocol';
 
 export interface XianwangApiSettings {
   apiBaseUrl: string;
@@ -75,19 +76,8 @@ export const XIANWANG_TRENDS_SYSTEM_PROMPT = `你是修仙世界“仙网风闻�
 返回格式：
 {"schemaVersion":1,"rumors":[{"type":"爆料","title":"标题","description":"正文","location":"地点","source":"来源用户","storyTime":"故事内时间","credibility":50,"heat":100,"comments":[{"author":"用户ID","content":"评论"}]}]}`;
 
-function endpoint(url: string): string {
-  const normalized = url.trim().replace(/\/+$/, '');
-  return normalized.endsWith('/chat/completions') ? normalized : `${normalized}/chat/completions`;
-}
-
 function extractText(value: unknown): string {
-  if (typeof value === 'string') return value.trim();
-  if (!value || typeof value !== 'object') return '';
-  const record = value as Record<string, unknown>;
-  const choices = Array.isArray(record.choices) ? record.choices : [];
-  const first = choices[0] && typeof choices[0] === 'object' ? choices[0] as Record<string, unknown> : {};
-  const message = first.message && typeof first.message === 'object' ? first.message as Record<string, unknown> : {};
-  return typeof message.content === 'string' ? message.content.trim() : '';
+  return extractOpenAIText(value);
 }
 
 function parseJson(text: string): unknown {
@@ -142,7 +132,7 @@ ${input.lore.slice(0, 16000) || '无'}
 ${input.existingTitles.slice(-40).join('\n') || '无'}
 
 返回前检查数量、字段、时间线、主题差异和观点冲突。`;
-  const response = await fetch(endpoint(settings.apiBaseUrl), {
+  const response = await fetch(chatCompletionsEndpoint(settings.apiBaseUrl), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...(settings.apiKey ? { Authorization: `Bearer ${settings.apiKey}` } : {}) },
     body: JSON.stringify({ model: settings.apiModel.trim(), temperature: 0.85, max_tokens: 5000, messages: [

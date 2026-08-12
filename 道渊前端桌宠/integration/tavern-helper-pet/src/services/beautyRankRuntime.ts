@@ -2,6 +2,7 @@ import type { BeautyRankEntry } from '../contract/appData';
 import { getBeautyRankCandidatePool, selectBeautyRankCandidates, type BeautyRankRealm } from './beautyRankCandidates';
 import { DEFAULT_BEAUTY_RANK_PROMPT } from './beautyRankPrompt';
 import { parseIndependentBeautyRankData } from './beautyRankService';
+import { chatCompletionsEndpoint, extractOpenAIText } from './openaiProtocol';
 
 export interface BeautyRankApiSettings {
   apiBaseUrl: string;
@@ -29,6 +30,8 @@ function asRecord(value: unknown): Record<string, unknown> {
 }
 
 function extractText(value: unknown): string {
+  const standardText = extractOpenAIText(value);
+  if (standardText) return standardText;
   if (typeof value === 'string') return value.trim();
   const record = asRecord(value);
   const choices = Array.isArray(record.choices) ? record.choices : [];
@@ -178,7 +181,7 @@ export async function generateBeautyRank(
   const candidates = selectBeautyRankCandidates(realm, current.map(entry => entry.name), desiredCount, Math.random, lore.availableNames);
   const candidateLore = formatCandidateLore(candidates, lore.entriesByName);
   const userPrompt = `【本次绝色榜独立生成任务】\n所在界域：${realm}\n原版随机占位符已抽取人物：${candidates.join('、')}\n\n【候选人物世界书资料】\n${candidateLore}\n\n请严格依据上述世界书资料，为以上${candidates.length}位且仅限以上人物生成完整新榜，并使用一次 replace 整体替换 /绝色榜。不要读取或假定任何聊天、剧情上下文。排名必须合理分散，禁止按候选顺序填写一、二、三或其他连续名次。`;
-  const response = await fetch(endpoint(settings.apiBaseUrl), {
+  const response = await fetch(chatCompletionsEndpoint(settings.apiBaseUrl), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...(settings.apiKey ? { Authorization: `Bearer ${settings.apiKey}` } : {}) },
     body: JSON.stringify({
@@ -208,7 +211,7 @@ export async function generateBeautyRankReply(
 ): Promise<string> {
   if (!settings.apiBaseUrl.trim() || !settings.apiModel.trim()) throw new Error('请先配置绝色榜 API 和模型');
   const injectContent = `[绝色榜人物]\n角色: ${name}\n仙姿: ${xianzi}\n\n[群芳谱原作]\n${qunfangpu}\n\n${history.length ? `[历史回帖记录]\n${history.map((item, index) => `#${index + 1}楼 匿名道友: ${item}`).join('\n')}\n\n` : ''}[上一条评论]\n匿名道友说: ${userReply}\n\n(你现在正在群芳谱论坛上，以匿名道友的身份参与讨论。群芳谱是修仙界坊间流传的绝色榜，众道友在此对各路上榜女修品头论足，言辞下流猥琐、毫无底线，尽是意淫挑衅之语。你必须互喷、抬杠或吐槽上一条评论，言辞下流猥琐，绝不可附和赞同。请直接输出你的回帖内容，必须贴合坊间泼皮流氓的语气，粗俗直白，100字以内。\n【绝对禁令】：除了你要说的回帖内容本身，禁止输出任何其他内容！禁止带角色署名，禁止加任何括号、标签或特殊符号，禁止分段换行！直接开口！)`;
-  const response = await fetch(endpoint(settings.apiBaseUrl), {
+  const response = await fetch(chatCompletionsEndpoint(settings.apiBaseUrl), {
     method: 'POST', headers: { 'Content-Type': 'application/json', ...(settings.apiKey ? { Authorization: `Bearer ${settings.apiKey}` } : {}) },
     body: JSON.stringify({ model: settings.apiModel.trim(), temperature: 0.85, max_tokens: 900, messages: [
       { role: 'system', content: injectContent },

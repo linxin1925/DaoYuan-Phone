@@ -1,3 +1,5 @@
+import { extractOpenAIText, modelsEndpoint } from './openaiProtocol';
+
 interface YujianRuntimeHost {
   Mvu?: {
     getMvuData?: (scope?: unknown) => unknown | Promise<unknown>;
@@ -136,8 +138,7 @@ function readSelectedLoreFromRuntime(runtime: YujianRuntimeHost): string[] {
 
 export async function fetchYujianModels(apiBaseUrl: string, apiKey: string): Promise<string[]> {
   if (!apiBaseUrl.trim()) throw new Error('请先填写基础 URL');
-  let endpoint = apiBaseUrl.trim().replace(/\/+$/, '').replace(/\/chat\/completions$/, '');
-  if (!endpoint.endsWith('/models')) endpoint += '/models';
+  const endpoint = modelsEndpoint(apiBaseUrl);
   const response = await fetch(endpoint, {
     method: 'GET',
     headers: apiKey ? { Authorization: `Bearer ${apiKey}` } : {},
@@ -367,6 +368,8 @@ export function importStatusYujianHistories(
 }
 
 function extractGeneratedText(value: unknown): string {
+  const standardText = extractOpenAIText(value);
+  if (standardText) return standardText;
   if (typeof value === 'string') return value.trim();
   const record = asRecord(value);
   const choices = Array.isArray(record.choices) ? record.choices : [];

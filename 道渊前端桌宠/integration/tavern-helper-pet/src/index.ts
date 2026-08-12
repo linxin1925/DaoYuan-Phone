@@ -215,6 +215,8 @@ class FeatureShell {
   private shellPosition: { left: number; top: number } | null = null;
   private shellPositionBeforeKeyboard: { left: number; top: number } | null = null;
   private keyboardViewportActive = false;
+  private viewportBaselineHeight = 0;
+  private viewportBaselineWidth = 0;
   private orbPosition: { left: number; top: number } | null = null;
   private orbDragMoved = false;
   private worldRefreshTimer: number | null = null;
@@ -1408,7 +1410,16 @@ class FeatureShell {
     const viewportHeight = visualViewport?.height ?? this.hostWindow.innerHeight;
     const viewportLeft = visualViewport?.offsetLeft ?? 0;
     const viewportTop = visualViewport?.offsetTop ?? 0;
-    const keyboardOpen = Boolean(visualViewport && visualViewport.height < this.hostWindow.innerHeight - 120);
+    const activeElement = this.frame?.contentDocument?.activeElement;
+    const editableFocused = Boolean(activeElement?.matches('input:not([type="checkbox"]):not([type="radio"]):not([type="button"]):not([type="submit"]), textarea, select'));
+    if (!editableFocused || Math.abs(viewportWidth - this.viewportBaselineWidth) > 40) {
+      this.viewportBaselineWidth = viewportWidth;
+      this.viewportBaselineHeight = Math.max(this.viewportBaselineHeight, viewportHeight);
+    }
+    const keyboardOpen = Boolean(visualViewport && editableFocused && (
+      visualViewport.height < this.hostWindow.innerHeight - 120
+      || viewportHeight < this.viewportBaselineHeight - 40
+    ));
     if (this.orb) {
       if (this.orbPosition) {
         const orbRect = this.orb.getBoundingClientRect();

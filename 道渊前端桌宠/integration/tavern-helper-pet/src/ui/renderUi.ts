@@ -408,6 +408,23 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
   let beautyPortraitName: string | null = null;
   let beautyPortraitShowSpecial = false;
 
+  const configureApiUrlInput = (input: HTMLInputElement): void => {
+    input.inputMode = 'url';
+    input.enterKeyHint = 'next';
+    input.autocapitalize = 'none';
+    input.spellcheck = false;
+    input.addEventListener('pointerup', () => {
+      const virtualKeyboard = (view.navigator as Navigator & { virtualKeyboard?: { show(): void } }).virtualKeyboard;
+      if (!virtualKeyboard) return;
+      try {
+        input.focus({ preventScroll: true });
+        virtualKeyboard.show();
+      } catch {
+        // 不支持主动唤起时保留浏览器原生输入行为。
+      }
+    });
+  };
+
   const openMapFactionPortraitLarge = (url: string, name: string): boolean => {
     if (!url) return false;
     let parentView: Window;
@@ -560,7 +577,8 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
     const field = (label: string, key: 'apiBaseUrl'|'apiKey'|'apiModel', type = 'text'): HTMLInputElement => {
       const wrap = element(doc, 'label', 'settings-field');
       wrap.append(element(doc, 'span', 'settings-label', label));
-      const input = doc.createElement('input'); input.type = type; input.value = yujianSettings[key]; input.dataset.setting = key;
+      const input = doc.createElement('input'); input.type = key === 'apiBaseUrl' ? 'url' : type; input.value = yujianSettings[key]; input.dataset.setting = key;
+      if (key === 'apiBaseUrl') configureApiUrlInput(input);
       wrap.append(input); settingsPanel.append(wrap); return input;
     };
     field('基础 URL（Endpoint）', 'apiBaseUrl');
@@ -712,7 +730,8 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
     const field = (label: string, key: 'apiBaseUrl' | 'apiKey' | 'apiModel', type = 'text'): void => {
       const wrap = element(doc, 'label', 'settings-field');
       wrap.append(element(doc, 'span', 'settings-label', label));
-      const input = doc.createElement('input'); input.type = type; input.value = beautyApiSettings[key]; input.dataset.beautySetting = key;
+      const input = doc.createElement('input'); input.type = key === 'apiBaseUrl' ? 'url' : type; input.value = beautyApiSettings[key]; input.dataset.beautySetting = key;
+      if (key === 'apiBaseUrl') configureApiUrlInput(input);
       wrap.append(input); panel.append(wrap);
     };
     field('基础 URL（Endpoint）', 'apiBaseUrl');
@@ -755,7 +774,8 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
     const field = (label: string, key: keyof ApiSettingsDraft, type = 'text'): void => {
       const wrap = element(doc, 'label', 'settings-field');
       wrap.append(element(doc, 'span', 'settings-label', label));
-      const input = doc.createElement('input'); input.type = type; input.value = xianwangApiSettings[key]; input.dataset.xianwangSetting = key;
+      const input = doc.createElement('input'); input.type = key === 'apiBaseUrl' ? 'url' : type; input.value = xianwangApiSettings[key]; input.dataset.xianwangSetting = key;
+      if (key === 'apiBaseUrl') configureApiUrlInput(input);
       wrap.append(input); panel.append(wrap);
     };
     field('基础 URL（Endpoint）', 'apiBaseUrl');

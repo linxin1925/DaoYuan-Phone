@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { ForumPostSchema, NewsPaperSchema, type ForumPost, type NewsPaper } from '../contract/appData';
 import type { XianwangApiSettings } from './xianwangTrendsRuntime';
+import { chatCompletionsEndpoint, extractOpenAIText } from './openaiProtocol';
 
 const Comment = z.object({ author: z.string().min(1).max(120), content: z.string().min(1).max(3000), storyTime: z.string().max(120).default('') }).strict();
 const ForumResponse = z.object({ schemaVersion: z.literal(1), posts: z.array(z.object({ tag: z.string().min(1).max(40), title: z.string().min(1).max(240), content: z.string().min(1).max(8000), author: z.string().min(1).max(120), storyTime: z.string().min(1).max(120), likes: z.number().int().nonnegative(), comments: z.array(Comment).min(1).max(10) }).strict()).min(1).max(6) }).strict();
@@ -10,12 +11,11 @@ const NewsResponse = z.object({ schemaVersion: z.literal(1), papers: z.array(z.o
 const FORUM_PROMPT = `你是修仙世界“仙网论坛”的内容编辑器。依据剧情与世界资料生成论坛帖子及楼内评论。帖子应像真实论坛：不同板块、不同作者、观点冲突自然；正文完整、有信息量，评论回应具体内容。不得提前泄露剧情，不得把猜测写成确定事实。只能返回合法JSON，无Markdown和额外字段。格式：{"schemaVersion":1,"posts":[{"tag":"论道","title":"标题","content":"完整正文","author":"用户名","storyTime":"故事内时间","likes":100,"comments":[{"author":"用户名","content":"完整评论","storyTime":"故事内时间"}]}]}`;
 const NEWS_PROMPT = `你是修仙世界“天机日报”的总编辑。依据剧情与世界资料生成完整一期报纸。第一篇articles必须是头条；其余文章应分属不同栏目。主编寄语、文章和读者来信必须完整，不得用省略号代替正文。不得提前泄露剧情，不得虚构资料明确否定的事实。issue只需返回“待编排”，最终期号由本地系统连续编号。只能返回合法JSON，无Markdown和额外字段。格式：{"schemaVersion":1,"papers":[{"title":"天机日报","issue":"待编排","editor":"主编名","editorNote":"主编寄语","storyTime":"故事内时间","likes":100,"articles":[{"tag":"头条","source":"记者名","title":"标题","content":"完整正文"},{"tag":"宗门","source":"记者名","title":"标题","content":"完整正文"}],"letters":[{"author":"读者名","content":"来信"}]}]}`;
 
-function endpoint(url: string): string { const u=url.trim().replace(/\/+$/, ''); return u.endsWith('/chat/completions') ? u : `${u}/chat/completions`; }
-function textOf(v: unknown): string { const c=(v as any)?.choices?.[0]?.message?.content; return typeof c==='string' ? c.trim() : ''; }
+function textOf(v: unknown): string { return extractOpenAIText(v); }
 function json(text: string): unknown { try { return JSON.parse(text.replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/i,'').trim()); } catch { throw new Error('返回不是合法 JSON'); } }
 async function call(settings: XianwangApiSettings, system: string, user: string, max_tokens=7000): Promise<string> {
   if (!settings.apiBaseUrl.trim() || !settings.apiModel.trim()) throw new Error('请先配置仙网内容 API 地址和模型');
-  const response=await fetch(endpoint(settings.apiBaseUrl), { method:'POST', headers:{'Content-Type':'application/json',...(settings.apiKey?{Authorization:`Bearer ${settings.apiKey}`}:{})}, body:JSON.stringify({model:settings.apiModel.trim(),temperature:.82,max_tokens,messages:[{role:'system',content:system},{role:'user',content:user}]}) });
+  const response=await fetch(chatCompletionsEndpoint(settings.apiBaseUrl), { method:'POST', headers:{'Content-Type':'application/json',...(settings.apiKey?{Authorization:`Bearer ${settings.apiKey}`}:{})}, body:JSON.stringify({model:settings.apiModel.trim(),temperature:.82,max_tokens,messages:[{role:'system',content:system},{role:'user',content:user}]}) });
   if (!response.ok) throw new Error(`仙网内容 API 请求失败：${response.status} ${(await response.text()).slice(0,160)}`);
   const t=textOf(await response.json()); if (!t) throw new Error('仙网内容 API 返回为空'); return t;
 }
