@@ -10,6 +10,9 @@ export function modelsEndpoint(url: string): string {
 
 function protocolFor(url: string): 'anthropic' | 'responses' | 'chat' {
   const value = url.toLowerCase();
+  if (value.endsWith('/messages')) return 'anthropic';
+  if (value.endsWith('/responses')) return 'responses';
+  if (value.endsWith('/chat/completions')) return 'chat';
   if (value.includes('/api/coding/v3')) return 'responses';
   if (value.includes('/api/coding')) return 'anthropic';
   return 'chat';
@@ -35,7 +38,7 @@ export async function fetchAuto(url: string, init: RequestInit & { body?: string
     const responseInput = [...(system ? [{ role: 'system', content: system }] : []), ...input];
     return fetch(url.replace(/\/+$/, ''), { ...init, headers, body: JSON.stringify({ model, input: responseInput, temperature: source.temperature, max_output_tokens: source.max_tokens ?? 4096 }) });
   }
-  return fetch(chatCompletionsEndpoint(url), { ...init, headers, body: init.body });
+  return fetch(url.toLowerCase().endsWith('/chat/completions') ? url.replace(/\/+$/, '') : chatCompletionsEndpoint(url), { ...init, headers, body: init.body });
 }
 
 export function extractOpenAIText(value: unknown): string {
