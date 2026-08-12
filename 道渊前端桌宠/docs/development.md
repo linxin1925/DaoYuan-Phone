@@ -1,5 +1,7 @@
 # 开发说明
 
+维护者新增页面、BridgeAction、聊天变量、API 或 MVU 功能前，请先阅读 [维护者扩展开发手册](./维护者扩展开发手册.md)。本文保留基础资源和宿主说明；当前 V0.7 的实际扩展边界以维护者手册和 `integration/tavern-helper-pet/src/` 为准。
+
 当前实现使用浏览器原生 ES Modules，不引入 Live2D 或其他运行时依赖。
 
 ```bash
