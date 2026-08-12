@@ -360,6 +360,7 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
   let trendPosts: TrendPost[] = [];
   let forumPosts: ForumPost[] = [];
   let newsPapers: NewsPaper[] = [];
+  let xianwangCounters = { trends: 0, forum: 0, news: 0 };
   let beautyReplyInputs: Record<string, string> = {};
   let expandedBeautyForum: string | null = null;
   let beautyReplySending = false;
@@ -1045,6 +1046,9 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
       const generate = button(doc, 'forum-ai-button', trendsGenerating ? '推演中…' : '◌ 推演风闻', 'trends-generate');
       generate.disabled = trendsGenerating;
       actions.append(generate);
+      const interval = xianwangApiSettings.autoInterval;
+      const remaining = xianwangApiSettings.trendsAutoEnabled && interval > 0 ? Math.max(0, interval - xianwangCounters.trends) : null;
+      actions.append(element(doc, 'span', 'notice muted', remaining === null ? '自动风闻已关闭' : remaining === 0 ? '本轮将开始生成仙网风闻' : `还有 ${remaining} 轮对话开始生成仙网风闻`));
       const posts = element(doc, 'div', 'forum-post-list');
       const visiblePosts = trendPosts.length
         ? [...trendPosts].sort((left, right) => right.createdAt.localeCompare(left.createdAt))
@@ -1721,6 +1725,7 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
       if (Array.isArray(message.payload.trendPosts)) trendPosts = message.payload.trendPosts as TrendPost[];
       if (Array.isArray(message.payload.forumPosts)) forumPosts = message.payload.forumPosts as ForumPost[];
       if (Array.isArray(message.payload.newsPapers)) newsPapers = message.payload.newsPapers as NewsPaper[];
+      if (message.payload.xianwangCounters && typeof message.payload.xianwangCounters === 'object') xianwangCounters = { ...xianwangCounters, ...(message.payload.xianwangCounters as Partial<typeof xianwangCounters>) };
       if (message.payload.yujianSettings && typeof message.payload.yujianSettings === 'object') yujianSettings = { ...yujianSettings, ...(message.payload.yujianSettings as Partial<YujianSettingsDraft>) };
       if (message.payload.beautyApiSettings && typeof message.payload.beautyApiSettings === 'object') beautyApiSettings = { ...beautyApiSettings, ...(message.payload.beautyApiSettings as Partial<BeautyApiSettingsDraft>) };
       if (message.payload.xianwangApiSettings && typeof message.payload.xianwangApiSettings === 'object') xianwangApiSettings = { ...xianwangApiSettings, ...(message.payload.xianwangApiSettings as Partial<ApiSettingsDraft>) };

@@ -1383,6 +1383,11 @@ class FeatureShell {
       trendPosts: this.trendPosts,
       forumPosts: this.forumPosts,
       newsPapers: this.newsPapers,
+      xianwangCounters: {
+        trends: parseTrendsData(this.repository.getData('daoyuan_web_trends_data')).autoCounter,
+        forum: parseForumData(this.repository.getData('daoyuan_forum_data')).autoCounter,
+        news: parseNewsData(this.repository.getData('daoyuan_news_data')).autoCounter,
+      },
       yujianContacts: this.yujianContacts,
       inventoryItems: this.inventoryItems,
       worldStatus: this.worldStatus,
