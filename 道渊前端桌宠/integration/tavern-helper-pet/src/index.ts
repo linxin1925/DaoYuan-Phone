@@ -221,6 +221,7 @@ class FeatureShell {
   private orbDragMoved = false;
   private worldRefreshTimer: number | null = null;
   private reconcileTimer: number | null = null;
+  private autoSchedulerTimer: number | null = null;
   private lastWorldProjection = '';
   private beautyGenerationInFlight = false;
   private trendsGenerationInFlight = false;
@@ -447,6 +448,14 @@ class FeatureShell {
     }, delayMs);
   }
 
+  private scheduleAutoScheduler(delayMs = 420): void {
+    if (this.autoSchedulerTimer !== null) window.clearTimeout(this.autoSchedulerTimer);
+    this.autoSchedulerTimer = window.setTimeout(() => {
+      this.autoSchedulerTimer = null;
+      void this.handleMvuUpdateStarted();
+    }, delayMs);
+  }
+
   private async reconcileDerivedContent(): Promise<void> {
     if (!this.hostWindow || !this.session.chatId || this.session.phase === 'destroyed') return;
     const chat = this.hostWindow.SillyTavern?.getContext?.()?.chat;
@@ -625,6 +634,10 @@ class FeatureShell {
         const listener = (): void => {
           this.scheduleWorldDataRefresh(delay);
           this.scheduleDerivedReconciliation(delay + 80);
+          if (eventName === hostRuntime.TavernHelper?.tavern_events?.MESSAGE_RECEIVED
+            || eventName === hostRuntime.TavernHelper?.tavern_events?.GENERATION_ENDED) {
+            this.scheduleAutoScheduler(delay + 120);
+          }
         };
         hostEventSource.on(eventName, listener);
         this.session.disposers.push(() => hostEventSource.removeListener(eventName, listener));
@@ -1671,6 +1684,8 @@ class FeatureShell {
     this.worldRefreshTimer = null;
     if (this.reconcileTimer !== null) window.clearTimeout(this.reconcileTimer);
     this.reconcileTimer = null;
+    if (this.autoSchedulerTimer !== null) window.clearTimeout(this.autoSchedulerTimer);
+    this.autoSchedulerTimer = null;
   }
 }
 
