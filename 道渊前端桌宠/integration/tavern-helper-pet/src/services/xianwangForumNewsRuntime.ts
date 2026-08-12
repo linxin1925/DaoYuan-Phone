@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { ForumPostSchema, NewsPaperSchema, type ForumPost, type NewsPaper } from '../contract/appData';
 import type { XianwangApiSettings } from './xianwangTrendsRuntime';
-import { chatCompletionsEndpoint, extractOpenAIText } from './openaiProtocol';
+import { extractOpenAIText, fetchAuto } from './openaiProtocol';
 
 const Comment = z.object({ author: z.string().min(1).max(120), content: z.string().min(1).max(3000), storyTime: z.string().max(120).default('') }).strict();
 const ForumResponse = z.object({ schemaVersion: z.literal(1), posts: z.array(z.object({ tag: z.string().min(1).max(40), title: z.string().min(1).max(240), content: z.string().min(1).max(8000), author: z.string().min(1).max(120), storyTime: z.string().min(1).max(120), likes: z.number().int().nonnegative(), comments: z.array(Comment).min(1).max(10) }).strict()).min(1).max(6) }).strict();
@@ -15,7 +15,7 @@ function textOf(v: unknown): string { return extractOpenAIText(v); }
 function json(text: string): unknown { try { return JSON.parse(text.replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/i,'').trim()); } catch { throw new Error('返回不是合法 JSON'); } }
 async function call(settings: XianwangApiSettings, system: string, user: string, max_tokens=7000): Promise<string> {
   if (!settings.apiBaseUrl.trim() || !settings.apiModel.trim()) throw new Error('请先配置仙网内容 API 地址和模型');
-  const response=await fetch(chatCompletionsEndpoint(settings.apiBaseUrl), { method:'POST', headers:{'Content-Type':'application/json',...(settings.apiKey?{Authorization:`Bearer ${settings.apiKey}`}:{})}, body:JSON.stringify({model:settings.apiModel.trim(),temperature:.82,max_tokens,messages:[{role:'system',content:system},{role:'user',content:user}]}) });
+  const response=await fetchAuto(settings.apiBaseUrl, { method:'POST', headers:{'Content-Type':'application/json',...(settings.apiKey?{Authorization:`Bearer ${settings.apiKey}`}:{})}, body:JSON.stringify({model:settings.apiModel.trim(),temperature:.82,max_tokens,messages:[{role:'system',content:system},{role:'user',content:user}]}) });
   if (!response.ok) throw new Error(`仙网内容 API 请求失败：${response.status} ${(await response.text()).slice(0,160)}`);
   const t=textOf(await response.json()); if (!t) throw new Error('仙网内容 API 返回为空'); return t;
 }
