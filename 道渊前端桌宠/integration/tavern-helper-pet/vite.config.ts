@@ -7,6 +7,10 @@ const projectRoot = fileURLToPath(new URL('.', import.meta.url));
 
 export default defineConfig(({ command }) => ({
   plugins: [vue()],
+  // Vue is bundled into a browser-side Tavern Helper script iframe. Vite's
+  // library build does not automatically replace Vue's process.env guard,
+  // while the iframe has no Node `process` global; define it at build time.
+  define: command === 'build' ? { 'process.env.NODE_ENV': JSON.stringify('production') } : undefined,
   resolve: {
     alias: { '@': resolve(projectRoot, 'src') },
   },

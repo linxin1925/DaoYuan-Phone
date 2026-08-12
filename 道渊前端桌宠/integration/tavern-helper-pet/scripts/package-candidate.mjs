@@ -3,19 +3,19 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 const projectRoot = new URL('..', import.meta.url);
 const artifactPath = new URL('./dist/道渊功能前端.js', projectRoot);
 const outputPath = new URL('./dist/道渊功能前端-常驻脚本候选.json', projectRoot);
-const importOutputPath = new URL('./dist/道渊小手机V0.7.json', projectRoot);
+const importOutputPath = new URL('./dist/道渊小手机V1.5-preview.json', projectRoot);
 const testOutputPath = new URL('./dist/道渊功能前端-紫薇桌宠-主线注入测试.json', projectRoot);
 const source = await readFile(artifactPath, 'utf8');
 
 const candidate = {
   format: 'daoyuan-tavern-helper-script-candidate',
   formatVersion: 1,
-  name: '道渊小手机V0.7',
-  version: '0.7.0',
-  scriptId: 'daoyuan-feature-frontend-hud',
+  name: '道渊小手机V1.5 Preview',
+  version: '1.5.0-preview.0',
+  scriptId: 'daoyuan-feature-frontend-hud-v15',
   enabled: true,
-  runtimeStatus: '待真机探测：Tavern Helper 导入包装与目标版本能力',
-  scope: '阶段 0/1：常驻脚本、宿主悬浮球、桌面浮窗/手机抽屉、单例 iframe UI',
+  runtimeStatus: '测试中：等待真实酒馆双包导入与运行时回归',
+  scope: 'V1.5 阶段 5：Vue UI、手机/桌面双布局与 V0.7 并行兼容预览验证',
   dataBoundary: {
     chatVariables: ['daoyuan_yujian_data', 'daoyuan_web_beauty_data', 'daoyuan_web_trends_data', 'daoyuan_forum_data', 'daoyuan_news_data', 'daoyuan_map_state'],
     statDataWrites: [],
@@ -37,10 +37,10 @@ await writeFile(outputPath, JSON.stringify(candidate, null, 2));
 const importableScript = {
   type: 'script',
   enabled: true,
-  name: '道渊小手机V0.7',
-  id: 'daoyuan-feature-frontend-hud',
+  name: '道渊小手机V1.5 Preview',
+    id: 'daoyuan-feature-frontend-hud-v15',
   content: source,
-  info: '道渊功能前端正式集成版：紫薇序列帧桌宠、天机阁随身玉简与 390×844 手机比例 UI。绝色榜使用独立 API；仙网风闻、仙网论坛与天机日报共用仙网内容 API。自动生成只在 AI 正文完成且 MVU 开始解析该正文层时触发；设置中可分别选择玉简、风闻、论坛、日报是否注入后续主线，默认全部关闭；注入不写改 MVU stat_data。',
+  info: '道渊小手机 V1.5 Vue 重构预览版：仅用于分支验收，不覆盖 V0.7 正式包。',
   button: {
     enabled: false,
     buttons: [],

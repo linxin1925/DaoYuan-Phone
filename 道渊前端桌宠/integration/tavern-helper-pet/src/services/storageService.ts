@@ -3,11 +3,11 @@ import { parseAppData, type AppData } from '../contract/appData';
 const UI_KEY = 'daoyuan_feature_frontend_ui_v1';
 
 export interface UiPreferences {
-  layoutMode: 'phone';
+  layoutMode: 'auto' | 'desktop-tablet' | 'phone';
   lastApp: string;
 }
 
-const defaults: UiPreferences = { layoutMode: 'phone', lastApp: 'home' };
+const defaults: UiPreferences = { layoutMode: 'auto', lastApp: 'home' };
 
 function safeStorage(): Storage | null {
   try {
@@ -23,8 +23,7 @@ export function loadUiPreferences(): UiPreferences {
   try {
     const parsed = JSON.parse(store.getItem(UI_KEY) ?? 'null') as Partial<UiPreferences> | null;
     return {
-      // 迁移旧版本偏好：原来的 auto/desktop-tablet 不再参与布局计算。
-      layoutMode: 'phone',
+      layoutMode: parsed?.layoutMode === 'phone' || parsed?.layoutMode === 'desktop-tablet' || parsed?.layoutMode === 'auto' ? parsed.layoutMode : defaults.layoutMode,
       lastApp: typeof parsed?.lastApp === 'string' ? parsed.lastApp : defaults.lastApp,
     };
   } catch {

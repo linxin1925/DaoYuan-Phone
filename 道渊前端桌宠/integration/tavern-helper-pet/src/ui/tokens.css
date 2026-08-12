@@ -1,0 +1,35 @@
+:root {
+  --dy-color-bg: #0c0f14;
+  --dy-color-surface: #151b26;
+  --dy-color-surface-raised: #1d2634;
+  --dy-color-border: rgba(216, 193, 136, .28);
+  --dy-color-border-strong: rgba(216, 193, 136, .52);
+  --dy-color-primary: #d8c188;
+  --dy-color-accent: #73c6a1;
+  --dy-color-danger: #df8177;
+  --dy-color-text: #eee5cb;
+  --dy-color-text-muted: rgba(238, 229, 203, .64);
+  --dy-font-body: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --dy-font-display: "Noto Serif SC", "Songti SC", serif;
+  --dy-space-1: 4px;
+  --dy-space-2: 8px;
+  --dy-space-3: 12px;
+  --dy-space-4: 16px;
+  --dy-space-5: 20px;
+  --dy-radius-sm: 6px;
+  --dy-radius-md: 10px;
+  --dy-radius-pill: 999px;
+  --dy-control-min: 44px;
+  --dy-motion-fast: 150ms;
+  --dy-motion-normal: 220ms;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+button, input, textarea, select { font: inherit; }
+button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible {
+  outline: 2px solid var(--dy-color-primary);
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 1ms !important; transition-duration: 1ms !important; scroll-behavior: auto !important; }
+}

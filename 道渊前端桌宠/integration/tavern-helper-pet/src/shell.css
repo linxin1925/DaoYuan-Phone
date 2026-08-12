@@ -16,6 +16,8 @@
 #daoyuan-feature-orb[hidden] { display: none !important; }
 #daoyuan-feature-hud.is-dragging { transition: none; }
 #daoyuan-feature-hud[data-keyboard="open"] { transition: none; }
+#daoyuan-feature-hud[data-mode="desktop-tablet"] { border-radius: 12px; }
+#daoyuan-feature-hud[data-mode="phone"] { border-radius: 9px; }
 #daoyuan-feature-hud .daoyuan-hud-drag-strip {
   position: absolute;
   z-index: 3;
@@ -72,6 +74,9 @@
   #daoyuan-feature-orb { width: 72px; height: 89px; }
   #daoyuan-feature-orb[data-pet-size="small"] { width: 52px; height: 64px; }
   #daoyuan-feature-orb[data-pet-size="medium"] { width: 62px; height: 76px; }
+}
+@media (min-width: 761px) and (pointer: fine) {
+  #daoyuan-feature-hud[data-mode="desktop-tablet"] { box-shadow: 0 22px 70px rgba(0, 0, 0, .62), 0 0 0 1px rgba(216, 193, 136, .12); }
 }
 @media (max-height: 560px) and (pointer: coarse) {
   #daoyuan-feature-orb { width: 59px; height: 72px; }

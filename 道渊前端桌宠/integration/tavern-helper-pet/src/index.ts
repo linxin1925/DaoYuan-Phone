@@ -9,6 +9,7 @@ import { getWorldDataCapability, projectInventory, projectNpcContacts, projectWo
 import { MVU_CHANNEL_NAME, MvuChannelTool } from './services/mvuChannel';
 import { appendStandaloneYujianRecord, clearStandaloneYujianHistory, deleteStandaloneYujianRecord, extractStoryYujianEvents, fetchYujianModels, importStatusYujianHistories, loadStandaloneKnownContacts, loadStandaloneYujianHistories, reconcileAutoYujianRecords, rememberStandaloneKnownContacts, removeAutoYujianRecordsForFloor, resetYujianRuntimeContext, sendYujianMessageWithProgress } from './services/yujianRuntime';
 import { mountUi } from './ui/renderUi';
+import { mountVueShell, type VueShellMount } from './ui/vueShell';
 import { parseIndependentBeautyRankData } from './services/beautyRankService';
 import { DEFAULT_BEAUTY_RANK_PROMPT } from './services/beautyRankPrompt';
 import { generateBeautyRank, generateBeautyRankReply, type BeautyRankApiSettings } from './services/beautyRankRuntime';
@@ -20,16 +21,19 @@ import appCss from './styles.css?inline';
 import shellCss from './shell.css?inline';
 import { ZiweiPetController, type PetSize } from './petController';
 
-const SCRIPT_ID = 'daoyuan-feature-frontend-hud';
-const HOST_ID = 'daoyuan-feature-hud';
-const ORB_ID = 'daoyuan-feature-orb';
+// V1.5 runs alongside the V0.7 card script during migration; keep a distinct
+// Tavern Helper identity so the two imported scripts cannot collide.
+const SCRIPT_ID = 'daoyuan-feature-frontend-hud-v15';
+const HOST_ID = 'daoyuan-feature-hud-v15';
+const ORB_ID = 'daoyuan-feature-orb-v15';
+const CLEANUP_KEY = '__daoyuanFeatureCleanupV15';
 const IPHONE_WIDTH = 390;
 const IPHONE_HEIGHT = 844;
 const IPHONE_RATIO = IPHONE_WIDTH / IPHONE_HEIGHT;
 const PET_SIZE_KEY = 'daoyuan_ziwei_pet_size_v1';
 
-type ShellMode = 'phone';
-type Layout = 'phone';
+type ShellMode = 'auto' | 'desktop-tablet' | 'phone';
+type Layout = 'phone' | 'desktop-tablet';
 
 function readPetSize(hostWindow: Window): PetSize {
   try {
@@ -66,7 +70,7 @@ interface HostContext {
 }
 
 interface DaoyuanHostWindow extends Window {
-  __daoyuanFeatureCleanup?: () => void;
+  __daoyuanFeatureCleanupV15?: () => void;
 }
 
 interface YujianLoreEntry {
@@ -233,8 +237,10 @@ function resolveHostContext(): HostContext {
 }
 
 function onReady(callback: () => void): void {
-  if (typeof runtime.$ === 'function') runtime.$(callback);
-  else callback();
+  // Tavern Helper runs character scripts as a module in an already-created
+  // hidden iframe. The host document's ready queue is unrelated to this
+  // iframe, so boot synchronously instead of waiting on parent jQuery.
+  callback();
 }
 
 class FeatureShell {
@@ -261,9 +267,9 @@ class FeatureShell {
   private frame: HTMLIFrameElement | null = null;
   private dragStrip: HTMLDivElement | null = null;
   private uiMount: { destroy(): void } | null = null;
+  private vueShellMount: VueShellMount | null = null;
   private hostStyle: HTMLStyleElement | null = null;
-  private readonly layout: Layout = 'phone';
-  private readonly shellMode: ShellMode = 'phone';
+  private currentLayout: Layout = 'phone';
   private resizeFrame = 0;
   private shellPosition: { left: number; top: number } | null = null;
   private shellPositionBeforeKeyboard: { left: number; top: number } | null = null;
@@ -323,7 +329,7 @@ class FeatureShell {
     this.syncChatContext();
     const hostRuntime = this.hostWindow as DaoyuanHostWindow;
     try {
-      hostRuntime.__daoyuanFeatureCleanup?.();
+      hostRuntime[CLEANUP_KEY]?.();
     } catch (error) {
       console.warn('[道渊玉简] 旧实例清理失败，将继续移除旧宿主节点', error);
     }
@@ -333,9 +339,9 @@ class FeatureShell {
       .forEach((node) => node.remove());
     this.session.phase = 'opening';
     const cleanup = (): void => this.destroy();
-    hostRuntime.__daoyuanFeatureCleanup = cleanup;
+    hostRuntime[CLEANUP_KEY] = cleanup;
     this.session.disposers.push(() => {
-      if (hostRuntime.__daoyuanFeatureCleanup === cleanup) delete hostRuntime.__daoyuanFeatureCleanup;
+      if (hostRuntime[CLEANUP_KEY] === cleanup) delete hostRuntime[CLEANUP_KEY];
     });
     this.host = this.hostDocument.createElement('div');
     this.host.id = HOST_ID;
@@ -345,7 +351,9 @@ class FeatureShell {
 
     this.hostStyle = this.hostDocument.createElement('style');
     this.hostStyle.dataset.daoyuan = SCRIPT_ID;
-    this.hostStyle.textContent = shellCss;
+    this.hostStyle.textContent = shellCss
+      .replaceAll('#daoyuan-feature-hud', `#${HOST_ID}`)
+      .replaceAll('#daoyuan-feature-orb', `#${ORB_ID}`);
     this.hostDocument.head.append(this.hostStyle);
 
     this.orb = this.hostDocument.createElement('button');
@@ -616,9 +624,11 @@ class FeatureShell {
       if (!message) return;
       if (message.action === 'APP_READY' || message.action === 'REQUEST_CONTEXT') this.sendContext();
       if (message.action === 'SET_LAYOUT') {
-        this.preferences.layoutMode = 'phone';
+        const requested = message.payload.layoutMode;
+        if (requested === 'auto' || requested === 'desktop-tablet' || requested === 'phone') this.preferences.layoutMode = requested;
         saveUiPreferences(this.preferences);
         this.resize();
+        this.sendContext();
       }
       if (message.action === 'SET_ACTIVE_APP' && typeof message.payload.app === 'string') {
         this.preferences.lastApp = message.payload.app;
@@ -766,9 +776,11 @@ class FeatureShell {
   private handleUiAction(action: Parameters<typeof makeBridgeMessage>[1], payload: Record<string, unknown> = {}): void {
     if (action === 'APP_READY' || action === 'REQUEST_CONTEXT') this.sendContext();
     if (action === 'SET_LAYOUT') {
-      this.preferences.layoutMode = 'phone';
+      const requested = payload.layoutMode;
+      if (requested === 'auto' || requested === 'desktop-tablet' || requested === 'phone') this.preferences.layoutMode = requested;
       saveUiPreferences(this.preferences);
       this.resize();
+      this.sendContext();
     }
     if (action === 'SET_ACTIVE_APP' && typeof payload.app === 'string') {
       this.preferences.lastApp = payload.app;
@@ -1469,7 +1481,9 @@ class FeatureShell {
     style.textContent = appCss;
     doc.head.append(style);
     this.uiMount?.destroy();
+    this.vueShellMount?.destroy();
     try {
+      this.vueShellMount = mountVueShell(doc, (action, payload) => this.handleUiAction(action, payload));
       this.uiMount = mountUi(doc, (action, payload) => this.handleUiAction(action, payload));
     } catch (error) {
       console.error('[道渊玉简] ui mount failed', error);
@@ -1488,8 +1502,8 @@ class FeatureShell {
   private sendContext(): void {
     if (!this.frame?.contentWindow) return;
     this.frame.contentWindow.postMessage(makeBridgeMessage('event', 'REQUEST_CONTEXT', {
-      layout: this.layout,
-      shellMode: this.shellMode,
+      layout: this.currentLayout,
+      shellMode: this.preferences.layoutMode,
       appData: this.appData,
       beautyRanks: this.beautyRanks,
       beautyReplies: this.beautyReplies,
@@ -1539,6 +1553,8 @@ class FeatureShell {
       visualViewport.height < this.hostWindow.innerHeight - 120
       || viewportHeight < this.viewportBaselineHeight - 40
     ));
+    const effectiveLayout: Layout = keyboardOpen ? 'phone' : this.resolveLayout(viewportWidth);
+    this.currentLayout = effectiveLayout;
     if (this.orb) {
       if (this.orbPosition) {
         const orbRect = this.orb.getBoundingClientRect();
@@ -1555,8 +1571,12 @@ class FeatureShell {
       this.shellPositionBeforeKeyboard = null;
     }
     this.keyboardViewportActive = keyboardOpen;
-    const width = keyboardOpen ? Math.min(420, viewportWidth) : Math.min(420, viewportWidth, viewportHeight * IPHONE_RATIO);
-    const height = keyboardOpen ? Math.min(width / IPHONE_RATIO, viewportHeight) : width / IPHONE_RATIO;
+    const width = effectiveLayout === 'desktop-tablet'
+      ? Math.min(960, Math.max(640, viewportWidth - 48), viewportHeight * (16 / 9))
+      : keyboardOpen ? Math.min(420, viewportWidth) : Math.min(420, viewportWidth, viewportHeight * IPHONE_RATIO);
+    const height = effectiveLayout === 'desktop-tablet'
+      ? width * (9 / 16)
+      : keyboardOpen ? Math.min(width / IPHONE_RATIO, viewportHeight) : width / IPHONE_RATIO;
     const left = keyboardOpen
       ? viewportLeft + Math.max(0, (viewportWidth - width) / 2)
       : this.shellPosition?.left ?? Math.max(viewportLeft, viewportLeft + viewportWidth - width - 24);
@@ -1569,9 +1589,17 @@ class FeatureShell {
       const clamped = this.clampPosition(left - viewportLeft, top - viewportTop, width, height, viewportWidth, viewportHeight);
       this.shellPosition = { left: clamped.left + viewportLeft, top: clamped.top + viewportTop };
     }
-    this.host.dataset.mode = 'phone';
+    this.host.dataset.mode = effectiveLayout;
     this.host.dataset.keyboard = keyboardOpen ? 'open' : 'closed';
     Object.assign(this.host.style, { left: `${this.shellPosition.left}px`, top: `${this.shellPosition.top}px`, width: `${width}px`, height: `${height}px`, right: 'auto', bottom: 'auto' });
+    this.sendContext();
+  }
+
+  private resolveLayout(viewportWidth: number): Layout {
+    if (this.preferences.layoutMode === 'phone') return 'phone';
+    if (this.preferences.layoutMode === 'desktop-tablet') return 'desktop-tablet';
+    if (this.currentLayout === 'desktop-tablet') return viewportWidth <= 680 ? 'phone' : 'desktop-tablet';
+    return viewportWidth >= 760 ? 'desktop-tablet' : 'phone';
   }
 
   private positionOrb(): void {
@@ -1767,6 +1795,8 @@ class FeatureShell {
     destroyHudSession(this.session);
     this.uiMount?.destroy();
     this.uiMount = null;
+    this.vueShellMount?.destroy();
+    this.vueShellMount = null;
     this.frame?.remove();
     this.host?.remove();
     this.hostStyle?.remove();
@@ -1789,9 +1819,14 @@ class FeatureShell {
 
 function boot(): void {
   if (typeof document === 'undefined' || typeof window === 'undefined') return;
-  const shell = new FeatureShell();
-  shell.start();
-  console.info('[道渊玉简] phone-ratio shell ready; desktop 16:9 mode disabled');
+  console.info('[道渊玉简] boot entry');
+  try {
+    const shell = new FeatureShell();
+    shell.start();
+    console.info('[道渊玉简] phone-ratio shell ready; desktop 16:9 mode disabled');
+  } catch (error) {
+    console.error('[道渊玉简] shell boot failed', error);
+  }
 }
 
 onReady(boot);

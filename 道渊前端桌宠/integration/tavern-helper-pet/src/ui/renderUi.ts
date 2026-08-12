@@ -22,7 +22,7 @@ import {
 } from '../services/portraitService';
 
 type AppKey = 'home' | 'yujian' | 'beauty' | 'trends' | 'inventory' | 'map' | 'forum' | 'news' | 'settings' | 'diagnostic';
-type Layout = 'phone';
+type Layout = 'phone' | 'desktop-tablet';
 
 interface AppItem { key: AppKey; icon: string; label: string; note: string; }
 interface UiMount { destroy(): void; }
@@ -1380,7 +1380,7 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
     if (action === 'map-faction-portrait-zoom-close' && actionNode.classList.contains('map-faction-image-overlay') && target !== actionNode) return;
     if (action === 'app') {
       const next = actionNode.dataset.key as AppKey | undefined;
-      if (next) { markAppRead(next); active = next; if (next === 'settings') settingsSection = 'home'; selectedNewsId = null; selectedContactName = null; announcement = ''; saveUiPreferences({ layoutMode: 'phone', lastApp: active }); sendAction('SET_ACTIVE_APP', { app: active }); render(false); }
+      if (next) { markAppRead(next); active = next; if (next === 'settings') settingsSection = 'home'; selectedNewsId = null; selectedContactName = null; announcement = ''; saveUiPreferences({ ...loadUiPreferences(), lastApp: active }); sendAction('SET_ACTIVE_APP', { app: active }); render(false); }
     } else if (action === 'map-realm') {
       const selectedRealm: MapRealm = actionNode.dataset.key === '仙界' ? '仙界' : '玄天界';
       const selectedNode = normalizeMapNode(selectedRealm, data.map.selectedNode);
@@ -1752,7 +1752,7 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
     const message = parseBridgeMessage(event.data);
     if (!message || message.kind !== 'event') return;
     if (message.action === 'REQUEST_CONTEXT') {
-      layout = 'phone';
+      layout = message.payload.layout === 'desktop-tablet' ? 'desktop-tablet' : 'phone';
       data = parseAppData(message.payload.appData);
       beautyRanks = Array.isArray(message.payload.beautyRanks)
         ? (message.payload.beautyRanks as BeautyRankView[]).filter(item => item && typeof item.name === 'string' && typeof item.rank === 'string')
@@ -1944,7 +1944,5 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
   view.addEventListener('keydown', onKeydown);
   const unsubscribePortraits = onPortraitsUpdated(() => render());
   render();
-  sendAction('APP_READY');
-  sendAction('REQUEST_CONTEXT');
   return { destroy: () => { closeParentMapFactionPortrait?.(); unsubscribePortraits(); root.remove(); root.removeEventListener('click', onClick); root.removeEventListener('input', onInput); root.removeEventListener('change', onChange); view.removeEventListener('message', onMessage); view.removeEventListener('keydown', onKeydown); } };
 }
