@@ -1237,6 +1237,9 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
       }
       const actions = element(doc, 'div', 'forum-action-bar');
       actions.append(button(doc, 'forum-parent-back-button', '← 返回上一级', 'app', 'home'), button(doc, 'forum-ai-button', forumGenerating?'推演中…':'◌ 推演论帖', 'forum-generate'));
+      const forumRemaining = xianwangApiSettings.forumAutoEnabled && xianwangApiSettings.forumAutoInterval > 0
+        ? Math.max(0, xianwangApiSettings.forumAutoInterval - xianwangCounters.forum) : null;
+      actions.append(element(doc, 'span', 'xianwang-counter-line', forumRemaining === null ? '自动论坛已关闭' : forumRemaining === 0 ? '本轮将开始生成仙网论坛' : `还有 ${forumRemaining} 轮对话后生成仙网论坛`));
       forumPage.append(actions);
       const posts = element(doc, 'div', 'forum-post-list');
       [...forumPosts].sort((a,b)=>b.createdAt.localeCompare(a.createdAt)).forEach(post=>{const card=appendForumPost(doc,posts,{tag:post.tag,title:post.title,excerpt:post.content,author:post.author,likes:post.likes,comments:post.comments.length,time:post.storyTime,replies:post.comments.slice(0,2)},{key:post.id,expanded:!collapsedForumComments.has(post.id)});card.dataset.action='forum-open';card.dataset.key=post.id;card.tabIndex=0;});
@@ -1250,6 +1253,9 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
         const listPage = element(doc, 'div', 'news-list-page');
         const listBar = element(doc, 'div', 'forum-action-bar news-list-bar');
         listBar.append(button(doc, 'forum-parent-back-button', '← 返回上一级', 'app', 'home'), button(doc, 'forum-ai-button', newsGenerating?'推演中…':'◌ 推演日报', 'news-generate'));
+        const newsRemaining = xianwangApiSettings.newsAutoEnabled && xianwangApiSettings.newsAutoInterval > 0
+          ? Math.max(0, xianwangApiSettings.newsAutoInterval - xianwangCounters.news) : null;
+        listBar.append(element(doc, 'span', 'xianwang-counter-line', newsRemaining === null ? '自动日报已关闭' : newsRemaining === 0 ? '本轮将开始生成天机日报' : `还有 ${newsRemaining} 轮对话后生成天机日报`));
         const paperList = element(doc, 'div', 'news-paper-list');
         for (const item of [...newsPapers].sort((a,b)=>b.createdAt.localeCompare(a.createdAt))) {
           const paper = button(doc, 'news-paper-card', '', 'news-open', item.id);
