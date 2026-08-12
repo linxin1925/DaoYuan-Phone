@@ -39,13 +39,7 @@ export async function fetchAuto(url: string, init: RequestInit & { body?: string
   const input = messages.filter(message => message.role !== 'system').map(message => ({ role: message.role, content: message.content }));
   const headers = new Headers(init.headers);
   headers.set('Content-Type', 'application/json');
-  const tavern = typeof window !== 'undefined' ? (window as unknown as { SillyTavern?: { getContext?: () => { getRequestHeaders?: () => Record<string, string> } } }).SillyTavern : undefined;
-  const requestHeaders = tavern?.getContext?.()?.getRequestHeaders?.();
-  if (requestHeaders && typeof requestHeaders === 'object') {
-    const base = url.trim().replace(/\/+$/, '').replace(/\/(?:chat\/completions|responses|messages)$/i, '');
-    const proxyPayload = { chat_completion_source: 'openai', reverse_proxy: base, proxy_password: headers.get('Authorization')?.replace(/^Bearer\s+/i, '') || '', ...source, stream: false };
-    return fetch('/api/backends/chat-completions/generate', { method: 'POST', headers: { ...requestHeaders, 'Content-Type': 'application/json' }, body: JSON.stringify(proxyPayload) });
-  }
+  const direct = async (): Promise<Response> => {
   if (protocol === 'anthropic') {
     headers.delete('Authorization');
     const key = headers.get('x-api-key') || headers.get('authorization')?.replace(/^Bearer\s+/i, '');
@@ -58,6 +52,15 @@ export async function fetchAuto(url: string, init: RequestInit & { body?: string
     return fetch(url.replace(/\/+$/, ''), { ...init, headers, body: JSON.stringify({ model, input: responseInput, temperature: source.temperature, max_output_tokens: source.max_tokens ?? 4096 }) });
   }
   return fetch(url.toLowerCase().endsWith('/chat/completions') ? url.replace(/\/+$/, '') : chatCompletionsEndpoint(url), { ...init, headers, body: init.body });
+  };
+  const fallback = async (): Promise<Response> => {
+    const tavern = typeof window !== 'undefined' ? (window as unknown as { SillyTavern?: { getContext?: () => { getRequestHeaders?: () => Record<string, string> } } }).SillyTavern : undefined;
+    const requestHeaders = tavern?.getContext?.()?.getRequestHeaders?.();
+    if (!requestHeaders) throw new Error('直连请求失败，且当前酒馆不支持代理');
+    const base = url.trim().replace(/\/+$/, '').replace(/\/(?:chat\/completions|responses|messages)$/i, '');
+    return fetch('/api/backends/chat-completions/generate', { method: 'POST', headers: { ...requestHeaders, 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_completion_source: 'openai', reverse_proxy: base, proxy_password: headers.get('Authorization')?.replace(/^Bearer\s+/i, '') || '', ...source, stream: false }) });
+  };
+  try { const response = await direct(); return response.ok ? response : fallback(); } catch { return fallback(); }
 }
 
 export function extractOpenAIText(value: unknown): string {
