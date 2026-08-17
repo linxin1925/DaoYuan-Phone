@@ -39,7 +39,7 @@ interface WorldStatus { time: string; location: string; energy: string; }
 interface YujianSettingsDraft { customPrompt: string; apiBaseUrl: string; apiKey: string; apiModel: string; storyParseEnabled: boolean; }
 interface BeautyApiSettingsDraft { apiBaseUrl: string; apiKey: string; apiModel: string; autoEnabled: boolean; autoInterval: number; }
 type ApiSettingsDraft = Pick<BeautyApiSettingsDraft, 'apiBaseUrl' | 'apiKey' | 'apiModel'>;
-interface XianwangSettingsDraft extends ApiSettingsDraft { trendsAutoEnabled:boolean; autoInterval: number; batchMin: number; batchMax: number; maxPosts: number; forumAutoEnabled:boolean; forumAutoInterval:number; forumBatchSize:number; forumMaxPosts:number; newsAutoEnabled:boolean; newsAutoInterval:number; newsBatchSize:number; newsMaxPapers:number; decentralizedMode:boolean; autoAiReply:boolean; showHeat:boolean; showCommentPreview:boolean; jailbreakPrompt:boolean; generatedCommentCount:number; }
+interface XianwangSettingsDraft extends ApiSettingsDraft { playerAlias:string; trendsAutoEnabled:boolean; autoInterval: number; batchMin: number; batchMax: number; maxPosts: number; forumAutoEnabled:boolean; forumAutoInterval:number; forumBatchSize:number; forumMaxPosts:number; newsAutoEnabled:boolean; newsAutoInterval:number; newsBatchSize:number; newsMaxPapers:number; decentralizedMode:boolean; autoAiReply:boolean; showHeat:boolean; showCommentPreview:boolean; jailbreakPrompt:boolean; generatedCommentCount:number; }
 type XianwangNumberSetting = 'autoInterval'|'batchMin'|'batchMax'|'maxPosts'|'forumAutoInterval'|'forumBatchSize'|'forumMaxPosts'|'newsAutoInterval'|'newsBatchSize'|'newsMaxPapers'|'generatedCommentCount';
 interface PromptInjectionSettingsDraft { yujian: boolean; trends: boolean; forum: boolean; news: boolean; }
 type SettingsSection = 'home' | 'yujian' | 'beauty' | 'xianwang' | 'injection';
@@ -381,7 +381,7 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
   let mapImageFailed = false;
   let yujianSettings: YujianSettingsDraft = { customPrompt: '', apiBaseUrl: '', apiKey: '', apiModel: '', storyParseEnabled: false };
   let beautyApiSettings: BeautyApiSettingsDraft = { apiBaseUrl: '', apiKey: '', apiModel: '', autoEnabled: true, autoInterval: 1 };
-  let xianwangApiSettings: XianwangSettingsDraft = { apiBaseUrl: '', apiKey: '', apiModel: '', trendsAutoEnabled:true, autoInterval: 3, batchMin: 2, batchMax: 3, maxPosts: 30, forumAutoEnabled:true, forumAutoInterval:3, forumBatchSize:2, forumMaxPosts:30, newsAutoEnabled:true, newsAutoInterval:5, newsBatchSize:1, newsMaxPapers:12, decentralizedMode:false, autoAiReply:true, showHeat:true, showCommentPreview:true, jailbreakPrompt:true, generatedCommentCount:3 };
+  let xianwangApiSettings: XianwangSettingsDraft = { apiBaseUrl: '', apiKey: '', apiModel: '', playerAlias:'我', trendsAutoEnabled:true, autoInterval: 3, batchMin: 2, batchMax: 3, maxPosts: 30, forumAutoEnabled:true, forumAutoInterval:3, forumBatchSize:2, forumMaxPosts:30, newsAutoEnabled:true, newsAutoInterval:5, newsBatchSize:1, newsMaxPapers:12, decentralizedMode:false, autoAiReply:true, showHeat:true, showCommentPreview:true, jailbreakPrompt:true, generatedCommentCount:3 };
   let promptInjectionSettings: PromptInjectionSettingsDraft = { yujian: false, trends: false, forum: false, news: false };
   let loreEntries: YujianLoreEntry[] = [];
   let loreSelected: Array<{ uid: string; content: string }> = [];
@@ -783,13 +783,16 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
   function renderXianwangApiSettings(content: HTMLElement): void {
     const panel = appendPanel(doc, content, '仙网内容 API 配置', '这套配置只用于仙网风闻、仙网论坛和天机日报，与玉简传讯、绝色榜相互独立。');
     panel.classList.add('xianwang-api-settings-panel');
-    const field = (label: string, key: keyof ApiSettingsDraft, type = 'text'): void => {
+    const field = (label: string, key: keyof ApiSettingsDraft | 'playerAlias', type = 'text'): void => {
       const wrap = element(doc, 'label', 'settings-field');
       wrap.append(element(doc, 'span', 'settings-label', label));
       const input = doc.createElement('input'); input.type = key === 'apiBaseUrl' ? 'url' : type; input.value = xianwangApiSettings[key]; input.dataset.xianwangSetting = key;
       if (key === 'apiBaseUrl') configureApiUrlInput(input);
+      if (key === 'playerAlias') { input.maxLength = 24; input.placeholder = '我'; input.setAttribute('autocomplete', 'nickname'); }
       wrap.append(input); panel.append(wrap);
     };
+    field('玩家网名（论坛发言显示）', 'playerAlias');
+    panel.append(element(doc, 'p', 'settings-section-note', '默认为“我”。修改后只影响新评论；旧评论保留发布时的网名。AI 会把该名称识别为玩家而非 NPC。'));
     field('基础 URL（Endpoint）', 'apiBaseUrl');
     field('API 密钥（API Key）', 'apiKey', 'password');
     field('模型（Model）', 'apiModel');
@@ -1583,7 +1586,7 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
       sendAction('REQUEST_BEAUTY_MODELS', { apiBaseUrl: beautyApiSettings.apiBaseUrl, apiKey: beautyApiSettings.apiKey });
     } else if (action === 'xianwang-settings-save') {
       root.querySelectorAll<HTMLElement>('[data-xianwang-setting]').forEach(node => {
-        const key = node.dataset.xianwangSetting as keyof ApiSettingsDraft;
+        const key = node.dataset.xianwangSetting as keyof ApiSettingsDraft | 'playerAlias';
         if (key) xianwangApiSettings[key] = (node as HTMLInputElement).value;
       });
       root.querySelectorAll<HTMLInputElement>('[data-xianwang-number-setting]').forEach(node => {
@@ -1601,7 +1604,7 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
       announcement = '仙网内容 API 设置已保存'; render();
     } else if (action === 'xianwang-models-fetch') {
       root.querySelectorAll<HTMLElement>('[data-xianwang-setting]').forEach(node => {
-        const key = node.dataset.xianwangSetting as keyof ApiSettingsDraft;
+        const key = node.dataset.xianwangSetting as keyof ApiSettingsDraft | 'playerAlias';
         if (key) xianwangApiSettings[key] = (node as HTMLInputElement).value;
       });
       if (fetchingXianwangModels) return;
@@ -1769,7 +1772,7 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
       if (message.payload.xianwangCounters && typeof message.payload.xianwangCounters === 'object') xianwangCounters = { ...xianwangCounters, ...(message.payload.xianwangCounters as Partial<typeof xianwangCounters>) };
       if (message.payload.yujianSettings && typeof message.payload.yujianSettings === 'object') yujianSettings = { ...yujianSettings, ...(message.payload.yujianSettings as Partial<YujianSettingsDraft>) };
       if (message.payload.beautyApiSettings && typeof message.payload.beautyApiSettings === 'object') beautyApiSettings = { ...beautyApiSettings, ...(message.payload.beautyApiSettings as Partial<BeautyApiSettingsDraft>) };
-      if (message.payload.xianwangApiSettings && typeof message.payload.xianwangApiSettings === 'object') xianwangApiSettings = { ...xianwangApiSettings, ...(message.payload.xianwangApiSettings as Partial<ApiSettingsDraft>) };
+      if (message.payload.xianwangApiSettings && typeof message.payload.xianwangApiSettings === 'object') xianwangApiSettings = { ...xianwangApiSettings, ...(message.payload.xianwangApiSettings as Partial<XianwangSettingsDraft>) };
       if (message.payload.promptInjectionSettings && typeof message.payload.promptInjectionSettings === 'object') promptInjectionSettings = { ...promptInjectionSettings, ...(message.payload.promptInjectionSettings as Partial<PromptInjectionSettingsDraft>) };
       rerollCompatibilityEnabled = message.payload.rerollCompatibilityEnabled === true;
       if (message.payload.petSize === 'small' || message.payload.petSize === 'medium' || message.payload.petSize === 'large') petSize = message.payload.petSize;
@@ -1909,7 +1912,9 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
       }
       pendingSend = false;
       announcement = message.payload.ok === true
-        ? '传讯已写入玉简，回复已同步。'
+        ? (typeof message.payload.storageWarning === 'string' && message.payload.storageWarning
+          ? `回复生成成功，但历史保存失败：${message.payload.storageWarning}`
+          : '传讯已写入玉简，回复已同步。')
         : `传讯失败：${typeof message.payload.error === 'string' ? message.payload.error : '未知错误'}`;
       render();
     }

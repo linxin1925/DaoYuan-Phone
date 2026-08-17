@@ -7,18 +7,19 @@ import { loadUiPreferences, saveUiPreferences, type UiPreferences } from './serv
 import { initPortraits, onPortraitsUpdated } from './services/portraitService';
 import { getWorldDataCapability, projectInventory, projectNpcContacts, projectWorldStatus, projectYujianAffections, projectYujianContacts, type InventoryItemSnapshot, type WorldStatusSnapshot, type YujianContactSnapshot } from './services/worldDataBridge';
 import { MVU_CHANNEL_NAME, MvuChannelTool } from './services/mvuChannel';
-import { appendStandaloneYujianRecord, clearStandaloneYujianHistory, deleteStandaloneYujianRecord, extractStoryYujianEvents, fetchYujianModels, importStatusYujianHistories, loadStandaloneKnownContacts, loadStandaloneYujianHistories, reconcileAutoYujianRecords, rememberStandaloneKnownContacts, removeAutoYujianRecordsForFloor, resetYujianRuntimeContext, sendYujianMessageWithProgress } from './services/yujianRuntime';
+import { appendStandaloneYujianRecord, clearStandaloneYujianHistory, deleteStandaloneYujianRecord, extractStoryYujianEvents, fetchYujianModels, importStatusYujianHistories, loadStandaloneKnownContacts, loadStandaloneYujianHistories, readYujianStoryTime, reconcileAutoYujianRecords, rememberStandaloneKnownContacts, removeAutoYujianRecordsForFloor, resetYujianRuntimeContext, sendYujianMessageWithProgress } from './services/yujianRuntime';
 import { mountUi } from './ui/renderUi';
 import { parseIndependentBeautyRankData } from './services/beautyRankService';
-import { DEFAULT_BEAUTY_RANK_PROMPT } from './services/beautyRankPrompt';
 import { generateBeautyRank, generateBeautyRankReply, type BeautyRankApiSettings } from './services/beautyRankRuntime';
 import { generateTrends, retainTrendPosts, type XianwangApiSettings } from './services/xianwangTrendsRuntime';
+import { normalizePlayerAlias } from './services/playerAlias';
 import { generateForumPosts, generateForumReplies, generateNewsPapers, normalizeNewsIssueSequence, retainNewest } from './services/xianwangForumNewsRuntime';
 import { normalizeMapNode, type MapRealm } from './services/mapService';
 import { applyPromptInjection, buildPromptInjectionContent, DEFAULT_PROMPT_INJECTION_SETTINGS, normalizePromptInjectionSettings, type PromptInjectionApi, type PromptInjectionSettings, type YujianInjectionMessage } from './services/promptInjectionRuntime';
 import appCss from './styles.css?inline';
 import shellCss from './shell.css?inline';
 import { ZiweiPetController, type PetSize } from './petController';
+import { readProcessedYujianStories, writeProcessedYujianStories } from './services/yujianStorage';
 
 const SCRIPT_ID = 'daoyuan-feature-frontend-hud';
 const HOST_ID = 'daoyuan-feature-hud';
@@ -80,14 +81,14 @@ function readYujianSettings(hostWindow: Window): Record<string, string | boolean
   try {
     const value = JSON.parse(hostWindow.localStorage.getItem('daoyuan_wx_settings') || '{}') as Record<string, unknown>;
     return {
-      customPrompt: typeof value.customPrompt === 'string' && value.customPrompt ? value.customPrompt : DEFAULT_BEAUTY_RANK_PROMPT,
+      customPrompt: typeof value.customPrompt === 'string' ? value.customPrompt : '',
       apiBaseUrl: typeof value.apiBaseUrl === 'string' ? value.apiBaseUrl : '',
       apiKey: typeof value.apiKey === 'string' ? value.apiKey : '',
       apiModel: typeof value.apiModel === 'string' ? value.apiModel : '',
       storyParseEnabled: typeof value.storyParseEnabled === 'boolean' ? value.storyParseEnabled : false,
     };
   } catch {
-    return { customPrompt: DEFAULT_BEAUTY_RANK_PROMPT, apiBaseUrl: '', apiKey: '', apiModel: '', storyParseEnabled: false };
+    return { customPrompt: '', apiBaseUrl: '', apiKey: '', apiModel: '', storyParseEnabled: false };
   }
 }
 
@@ -146,9 +147,10 @@ function readXianwangApiSettings(hostWindow: Window): XianwangApiSettings {
       showCommentPreview: value.showCommentPreview !== false,
       jailbreakPrompt: value.jailbreakPrompt !== false,
       generatedCommentCount: typeof value.generatedCommentCount === 'number' ? Math.max(0, Math.min(10, Math.floor(value.generatedCommentCount))) : 3,
+      playerAlias: normalizePlayerAlias(value.playerAlias),
     };
   } catch {
-    return { apiBaseUrl: '', apiKey: '', apiModel: '', trendsAutoEnabled: true, autoInterval: 3, batchMin: 2, batchMax: 3, maxPosts: 30, forumAutoEnabled: true, forumAutoInterval: 3, forumBatchSize: 2, forumMaxPosts: 30, newsAutoEnabled: true, newsAutoInterval: 5, newsBatchSize: 1, newsMaxPapers: 12, decentralizedMode:false, autoAiReply:true, showHeat:true, showCommentPreview:true, jailbreakPrompt:true, generatedCommentCount:3 };
+    return { apiBaseUrl: '', apiKey: '', apiModel: '', trendsAutoEnabled: true, autoInterval: 3, batchMin: 2, batchMax: 3, maxPosts: 30, forumAutoEnabled: true, forumAutoInterval: 3, forumBatchSize: 2, forumMaxPosts: 30, newsAutoEnabled: true, newsAutoInterval: 5, newsBatchSize: 1, newsMaxPapers: 12, decentralizedMode:false, autoAiReply:true, showHeat:true, showCommentPreview:true, jailbreakPrompt:true, generatedCommentCount:3, playerAlias:'我' };
   }
 }
 
@@ -281,6 +283,7 @@ class FeatureShell {
   private forumGenerationInFlight = false;
   private newsGenerationInFlight = false;
   private yujianStoryParseInFlight = false;
+  private pendingYujianStoryParse: { messageId: string; story: string } | null = null;
   private autoSchedulerInFlight = false;
   private promptInjectionCleanup: (() => void) | null = null;
 
@@ -300,7 +303,7 @@ class FeatureShell {
     if (new URLSearchParams(window.location.search).has('preview')) {
       this.worldStatus = {
         time: '元会历·3726年·12月23日·15点45分',
-        location: '中央神州·南部·湮丹宗地界\n杏临谷外围·紫灵米药田',
+        location: '中央神州·南部·湮丹宗地界',
         energy: '100',
       };
       this.beautyRanks = [
@@ -423,7 +426,7 @@ class FeatureShell {
     if (!snapshot.ready && new URLSearchParams(window.location.search).has('preview')) {
       this.worldStatus = {
         time: '元会历·3726年·12月23日·15点45分',
-        location: '中央神州·南部·湮丹宗地界\n杏临谷外围·紫灵米药田',
+        location: '中央神州·南部·湮丹宗地界',
         energy: '100',
       };
     }
@@ -436,9 +439,9 @@ class FeatureShell {
       try { data = await hostMvu.getMvuData({ type: 'chat' }); } catch { /* keep latest fallback */ }
     }
     const chatId = this.session.chatId ?? '__default__';
-    const histories = this.hostWindow ? loadStandaloneYujianHistories(this.hostWindow, chatId) : {};
+    const histories = this.hostWindow ? await loadStandaloneYujianHistories(this.hostWindow, chatId) : {};
     const currentContacts = projectNpcContacts(data, histories);
-    const rememberedContacts = this.hostWindow ? loadStandaloneKnownContacts(this.hostWindow, chatId) : [];
+    const rememberedContacts = this.hostWindow ? await loadStandaloneKnownContacts(this.hostWindow, chatId) : [];
     const contactMap = new Map<string, YujianContactSnapshot>();
     for (const contact of rememberedContacts) {
       const history = histories[contact.name] ?? [];
@@ -479,7 +482,7 @@ class FeatureShell {
       });
     }
     const nextContacts = [...contactMap.values()];
-    if (this.hostWindow && nextContacts.length) rememberStandaloneKnownContacts(this.hostWindow, chatId, nextContacts);
+    if (this.hostWindow && nextContacts.length) await rememberStandaloneKnownContacts(this.hostWindow, chatId, nextContacts);
     const nextProjection = JSON.stringify(nextContacts);
     if (nextProjection === this.lastWorldProjection) return;
     this.lastWorldProjection = nextProjection;
@@ -525,7 +528,7 @@ class FeatureShell {
     });
     const idByFingerprint = new Map([...sources].map(([id, fingerprint]) => [fingerprint, id]));
     const chatId = this.session.chatId;
-    const removedYujian = reconcileAutoYujianRecords(this.hostWindow, chatId, sources);
+    const removedYujian = await reconcileAutoYujianRecords(this.hostWindow, chatId, sources);
     const reconcileMeta = <T extends { processedMessageIds: string[]; processedSwipeKeys: string[]; triggeredMessageIds: string[]; triggeredSwipeKeys: string[]; autoCounter: number }>(data: T, interval: number): T => {
       if (!data.processedSwipeKeys.length) return data;
       const processedFingerprints = new Set(data.processedSwipeKeys.map(key => key.slice(key.indexOf(':') + 1)));
@@ -917,8 +920,8 @@ class FeatureShell {
     try {
       const snapshot = await hostMvu.getMvuData({ type: 'chat' });
       const contacts = projectYujianContacts(snapshot);
-      const result = importStatusYujianHistories(this.hostWindow, chatId, contacts);
-      if (contacts.length) rememberStandaloneKnownContacts(this.hostWindow, chatId, contacts);
+      const result = await importStatusYujianHistories(this.hostWindow, chatId, contacts);
+      if (contacts.length) await rememberStandaloneKnownContacts(this.hostWindow, chatId, contacts);
       this.lastWorldProjection = '';
       await this.loadWorldData();
       if (notify || result.imported > 0) frame?.contentWindow?.postMessage(makeBridgeMessage('event', 'YUJIAN_HISTORY_IMPORT_STATUS', {
@@ -942,7 +945,7 @@ class FeatureShell {
     const from = payload.from === 'me' || payload.from === 'them' ? payload.from : null;
     const text = typeof payload.text === 'string' ? payload.text : '';
     const time = typeof payload.time === 'string' ? payload.time : '';
-    const ok = Boolean(charName && index >= 0 && from && deleteStandaloneYujianRecord(
+    const ok = Boolean(charName && index >= 0 && from && await deleteStandaloneYujianRecord(
       this.hostWindow, this.session.chatId, charName, index, { from: from!, text, time },
     ));
     if (ok) {
@@ -960,7 +963,7 @@ class FeatureShell {
   private async clearYujianHistory(payload: Record<string, unknown>): Promise<void> {
     if (!this.hostWindow || !this.session.chatId) return;
     const charName = typeof payload.charName === 'string' ? payload.charName.trim() : '';
-    const removed = charName ? clearStandaloneYujianHistory(this.hostWindow, this.session.chatId, charName) : 0;
+    const removed = charName ? await clearStandaloneYujianHistory(this.hostWindow, this.session.chatId, charName) : 0;
     this.lastWorldProjection = '';
     await this.loadWorldData();
     this.refreshPromptInjection();
@@ -1081,16 +1084,17 @@ class FeatureShell {
       showCommentPreview: payload.showCommentPreview !== false,
       jailbreakPrompt: payload.jailbreakPrompt !== false,
       generatedCommentCount: typeof payload.generatedCommentCount === 'number' ? Math.max(0, Math.min(10, Math.floor(payload.generatedCommentCount))) : 3,
+      playerAlias: normalizePlayerAlias(payload.playerAlias),
     };
     this.hostWindow.localStorage.setItem('daoyuan_xianwang_api_settings', JSON.stringify(settings));
     this.frame?.contentWindow?.postMessage(makeBridgeMessage('event', 'XIANWANG_SETTINGS_STATUS', { settingsSaved: true }), '*');
   }
 
-  private savePromptInjectionSettings(payload: Record<string, unknown>): void {
+  private async savePromptInjectionSettings(payload: Record<string, unknown>): Promise<void> {
     if (!this.hostWindow) return;
     const settings = normalizePromptInjectionSettings(payload);
     this.hostWindow.localStorage.setItem('daoyuan_prompt_injection_settings', JSON.stringify(settings));
-    const active = this.refreshPromptInjection();
+    const active = await this.refreshPromptInjection();
     this.frame?.contentWindow?.postMessage(makeBridgeMessage('event', 'PROMPT_INJECTION_SETTINGS_STATUS', {
       ok: true,
       active,
@@ -1105,12 +1109,12 @@ class FeatureShell {
     this.promptInjectionCleanup = null;
   }
 
-  private refreshPromptInjection(): boolean {
+  private async refreshPromptInjection(): Promise<boolean> {
     this.clearPromptInjection();
     if (!this.hostWindow || !this.session.chatId || new URLSearchParams(window.location.search).has('preview')) return false;
     const settings = readPromptInjectionSettings(this.hostWindow);
     if (!Object.values(settings).some(Boolean)) return false;
-    const histories = loadStandaloneYujianHistories(this.hostWindow, this.session.chatId);
+    const histories = await loadStandaloneYujianHistories(this.hostWindow, this.session.chatId);
     const yujianMessages: YujianInjectionMessage[] = Object.entries(histories).flatMap(([contact, messages]) =>
       messages.slice(-4).map(message => ({ contact, from: message.from, text: message.text, time: message.time })),
     );
@@ -1206,7 +1210,7 @@ class FeatureShell {
     this.appData=this.repository.project();this.sendContext();
   }
 
-  private async submitForumComment(payload:Record<string,unknown>):Promise<void>{const id=typeof payload.id==='string'?payload.id:'',content=typeof payload.content==='string'?payload.content.trim().slice(0,3000):'';const post=this.forumPosts.find(item=>item.id===id);if(!post||!content)return;const userComment={id:`forum-comment:${Date.now()}:user`,author:'我',content,storyTime:this.worldStatus.time};let comments=[...post.comments,userComment];try{this.forumPosts=this.forumPosts.map(item=>item.id===id?{...item,comments:comments.slice(-20)}:item);let data=parseForumData(this.repository.getData('daoyuan_forum_data'));await this.repository.write('daoyuan_forum_data',{...data,posts:this.forumPosts});this.sendContext();const settings=readXianwangApiSettings(this.hostWindow??window);if(settings.autoAiReply){comments=[...comments,...await generateForumReplies(settings,{...post,comments},content)];this.forumPosts=this.forumPosts.map(item=>item.id===id?{...item,comments:comments.slice(-20)}:item);data=parseForumData(this.repository.getData('daoyuan_forum_data'));await this.repository.write('daoyuan_forum_data',{...data,posts:this.forumPosts});}this.appData=this.repository.project();this.frame?.contentWindow?.postMessage(makeBridgeMessage('event','FORUM_COMMENT_STATUS',{ok:true,id}),'*');this.sendContext();}catch(error){this.frame?.contentWindow?.postMessage(makeBridgeMessage('event','FORUM_COMMENT_STATUS',{ok:false,error:`评论已保存；AI 回复失败：${error instanceof Error?error.message:String(error)}`}),'*');}}
+  private async submitForumComment(payload:Record<string,unknown>):Promise<void>{const id=typeof payload.id==='string'?payload.id:'',content=typeof payload.content==='string'?payload.content.trim().slice(0,3000):'';const post=this.forumPosts.find(item=>item.id===id);if(!post||!content)return;const settings=readXianwangApiSettings(this.hostWindow??window);const userComment={id:`forum-comment:${Date.now()}:user`,author:settings.playerAlias,content,storyTime:this.worldStatus.time};let comments=[...post.comments,userComment];try{this.forumPosts=this.forumPosts.map(item=>item.id===id?{...item,comments:comments.slice(-20)}:item);let data=parseForumData(this.repository.getData('daoyuan_forum_data'));await this.repository.write('daoyuan_forum_data',{...data,posts:this.forumPosts});this.sendContext();if(settings.autoAiReply){comments=[...comments,...await generateForumReplies(settings,{...post,comments},content)];this.forumPosts=this.forumPosts.map(item=>item.id===id?{...item,comments:comments.slice(-20)}:item);data=parseForumData(this.repository.getData('daoyuan_forum_data'));await this.repository.write('daoyuan_forum_data',{...data,posts:this.forumPosts});}this.appData=this.repository.project();this.frame?.contentWindow?.postMessage(makeBridgeMessage('event','FORUM_COMMENT_STATUS',{ok:true,id}),'*');this.sendContext();}catch(error){this.frame?.contentWindow?.postMessage(makeBridgeMessage('event','FORUM_COMMENT_STATUS',{ok:false,error:`评论已保存；AI 回复失败：${error instanceof Error?error.message:String(error)}`}),'*');}}
 
   private async xianwangGenerationInput(sourceMessageId?: string): Promise<{ worldTime:string; location:string; recentStory:string; worldFacts:string; lore:string; existingTitles:string[]; sourceMessageId?:string }> {
     if (!this.hostWindow) throw new Error('酒馆运行上下文不可用');
@@ -1326,9 +1330,9 @@ class FeatureShell {
     }
 
     const forumData=parseForumData(this.repository.getData('daoyuan_forum_data'));
-    if(trendSettings.forumAutoEnabled&&trendSettings.forumAutoInterval>0){const isNewFloor=!forumData.processedMessageIds.includes(messageId),isNewSwipe=!forumData.processedSwipeKeys.includes(swipeKey);if(isNewFloor||(rerollCompatible&&isNewSwipe)){const processedMessageIds=isNewFloor?[...forumData.processedMessageIds,messageId].slice(-200):forumData.processedMessageIds,processedSwipeKeys=[...forumData.processedSwipeKeys,swipeKey].slice(-400),counter=isNewFloor?forumData.autoCounter+1:forumData.autoCounter,firstTrigger=isNewFloor&&counter>=trendSettings.forumAutoInterval,rerollTrigger=!isNewFloor&&forumData.triggeredSwipeKeys.some(key=>key.endsWith(`:${storyFingerprint(story)}`)),triggeredMessageIds=firstTrigger?[...forumData.triggeredMessageIds,messageId].slice(-200):forumData.triggeredMessageIds,triggeredSwipeKeys=firstTrigger?[...forumData.triggeredSwipeKeys,swipeKey].slice(-200):forumData.triggeredSwipeKeys;await this.repository.write('daoyuan_forum_data',{...forumData,autoCounter:firstTrigger?0:counter,processedMessageIds,processedSwipeKeys,triggeredMessageIds,triggeredSwipeKeys});counterStateChanged=true;if(firstTrigger||rerollTrigger)void this.generateForumContent(messageId,rerollTrigger);}}
+    if(trendSettings.forumAutoEnabled&&trendSettings.forumAutoInterval>0){const isNewFloor=!forumData.processedMessageIds.includes(messageId),isNewSwipe=!forumData.processedSwipeKeys.includes(swipeKey);if(isNewFloor||(rerollCompatible&&isNewSwipe)){const processedMessageIds=isNewFloor?[...forumData.processedMessageIds,messageId].slice(-200):forumData.processedMessageIds,processedSwipeKeys=[...forumData.processedSwipeKeys,swipeKey].slice(-400),counter=isNewFloor?forumData.autoCounter+1:forumData.autoCounter,firstTrigger=isNewFloor&&counter>=trendSettings.forumAutoInterval,rerollTrigger=!isNewFloor&&forumData.triggeredMessageIds.includes(messageId),triggeredMessageIds=firstTrigger?[...forumData.triggeredMessageIds,messageId].slice(-200):forumData.triggeredMessageIds,triggeredSwipeKeys=firstTrigger?[...forumData.triggeredSwipeKeys,swipeKey].slice(-200):forumData.triggeredSwipeKeys;await this.repository.write('daoyuan_forum_data',{...forumData,autoCounter:firstTrigger?0:counter,processedMessageIds,processedSwipeKeys,triggeredMessageIds,triggeredSwipeKeys});counterStateChanged=true;if(firstTrigger||rerollTrigger)void this.generateForumContent(messageId,rerollTrigger);}}
     const newsData=parseNewsData(this.repository.getData('daoyuan_news_data'));
-    if(trendSettings.newsAutoEnabled&&trendSettings.newsAutoInterval>0){const isNewFloor=!newsData.processedMessageIds.includes(messageId),isNewSwipe=!newsData.processedSwipeKeys.includes(swipeKey);if(isNewFloor||(rerollCompatible&&isNewSwipe)){const processedMessageIds=isNewFloor?[...newsData.processedMessageIds,messageId].slice(-200):newsData.processedMessageIds,processedSwipeKeys=[...newsData.processedSwipeKeys,swipeKey].slice(-400),counter=isNewFloor?newsData.autoCounter+1:newsData.autoCounter,firstTrigger=isNewFloor&&counter>=trendSettings.newsAutoInterval,rerollTrigger=!isNewFloor&&newsData.triggeredSwipeKeys.some(key=>key.endsWith(`:${storyFingerprint(story)}`)),triggeredMessageIds=firstTrigger?[...newsData.triggeredMessageIds,messageId].slice(-200):newsData.triggeredMessageIds,triggeredSwipeKeys=firstTrigger?[...newsData.triggeredSwipeKeys,swipeKey].slice(-200):newsData.triggeredSwipeKeys;await this.repository.write('daoyuan_news_data',{...newsData,autoCounter:firstTrigger?0:counter,processedMessageIds,processedSwipeKeys,triggeredMessageIds,triggeredSwipeKeys});counterStateChanged=true;if(firstTrigger||rerollTrigger)void this.generateNewsContent(messageId,rerollTrigger);}}
+    if(trendSettings.newsAutoEnabled&&trendSettings.newsAutoInterval>0){const isNewFloor=!newsData.processedMessageIds.includes(messageId),isNewSwipe=!newsData.processedSwipeKeys.includes(swipeKey);if(isNewFloor||(rerollCompatible&&isNewSwipe)){const processedMessageIds=isNewFloor?[...newsData.processedMessageIds,messageId].slice(-200):newsData.processedMessageIds,processedSwipeKeys=[...newsData.processedSwipeKeys,swipeKey].slice(-400),counter=isNewFloor?newsData.autoCounter+1:newsData.autoCounter,firstTrigger=isNewFloor&&counter>=trendSettings.newsAutoInterval,rerollTrigger=!isNewFloor&&newsData.triggeredMessageIds.includes(messageId),triggeredMessageIds=firstTrigger?[...newsData.triggeredMessageIds,messageId].slice(-200):newsData.triggeredMessageIds,triggeredSwipeKeys=firstTrigger?[...newsData.triggeredSwipeKeys,swipeKey].slice(-200):newsData.triggeredSwipeKeys;await this.repository.write('daoyuan_news_data',{...newsData,autoCounter:firstTrigger?0:counter,processedMessageIds,processedSwipeKeys,triggeredMessageIds,triggeredSwipeKeys});counterStateChanged=true;if(firstTrigger||rerollTrigger)void this.generateNewsContent(messageId,rerollTrigger);}}
 
     const beautySettings = readBeautyApiSettings(this.hostWindow);
     const beautyData = this.repository.getData('daoyuan_web_beauty_data');
@@ -1357,21 +1361,36 @@ class FeatureShell {
   }
 
   private async parseStoryYujian(messageId: string, story: string): Promise<void> {
-    if (!this.hostWindow || !this.session.chatId || this.yujianStoryParseInFlight) return;
-    const storageKey = 'daoyuan_yujian_story_processed_v1';
-    let store: Record<string, string[]> = {};
-    try { store = JSON.parse(this.hostWindow.localStorage.getItem(storageKey) || '{}') as Record<string, string[]>; } catch { store = {}; }
-    const processed = Array.isArray(store[this.session.chatId]) ? store[this.session.chatId] : [];
+    if (!this.hostWindow || !this.session.chatId) return;
+    if (this.yujianStoryParseInFlight) { this.pendingYujianStoryParse = { messageId, story }; return; }
+    this.yujianStoryParseInFlight = true;
+    let next: { messageId: string; story: string } | null = { messageId, story };
+    try {
+      while (next) {
+        this.pendingYujianStoryParse = null;
+        await this.parseStoryYujianFloor(next.messageId, next.story);
+        next = this.pendingYujianStoryParse;
+      }
+    } finally {
+      this.yujianStoryParseInFlight = false;
+    }
+  }
+
+  private async parseStoryYujianFloor(messageId: string, story: string): Promise<void> {
+    if (!this.hostWindow || !this.session.chatId) return;
+    const chatId = this.session.chatId;
+    const processed = await readProcessedYujianStories(this.hostWindow, chatId);
     const fingerprint = storyFingerprint(story);
     const swipeKey = `${messageId}:${fingerprint}`;
     if (processed.includes(swipeKey)) return;
-    this.yujianStoryParseInFlight = true;
     try {
       const events = await extractStoryYujianEvents(this.hostWindow, story);
-      removeAutoYujianRecordsForFloor(this.hostWindow, this.session.chatId, messageId);
-      const remembered = new Map(loadStandaloneKnownContacts(this.hostWindow, this.session.chatId).map(contact => [contact.name, contact]));
+      const mvuWindow = runtime.Mvu ? runtime as unknown as Window : this.hostWindow;
+      const floorStoryTime = await readYujianStoryTime(mvuWindow, messageId);
+      await removeAutoYujianRecordsForFloor(this.hostWindow, chatId, messageId);
+      const remembered = new Map((await loadStandaloneKnownContacts(this.hostWindow, chatId)).map(contact => [contact.name, contact]));
       for (const event of events) {
-        appendStandaloneYujianRecord(this.hostWindow, this.session.chatId, event.contact, event.direction === 'to_player' ? 'them' : 'me', event.content, event.storyTime, {
+        await appendStandaloneYujianRecord(this.hostWindow, chatId, event.contact, event.direction === 'to_player' ? 'them' : 'me', event.content, floorStoryTime, {
           sourceMessageId: messageId,
           sourceFingerprint: fingerprint,
           generationMode: 'auto',
@@ -1383,19 +1402,16 @@ class FeatureShell {
           affection: previous?.affection,
           affectionLabel: previous?.affectionLabel,
           preview: event.content,
-          time: event.storyTime,
+          time: floorStoryTime,
           detail: previous?.detail ?? '正文玉简联系人',
           unread: (previous?.unread ?? 0) + (event.direction === 'to_player' ? 1 : 0),
         });
       }
-      rememberStandaloneKnownContacts(this.hostWindow, this.session.chatId, [...remembered.values()]);
-      store[this.session.chatId] = [...processed, swipeKey].slice(-600);
-      this.hostWindow.localStorage.setItem(storageKey, JSON.stringify(store));
+      await rememberStandaloneKnownContacts(this.hostWindow, chatId, [...remembered.values()]);
+      await writeProcessedYujianStories(this.hostWindow, chatId, [...processed, swipeKey]);
       if (events.length) this.scheduleWorldDataRefresh(0);
     } catch (error) {
       console.warn('[道渊玉简] 正文玉简解析失败', error);
-    } finally {
-      this.yujianStoryParseInFlight = false;
     }
   }
 
@@ -1414,15 +1430,15 @@ class FeatureShell {
       ? runtime as unknown as Window
       : this.hostWindow;
     try {
-      await sendYujianMessageWithProgress(executionWindow, this.session.chatId, charName, text, phase => {
+      const result = await sendYujianMessageWithProgress(executionWindow, this.session.chatId, charName, text, phase => {
         if (phase === 'user-written') {
           this.scheduleWorldDataRefresh(0);
           frame?.contentWindow?.postMessage(makeBridgeMessage('event', 'YUJIAN_SEND_STATUS', { phase }), '*');
         }
-      });
-      this.refreshPromptInjection();
+      }, this.session.messageId);
+      await this.refreshPromptInjection();
       this.scheduleWorldDataRefresh(120);
-      frame?.contentWindow?.postMessage(makeBridgeMessage('event', 'YUJIAN_SEND_STATUS', { ok: true }), '*');
+      frame?.contentWindow?.postMessage(makeBridgeMessage('event', 'YUJIAN_SEND_STATUS', { ok: true, storageWarning: result.storageWarning ?? '' }), '*');
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       console.warn('[道渊玉简] 玉简传讯失败', error);

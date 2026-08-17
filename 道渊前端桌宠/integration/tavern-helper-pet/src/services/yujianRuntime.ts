@@ -1,4 +1,6 @@
 import { extractOpenAIText, extractModelIds, fetchAuto, modelEndpoints } from './openaiProtocol';
+import { isYujianStorageError, readYujianContacts, readYujianHistories, writeYujianContacts, writeYujianHistories, type StoredYujianContact, type StoredYujianMessage } from './yujianStorage';
+import { formatWorldLocation } from './locationFormat';
 
 interface YujianRuntimeHost {
   Mvu?: {
@@ -39,7 +41,7 @@ async function buildOriginalInjection(runtime: YujianRuntimeHost, chatId: string
   const npc = asRecord(asRecord(stat.人物)[charName]);
   const partner = asRecord(asRecord(stat.道侣)[charName]);
   const npcInfo = Object.keys(npc).length ? npc : partner;
-  const historyText = (loadStandaloneYujianHistories(runtime as unknown as Window, chatId)[charName] ?? [])
+  const historyText = ((await loadStandaloneYujianHistories(runtime as unknown as Window, chatId))[charName] ?? [])
     .map(item => `[${item.from === 'me' ? '我' : charName}]: ${item.text}`)
     .join('\n');
   const loreItems = [
@@ -54,7 +56,7 @@ async function buildOriginalInjection(runtime: YujianRuntimeHost, chatId: string
     `[主角当前状态]\n` +
     `境界: ${String(hero.境界 || '未知')}\n` +
     `所在界域: ${String(hero.所在界 || '未知')}\n` +
-    `当前地点: ${String(world.当前地点 || '未知')}\n` +
+    `当前地点: ${formatWorldLocation(String(world.当前地点 || '未知'))}\n` +
     `当前时间: ${String(world.当前时间 || '未知')}\n` +
     `灵根: ${String(hero.灵根 || '无')}\n`;
   const skills = asRecord(hero.功法);
@@ -161,89 +163,52 @@ export async function fetchYujianModels(apiBaseUrl: string, apiKey: string): Pro
   throw new Error(`获取模型列表失败：${lastError || '未找到可用模型接口'}`);
 }
 
-export interface StandaloneYujianMessage {
-  from: 'them' | 'me';
-  text: string;
-  time: string;
-  sourceMessageId?: string;
-  sourceFingerprint?: string;
-  generationMode?: 'auto' | 'manual' | 'import';
+export type StandaloneYujianMessage = StoredYujianMessage;
+export type StandaloneKnownContact = StoredYujianContact;
+
+export async function loadStandaloneYujianHistories(hostWindow: Window, chatId: string): Promise<Record<string, StandaloneYujianMessage[]>> {
+  return readYujianHistories(hostWindow, chatId);
 }
 
-const STANDALONE_STORAGE_KEY = 'daoyuan_yujian_standalone_v1';
-const KNOWN_CONTACTS_STORAGE_KEY = 'daoyuan_yujian_known_contacts_v1';
-
-export interface StandaloneKnownContact {
-  name: string;
-  portrait?: string;
-  affection?: string;
-  affectionLabel?: '好感度' | '亲密度';
-  preview: string;
-  time: string;
-  detail: string;
-  unread: number;
+export async function loadStandaloneKnownContacts(hostWindow: Window, chatId: string): Promise<StandaloneKnownContact[]> {
+  return readYujianContacts(hostWindow, chatId);
 }
 
-function readStandaloneStore(hostWindow: Window): Record<string, Record<string, StandaloneYujianMessage[]>> {
-  try { return asRecord(JSON.parse(hostWindow.localStorage.getItem(STANDALONE_STORAGE_KEY) || '{}')) as Record<string, Record<string, StandaloneYujianMessage[]>>; }
-  catch { return {}; }
+export async function rememberStandaloneKnownContacts(hostWindow: Window, chatId: string, contacts: StandaloneKnownContact[]): Promise<void> {
+  const previous = await loadStandaloneKnownContacts(hostWindow, chatId);
+  const merged = new Map(previous.map(contact => [contact.name, contact]));
+  for (const contact of contacts) merged.set(contact.name, { ...merged.get(contact.name), ...contact });
+  await writeYujianContacts(hostWindow, chatId, [...merged.values()]);
 }
 
-export function loadStandaloneYujianHistories(hostWindow: Window, chatId: string): Record<string, StandaloneYujianMessage[]> {
-  return asRecord(readStandaloneStore(hostWindow)[chatId]) as Record<string, StandaloneYujianMessage[]>;
-}
-
-export function loadStandaloneKnownContacts(hostWindow: Window, chatId: string): StandaloneKnownContact[] {
+export async function readYujianStoryTime(hostWindow: Window, messageId?: string | number | null): Promise<string> {
+  const runtime = hostWindow as unknown as YujianRuntimeHost;
+  if (typeof runtime.Mvu?.getMvuData !== 'function') return '未知时间';
   try {
-    const store = asRecord(JSON.parse(hostWindow.localStorage.getItem(KNOWN_CONTACTS_STORAGE_KEY) || '{}'));
-    const rows = store[chatId];
-    if (!Array.isArray(rows)) return [];
-    return rows.flatMap(raw => {
-      const item = asRecord(raw);
-      if (typeof item.name !== 'string' || !item.name.trim()) return [];
-      return [{
-        name: item.name,
-        portrait: typeof item.portrait === 'string' ? item.portrait : undefined,
-        affection: typeof item.affection === 'string' ? item.affection : undefined,
-        affectionLabel: item.affectionLabel === '亲密度' ? '亲密度' : item.affectionLabel === '好感度' ? '好感度' : undefined,
-        preview: typeof item.preview === 'string' ? item.preview : '尚未开始传讯',
-        time: typeof item.time === 'string' ? item.time : '',
-        detail: typeof item.detail === 'string' ? item.detail : '已认识联系人',
-        unread: typeof item.unread === 'number' ? item.unread : 0,
-      }];
-    });
-  } catch { return []; }
-}
-
-export function rememberStandaloneKnownContacts(hostWindow: Window, chatId: string, contacts: StandaloneKnownContact[]): void {
-  try {
-    const store = asRecord(JSON.parse(hostWindow.localStorage.getItem(KNOWN_CONTACTS_STORAGE_KEY) || '{}'));
-    const previous = loadStandaloneKnownContacts(hostWindow, chatId);
-    const merged = new Map(previous.map(contact => [contact.name, contact]));
-    for (const contact of contacts) merged.set(contact.name, { ...merged.get(contact.name), ...contact });
-    store[chatId] = [...merged.values()];
-    hostWindow.localStorage.setItem(KNOWN_CONTACTS_STORAGE_KEY, JSON.stringify(store));
+    const scope = messageId !== undefined && messageId !== null
+      ? { type: 'message', message_id: messageId }
+      : { type: 'chat' };
+    const snapshot = asRecord(await runtime.Mvu.getMvuData(scope));
+    const world = asRecord(asRecord(snapshot.stat_data).世界);
+    const storyTime = typeof world.当前时间 === 'string' ? world.当前时间.trim() : '';
+    return storyTime || '未知时间';
   } catch {
-    // 联系人缓存失败不应阻断玉简本身。
+    return '未知时间';
   }
 }
 
-export function appendStandaloneYujianRecord(hostWindow: Window, chatId: string, charName: string, from: 'them' | 'me', content: string, storyTime = '', source?: Pick<StandaloneYujianMessage, 'sourceMessageId' | 'sourceFingerprint' | 'generationMode'>): void {
-  const store = readStandaloneStore(hostWindow);
-  const chat = asRecord(store[chatId]) as Record<string, StandaloneYujianMessage[]>;
-  store[chatId] = chat;
+export async function appendStandaloneYujianRecord(hostWindow: Window, chatId: string, charName: string, from: 'them' | 'me', content: string, storyTime = '', source?: Pick<StandaloneYujianMessage, 'sourceMessageId' | 'sourceFingerprint' | 'generationMode'>): Promise<void> {
+  const chat = await loadStandaloneYujianHistories(hostWindow, chatId);
   const history = Array.isArray(chat[charName]) ? chat[charName] : [];
   chat[charName] = history;
-  const now = new Date();
-  const time = storyTime || `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  const time = storyTime.trim() || '未知时间';
   history.push({ from, text: content, time, ...source });
   if (history.length > 100) history.splice(0, history.length - 100);
-  hostWindow.localStorage.setItem(STANDALONE_STORAGE_KEY, JSON.stringify(store));
+  await writeYujianHistories(hostWindow, chatId, chat);
 }
 
-export function removeAutoYujianRecordsForFloor(hostWindow: Window, chatId: string, sourceMessageId: string): number {
-  const store = readStandaloneStore(hostWindow);
-  const chat = asRecord(store[chatId]) as Record<string, StandaloneYujianMessage[]>;
+export async function removeAutoYujianRecordsForFloor(hostWindow: Window, chatId: string, sourceMessageId: string): Promise<number> {
+  const chat = await loadStandaloneYujianHistories(hostWindow, chatId);
   let removed = 0;
   for (const [name, history] of Object.entries(chat)) {
     if (!Array.isArray(history)) continue;
@@ -255,19 +220,17 @@ export function removeAutoYujianRecordsForFloor(hostWindow: Window, chatId: stri
     chat[name] = kept;
   }
   if (removed) {
-    store[chatId] = chat;
-    hostWindow.localStorage.setItem(STANDALONE_STORAGE_KEY, JSON.stringify(store));
+    await writeYujianHistories(hostWindow, chatId, chat);
   }
   return removed;
 }
 
-export function reconcileAutoYujianRecords(
+export async function reconcileAutoYujianRecords(
   hostWindow: Window,
   chatId: string,
   currentSources: Map<string, string>,
-): number {
-  const store = readStandaloneStore(hostWindow);
-  const chat = asRecord(store[chatId]) as Record<string, StandaloneYujianMessage[]>;
+): Promise<number> {
+  const chat = await loadStandaloneYujianHistories(hostWindow, chatId);
   let removed = 0;
   let changed = false;
   const idByFingerprint = new Map([...currentSources].map(([id, fingerprint]) => [fingerprint, id]));
@@ -285,40 +248,35 @@ export function reconcileAutoYujianRecords(
     });
   }
   if (removed || changed) {
-    store[chatId] = chat;
-    hostWindow.localStorage.setItem(STANDALONE_STORAGE_KEY, JSON.stringify(store));
+    await writeYujianHistories(hostWindow, chatId, chat);
   }
   return removed;
 }
 
-export function deleteStandaloneYujianRecord(
+export async function deleteStandaloneYujianRecord(
   hostWindow: Window,
   chatId: string,
   charName: string,
   index: number,
   expected: StandaloneYujianMessage,
-): boolean {
-  const store = readStandaloneStore(hostWindow);
-  const chat = asRecord(store[chatId]) as Record<string, StandaloneYujianMessage[]>;
+): Promise<boolean> {
+  const chat = await loadStandaloneYujianHistories(hostWindow, chatId);
   const history = Array.isArray(chat[charName]) ? chat[charName] : [];
   const current = history[index];
   if (!current || current.from !== expected.from || current.text !== expected.text || current.time !== expected.time) return false;
   history.splice(index, 1);
   chat[charName] = history;
-  store[chatId] = chat;
-  hostWindow.localStorage.setItem(STANDALONE_STORAGE_KEY, JSON.stringify(store));
+  await writeYujianHistories(hostWindow, chatId, chat);
   return true;
 }
 
-export function clearStandaloneYujianHistory(hostWindow: Window, chatId: string, charName: string): number {
-  const store = readStandaloneStore(hostWindow);
-  const chat = asRecord(store[chatId]) as Record<string, StandaloneYujianMessage[]>;
+export async function clearStandaloneYujianHistory(hostWindow: Window, chatId: string, charName: string): Promise<number> {
+  const chat = await loadStandaloneYujianHistories(hostWindow, chatId);
   const history = Array.isArray(chat[charName]) ? chat[charName] : [];
   if (!history.length) return 0;
   const removed = history.length;
   chat[charName] = [];
-  store[chatId] = chat;
-  hostWindow.localStorage.setItem(STANDALONE_STORAGE_KEY, JSON.stringify(store));
+  await writeYujianHistories(hostWindow, chatId, chat);
   return removed;
 }
 
@@ -329,14 +287,12 @@ export interface StatusYujianHistoryImportResult {
 }
 
 /** Merge a read-only status-bar projection into the standalone, chat-scoped store. */
-export function importStatusYujianHistories(
+export async function importStatusYujianHistories(
   hostWindow: Window,
   chatId: string,
   contacts: Array<{ name: string; history: StandaloneYujianMessage[] }>,
-): StatusYujianHistoryImportResult {
-  const store = readStandaloneStore(hostWindow);
-  const chat = asRecord(store[chatId]) as Record<string, StandaloneYujianMessage[]>;
-  store[chatId] = chat;
+): Promise<StatusYujianHistoryImportResult> {
+  const chat = await loadStandaloneYujianHistories(hostWindow, chatId);
   let imported = 0;
   let skipped = 0;
   let touchedContacts = 0;
@@ -369,7 +325,7 @@ export function importStatusYujianHistories(
       touchedContacts += 1;
     }
   }
-  if (imported) hostWindow.localStorage.setItem(STANDALONE_STORAGE_KEY, JSON.stringify(store));
+  if (imported) await writeYujianHistories(hostWindow, chatId, chat);
   return { contacts: touchedContacts, imported, skipped };
 }
 
@@ -387,13 +343,14 @@ function extractGeneratedText(value: unknown): string {
   return String(value ?? '').trim();
 }
 
-let activeSend: Promise<void> | null = null;
+export interface YujianSendResult { storageWarning?: string }
+let activeSend: Promise<YujianSendResult> | null = null;
 
 export function resetYujianRuntimeContext(): void {
   // 独立聊天仅以 chatId 隔离，本函数保留给宿主聊天切换生命周期调用。
 }
 
-export function sendYujianMessage(hostWindow: Window, chatId: string, charName: string, text: string): Promise<void> {
+export function sendYujianMessage(hostWindow: Window, chatId: string, charName: string, text: string): Promise<YujianSendResult> {
   return sendYujianMessageWithProgress(hostWindow, chatId, charName, text);
 }
 
@@ -403,12 +360,15 @@ export function sendYujianMessageWithProgress(
   charName: string,
   text: string,
   onProgress?: (phase: 'user-written' | 'reply-written') => void,
-): Promise<void> {
+  sourceMessageId?: string | number | null,
+): Promise<YujianSendResult> {
   if (activeSend) return Promise.reject(new Error('已有一条玉简传讯正在生成中'));
   activeSend = (async () => {
     const runtime = hostWindow as unknown as YujianRuntimeHost;
-    appendStandaloneYujianRecord(hostWindow, chatId, charName, 'me', text);
-    onProgress?.('user-written');
+    let storageWarning = '';
+    const storyTime = await readYujianStoryTime(hostWindow, sourceMessageId);
+    try { await appendStandaloneYujianRecord(hostWindow, chatId, charName, 'me', text, storyTime); onProgress?.('user-written'); }
+    catch (error) { if (!isYujianStorageError(error)) throw error; storageWarning = error.message; }
     const settings = readSettings(hostWindow);
     const prompt = await buildOriginalInjection(runtime, chatId, charName, settings.customPrompt);
     let result: unknown;
@@ -433,8 +393,9 @@ export function sendYujianMessageWithProgress(
     }
     const reply = extractGeneratedText(result);
     if (!reply) throw new Error('生成结果为空');
-    appendStandaloneYujianRecord(hostWindow, chatId, charName, 'them', reply);
-    onProgress?.('reply-written');
+    try { await appendStandaloneYujianRecord(hostWindow, chatId, charName, 'them', reply, storyTime); onProgress?.('reply-written'); }
+    catch (error) { if (!isYujianStorageError(error)) throw error; storageWarning = error.message; }
+    return storageWarning ? { storageWarning } : {};
   })().finally(() => { activeSend = null; });
   return activeSend;
 }

@@ -1,3 +1,5 @@
+import { formatWorldLocation } from './locationFormat';
+
 export type MapRealm = '玄天界' | '仙界';
 export type FactionType = 'human' | 'demon' | 'monster' | 'neutral' | 'blood';
 
@@ -127,7 +129,7 @@ const MAP_LANDMARKS: Partial<Record<`${MapRealm}:${string}`, string[]>> = {
 
 /** Resolve a read-only stat_data.世界.当前地点 string to one original map node. */
 export function resolveWorldMapLocation(rawLocation: string): ResolvedMapLocation | null {
-  const location = locationText(rawLocation);
+  const location = locationText(formatWorldLocation(rawLocation));
   if (!location || location === '未接入' || location === '未知') return null;
   const matches: Array<ResolvedMapLocation & { score: number }> = [];
   for (const [realm, data] of Object.entries(MAPS) as Array<[MapRealm, MapData]>) {

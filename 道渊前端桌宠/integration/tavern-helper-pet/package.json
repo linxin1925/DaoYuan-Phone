@@ -1,6 +1,6 @@
 {
   "name": "daoyuan-feature-frontend",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -10,8 +10,9 @@
     "test:fixtures": "node scripts/validate-fixtures.mjs",
     "test:trends-ui": "node scripts/validate-trends-ui.mjs",
     "test:forum-news-ui": "node scripts/validate-forum-news-ui.mjs",
+    "test:v08": "node scripts/validate-v08-regressions.mjs",
     "package:candidate": "node scripts/package-candidate.mjs",
-    "check": "pnpm typecheck && pnpm test:fixtures && pnpm test:trends-ui && pnpm build && pnpm package:candidate"
+    "check": "pnpm typecheck && pnpm test:fixtures && pnpm test:trends-ui && pnpm test:forum-news-ui && pnpm test:v08 && pnpm build && pnpm package:candidate"
   },
   "dependencies": {
     "vue": "^3.5.34",

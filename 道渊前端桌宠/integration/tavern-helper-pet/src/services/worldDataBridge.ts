@@ -1,4 +1,5 @@
 import { getPortraitUrl } from './portraitService';
+import { formatWorldLocation } from './locationFormat';
 
 export interface WorldDataCapability {
   available: boolean;
@@ -164,13 +165,6 @@ function valueText(record: Record<string, unknown>, keys: string[], fallback: st
     if (typeof value === 'number' && Number.isFinite(value)) return String(value);
   }
   return fallback;
-}
-
-function formatWorldLocation(value: string): string {
-  const segments = value.split('·').map(segment => segment.trim()).filter(Boolean);
-  const visible = segments.length > 5 ? segments.slice(0, 5) : segments;
-  if (visible.length <= 3) return visible.join('·') || value;
-  return `${visible.slice(0, 3).join('·')}\n${visible.slice(3).join('·')}`;
 }
 
 function numberOrNull(value: unknown): number | null {

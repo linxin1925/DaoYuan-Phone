@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { TrendPostSchema, type TrendPost } from '../contract/appData';
 import { chatCompletionsEndpoint, extractOpenAIText, fetchAuto } from './openaiProtocol';
+import { normalizePlayerAlias } from './playerAlias';
 
 export interface XianwangApiSettings {
   apiBaseUrl: string;
@@ -14,6 +15,7 @@ export interface XianwangApiSettings {
   forumAutoEnabled: boolean; forumAutoInterval: number; forumBatchSize: number; forumMaxPosts: number;
   newsAutoEnabled: boolean; newsAutoInterval: number; newsBatchSize: number; newsMaxPapers: number;
   decentralizedMode: boolean; autoAiReply: boolean; showHeat: boolean; showCommentPreview: boolean; jailbreakPrompt: boolean; generatedCommentCount: number;
+  playerAlias: string;
 }
 
 const AiCommentSchema = z.object({
@@ -117,6 +119,8 @@ export async function generateTrends(
   const min = Math.max(1, Math.min(8, Math.floor(settings.batchMin)));
   const max = Math.max(min, Math.min(8, Math.floor(settings.batchMax)));
   const user = `【本次任务】生成${min}～${max}条全新的仙网风闻。
+
+【玩家网名】${normalizePlayerAlias(settings.playerAlias)}。这是玩家身份，不是仙网NPC；AI生成的作者、来源和评论者禁止使用此名称。
 
 【世界视角硬约束】
 先从世界资料中寻找主角之外的并行动态，再完成输出；最近正文只是局部观测，不是选题中心。本次输出主角相关内容必须为零，禁止生成主角、主角身边人物、当前任务、当前地点或主角认识人物的内容。优先覆盖不同地域、宗门、族群、坊市、商路、边境、秘境和普通修士生活。
