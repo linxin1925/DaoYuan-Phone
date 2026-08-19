@@ -1,28 +1,29 @@
 # 道渊小手机
 
-面向 SillyTavern 的道渊世界观内嵌手机前端。当前正式版本为 **V0.7**，正式导入文件为 `道渊前端桌宠/道渊小手机V0.7.json`。
+面向 SillyTavern 的道渊世界观内嵌手机前端。当前正式版本为 **V0.9**，正式导入文件为 `v0.9-preview/道渊前端桌宠/道渊小手机V0.9.json`。
 
 ## 功能
 
 - 紫薇桌宠与手机比例悬浮界面（V0.7 以手机端为主要使用形态）
 - 玉简联系人、主动传讯、正文玉简通信解析与旧状态栏记录导入
+- 万宝商行 AI 货单、批量估价、买卖交易、交易记录与受限 MVU 写回
 - 绝色榜、仙网风闻、论坛和天机日报
 - MVU 世界时间、地点、人物关系、储物袋和地图只读展示
 - 主线信息注入开关、仙网重 Roll 兼容及楼层删除后的数据对账
 - 桌面浏览器与手机浏览器的基础适配；更细的长期 UI 重构计划见 [ROADMAP](./ROADMAP.md)
 
-> 使用建议：V0.7 已完成主要功能链路，但不同浏览器、模拟器和软键盘组合仍可能存在兼容差异。遇到问题请优先记录复现设备、浏览器、SillyTavern 版本和操作步骤。
+> 使用建议：V0.9 已完成离线验证和正式构建；正式导入前仍建议在目标 SillyTavern 版本中完成桌面与手机回归。遇到问题请优先记录复现设备、浏览器、SillyTavern 版本和操作步骤。
 
 ## 使用
 
-下载 `道渊小手机V0.7.json`，在 SillyTavern 的酒馆助手脚本库中导入。完整配置和数据边界见 [使用说明](./使用说明.md)。
+下载 `v0.9-preview/道渊前端桌宠/道渊小手机V0.9.json`，在 SillyTavern 的酒馆助手脚本库中导入。完整配置和数据边界见 [V0.9 使用说明](./v0.9-preview/使用说明.md)。
 
 ## 本地开发
 
-要求 Node.js 与 pnpm。项目目前包含根目录原型和 `道渊前端桌宠/integration/tavern-helper-pet` 正式桌宠集成；正式包从后者构建。
+要求 Node.js 与 pnpm。V0.9 正式桌宠集成位于 `v0.9-preview/道渊前端桌宠/integration/tavern-helper-pet`；正式包从后者构建。
 
 ```bash
-cd 道渊前端桌宠/integration/tavern-helper-pet
+cd v0.9-preview/道渊前端桌宠/integration/tavern-helper-pet
 pnpm install
 pnpm check
 ```
