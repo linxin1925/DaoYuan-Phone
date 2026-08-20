@@ -7,7 +7,7 @@
 主要目录：
 
 - `道渊前端桌宠/assets/pet/ziwei/`
-- `道渊前端桌宠/integration/tavern-helper-pet/src/assets/pet/ziwei/`
+- `app/src/assets/pet/ziwei/`
 
 ## 绝色榜牌匾
 
@@ -16,6 +16,6 @@
 公开发布前应使用从零生成的原创牌匾替换以下运行时资产，并重新构建正式 JSON：
 
 - `src/assets/beauty-plaque.png`
-- `道渊前端桌宠/integration/tavern-helper-pet/src/assets/beauty-plaque.png`
+- `app/src/assets/beauty-plaque.png`
 
 `beauty-plaque-chroma.png` 属于处理中间文件，不应作为公开发布素材。

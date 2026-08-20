@@ -1,6 +1,6 @@
 # 道渊小手机
 
-面向 SillyTavern 的道渊世界观内嵌手机前端。当前正式版本为 **V0.9**，正式导入文件为 `v0.9-preview/道渊前端桌宠/道渊小手机V0.9.json`。
+面向 SillyTavern 的道渊世界观内嵌手机前端。当前正式版本为 **V0.9**，正式导入文件为 `releases/道渊小手机V0.9.json`。
 
 ## 功能
 
@@ -16,16 +16,17 @@
 
 ## 使用
 
-下载 `v0.9-preview/道渊前端桌宠/道渊小手机V0.9.json`，在 SillyTavern 的酒馆助手脚本库中导入。完整配置和数据边界见 [V0.9 使用说明](./v0.9-preview/使用说明.md)。
+下载 [`releases/道渊小手机V0.9.json`](./releases/道渊小手机V0.9.json)，在 SillyTavern 的酒馆助手脚本库中导入。完整配置和数据边界见 [V0.9 使用说明](./docs/使用说明.md)。
 
 ## 本地开发
 
-要求 Node.js 与 pnpm。V0.9 正式桌宠集成位于 `v0.9-preview/道渊前端桌宠/integration/tavern-helper-pet`；正式包从后者构建。
+要求 Node.js 与 pnpm。`app/` 是唯一权威源码工程。
 
 ```bash
-cd v0.9-preview/道渊前端桌宠/integration/tavern-helper-pet
+cd app
 pnpm install
 pnpm check
+pnpm package:candidate -- --formal
 ```
 
 `pnpm check` 会执行类型检查、数据样例校验、界面契约校验、生产构建和候选包生成。
