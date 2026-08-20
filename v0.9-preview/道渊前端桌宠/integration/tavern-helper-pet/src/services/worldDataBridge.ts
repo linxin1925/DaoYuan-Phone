@@ -41,6 +41,14 @@ export interface SpiritStoneSnapshot {
   warning?: string;
 }
 
+/** Read-only protagonist cultivation realm from stat_data.主角. */
+export function projectProtagonistRealm(snapshot: unknown): string {
+  const root = asRecord(snapshot);
+  const statData = asRecord(root?.stat_data);
+  const protagonist = asRecord(statData?.主角);
+  return firstString(protagonist ?? {}, ['境界', '修为境界', '修为', 'realm'], '未知');
+}
+
 export interface WorldStatusSnapshot {
   time: string;
   location: string;

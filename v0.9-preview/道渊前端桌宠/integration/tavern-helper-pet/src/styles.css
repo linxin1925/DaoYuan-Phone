@@ -159,8 +159,8 @@ button:focus-visible, select:focus-visible, input:focus-visible {
 .app-nav-badge { min-width: 18px; padding: 1px 4px; border-radius: 10px; background: var(--c-danger); color: #fff0e3; font-size: 10px; text-align: center; }
 .sidebar-footer { margin-top: auto; padding: 10px; border-top: 1px solid var(--c-border); color: var(--c-text-dim); font-size: 11px; }
 
-.content { min-width: 0; min-height: 0; overflow: auto; }
-.content-inner { width: min(100%, 960px); margin: 0 auto; padding: 24px 28px 40px; }
+.content { min-width: 0; min-height: 0; overflow-x: hidden; overflow-y: auto; }
+.content-inner { width: 100%; max-width: 960px; min-width: 0; margin: 0 auto; padding: 24px 28px 40px; }
 .page-heading { display: flex; align-items: end; justify-content: space-between; gap: 14px; margin-bottom: 22px; }
 .page-heading h1 { margin: 0; color: var(--c-primary); font-size: clamp(22px, 3vw, 34px); font-weight: 500; letter-spacing: .08em; }
 .page-heading p { max-width: 520px; margin: 5px 0 0; color: var(--c-text-muted); }
@@ -273,25 +273,26 @@ button:focus-visible, select:focus-visible, input:focus-visible {
 .wanbao-toolbar-meta { color: var(--c-text-dim); font-size: 11px; text-align: right; }
 .wanbao-counter-line { margin: 0 0 10px; }
 .wanbao-product-grid { display: grid; grid-template-columns: 1fr; gap: 8px; }
-.wanbao-product-card { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px; min-width: 0; overflow: hidden; padding: 11px 12px; border: 1px solid var(--c-border); border-radius: 8px; background: linear-gradient(180deg, rgba(34,39,49,.96), rgba(17,20,27,.96)); box-shadow: 0 4px 12px rgba(0,0,0,.18); }
+.wanbao-product-card { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; width: 100%; min-width: 0; overflow: hidden; padding: 11px 12px; border: 1px solid var(--c-border); border-radius: 8px; background: linear-gradient(180deg, rgba(34,39,49,.96), rgba(17,20,27,.96)); box-shadow: 0 4px 12px rgba(0,0,0,.18); }
 .wanbao-product-image { display: grid; aspect-ratio: 1 / .82; place-items: center; background: radial-gradient(circle at 50% 38%, rgba(216,193,136,.16), transparent 52%), linear-gradient(145deg, rgba(95,179,196,.12), rgba(168,136,212,.08)); }
 .wanbao-product-image[data-category='炼丹材料'] { background: radial-gradient(circle at 50% 38%, rgba(111,179,154,.18), transparent 52%), linear-gradient(145deg, rgba(111,179,154,.12), rgba(12,15,20,.2)); }
 .wanbao-product-image[data-category='丹药'] { background: radial-gradient(circle at 50% 38%, rgba(196,102,91,.18), transparent 52%), linear-gradient(145deg, rgba(216,193,136,.10), rgba(12,15,20,.2)); }
 .wanbao-product-image[data-category='sell'] { background: radial-gradient(circle at 50% 38%, rgba(216,193,136,.14), transparent 52%), linear-gradient(145deg, rgba(216,193,136,.08), rgba(12,15,20,.2)); }
 .wanbao-product-image-glyph { color: var(--c-primary); font-size: 58px; line-height: 1; text-shadow: 0 0 25px rgba(216,193,136,.32); }
 .wanbao-product-head, .wanbao-product-category, .wanbao-product-description, .wanbao-product-footer { grid-column: 1; margin: 0; }
-.wanbao-product-head { display: flex; align-items: flex-start; gap: 9px; padding-right: 106px; }
-.wanbao-product-title { min-width: 0; }
-.wanbao-product-title strong { display: block; overflow-wrap: anywhere; color: var(--c-text); font-size: 15px; font-weight: 500; }
-.wanbao-product-grade, .wanbao-product-category { color: var(--c-primary-dim); font-size: 11px; }
+.wanbao-product-head { display: flex; min-width: 0; align-items: flex-start; gap: 9px; }
+.wanbao-product-title { min-width: 0; flex: 1 1 auto; }
+.wanbao-product-title strong { display: block; overflow-wrap: anywhere; word-break: break-word; color: var(--c-text); font-size: 15px; font-weight: 500; }
+.wanbao-product-grade, .wanbao-product-category { max-width: 100%; color: var(--c-primary-dim); font-size: 11px; overflow-wrap: anywhere; }
 .wanbao-product-category { display: inline-block; width: fit-content; padding: 1px 6px; border: 1px solid var(--c-border); border-radius: 10px; }
-.wanbao-product-description { display: -webkit-box; overflow: hidden; color: var(--c-text-muted); font-size: 11px; line-height: 1.5; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
-.wanbao-product-footer { display: flex; align-items: center; justify-content: flex-start; gap: 10px; padding-top: 5px; border-top: 1px solid var(--c-border); }
+.wanbao-product-description { display: -webkit-box; min-width: 0; overflow: hidden; box-sizing: border-box; color: var(--c-text-muted); font-size: 11px; line-height: 1.5; overflow-wrap: anywhere; white-space: normal; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
+.wanbao-product-footer { display: flex; min-width: 0; align-items: center; justify-content: flex-start; flex-wrap: wrap; gap: 6px 10px; padding-top: 5px; border-top: 1px solid var(--c-border); }
+.wanbao-product-price { min-width: 0; overflow-wrap: anywhere; }
 .wanbao-product-price-label { display: inline; margin-right: 5px; color: var(--c-text-dim); font-size: 10px; }
 .wanbao-product-price strong { color: var(--c-primary); font-size: 13px; font-weight: 500; }
 .wanbao-product-stock { color: var(--c-text-dim); font-size: 11px; }
-.wanbao-product-actions { position: absolute; top: 11px; right: 12px; display: flex; flex-direction: column; align-items: stretch; gap: 6px; margin: 0; }
-.wanbao-product-stats { margin: 0; color: var(--c-primary-dim); font-size: 10px; line-height: 1.4; overflow-wrap: anywhere; }
+.wanbao-product-actions { grid-column: 2; grid-row: 1 / span 5; display: flex; align-self: start; flex-direction: column; align-items: stretch; gap: 6px; margin: 0; }
+.wanbao-product-stats { min-width: 0; margin: 0; color: var(--c-primary-dim); font-size: 10px; line-height: 1.4; overflow-wrap: anywhere; white-space: normal; }
 .wanbao-product-actions button { min-width: 62px; min-height: 34px; padding: 5px 10px; font-size: 11px; }
 .wanbao-product-actions button:disabled { cursor: not-allowed; opacity: .48; }
 .wanbao-sell-card .wanbao-product-footer { display: grid; grid-template-columns: minmax(0, 1fr); gap: 3px; }
@@ -304,11 +305,11 @@ button:focus-visible, select:focus-visible, input:focus-visible {
 .wanbao-transaction-toolbar .wanbao-sell-section-title { margin: 0; }
 .wanbao-transaction-toolbar button { min-height: 30px; padding: 4px 9px; font-size: 10px; }
 .wanbao-transaction-list { display: grid; gap: 7px; }
-.wanbao-transaction-row { padding: 9px 10px; border: 1px solid var(--c-border); border-radius: 6px; background: rgba(0,0,0,.13); }
-.wanbao-transaction-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
-.wanbao-transaction-head strong { color: var(--c-text); font-size: 12px; font-weight: 500; overflow-wrap: anywhere; }
-.wanbao-transaction-head span { flex: 0 0 auto; color: var(--c-text-dim); font-size: 10px; }
-.wanbao-transaction-row p { margin: 4px 0 0; font-size: 11px; }
+.wanbao-transaction-row { width: 100%; min-width: 0; max-width: 100%; overflow: hidden; padding: 9px 10px; border: 1px solid var(--c-border); border-radius: 6px; background: rgba(0,0,0,.13); }
+.wanbao-transaction-head { display: flex; min-width: 0; max-width: 100%; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.wanbao-transaction-head strong { min-width: 0; flex: 1 1 auto; color: var(--c-text); font-size: 12px; font-weight: 500; overflow-wrap: anywhere; word-break: break-word; }
+.wanbao-transaction-head span { min-width: 0; max-width: 48%; flex: 0 1 48%; overflow: hidden; color: var(--c-text-dim); font-size: 10px; text-align: right; text-overflow: ellipsis; white-space: nowrap; }
+.wanbao-transaction-row p { min-width: 0; max-width: 100%; margin: 4px 0 0; font-size: 11px; overflow-wrap: anywhere; word-break: break-word; white-space: normal; }
 .wanbao-transaction-description { color: var(--c-text-muted); line-height: 1.45; }
 .wanbao-transaction-price { color: var(--c-primary); }
 .wanbao-transaction-delete { min-height: 28px; padding: 3px 8px; margin-top: 7px; border: 1px solid var(--c-border); border-radius: 4px; background: transparent; color: var(--c-text-dim); cursor: pointer; font: inherit; font-size: 10px; }
@@ -687,6 +688,9 @@ button:focus-visible, select:focus-visible, input:focus-visible {
 .app-root[data-layout='phone'] .wanbao-product-description { min-height: 0; font-size: 11px; }
 .app-root[data-layout='phone'] .wanbao-product-footer { align-items: center; flex-direction: row; gap: 10px; }
 .app-root[data-layout='phone'] .wanbao-product-actions { margin-bottom: 0; }
+.app-root[data-layout='phone'] .wanbao-transaction-head { display: block; }
+.app-root[data-layout='phone'] .wanbao-transaction-head strong { display: block; }
+.app-root[data-layout='phone'] .wanbao-transaction-head span { display: block; max-width: 100%; margin-top: 3px; text-align: left; white-space: normal; }
 .app-root[data-layout='phone'] .wanbao-toolbar { align-items: center; flex-direction: row; gap: 8px; }
 .app-root[data-layout='phone'] .wanbao-toolbar-meta { text-align: left; }
 .app-root[data-layout='phone'] .wanbao-generate-button { width: auto; }

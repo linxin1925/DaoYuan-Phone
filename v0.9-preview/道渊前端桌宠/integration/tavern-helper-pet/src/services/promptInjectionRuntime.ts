@@ -50,9 +50,11 @@ export interface PromptInjectionApi {
     content: string;
     should_scan: boolean;
   }>, options?: { once?: boolean }) => { uninject?: () => void };
+  uninjectPrompts?: (ids: string[]) => void;
 }
 
 const MAX_TOTAL_CHARS = 7200;
+export const DAOYUAN_PROMPT_INJECTION_ID = 'daoyuan_world_context';
 
 function clean(value: unknown, limit = 1200): string {
   return String(value ?? '').split('<').join('＜').split('>').join('＞').trim().slice(0, limit);
@@ -113,9 +115,12 @@ ${body}
 
 export function applyPromptInjection(api: PromptInjectionApi, content: string): (() => void) | null {
   if (!content || typeof api.injectPrompts !== 'function') return null;
+  api.uninjectPrompts?.([DAOYUAN_PROMPT_INJECTION_ID]);
   const result = api.injectPrompts(
-    [{ id: 'daoyuan_world_context', position: 'in_chat', depth: 0, role: 'system', content, should_scan: true }],
+    [{ id: DAOYUAN_PROMPT_INJECTION_ID, position: 'in_chat', depth: 0, role: 'system', content, should_scan: true }],
     { once: true },
   );
-  return typeof result?.uninject === 'function' ? result.uninject : null;
+  return () => {
+    try { result?.uninject?.(); } finally { api.uninjectPrompts?.([DAOYUAN_PROMPT_INJECTION_ID]); }
+  };
 }

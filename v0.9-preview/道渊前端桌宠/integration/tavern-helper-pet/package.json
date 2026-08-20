@@ -14,8 +14,9 @@
     "test:spirit-stones": "node --experimental-strip-types scripts/validate-spirit-stones.mjs",
     "test:wanbao-transactions": "node --experimental-strip-types scripts/validate-wanbao-transactions.mjs",
     "test:wanbao-pricing": "node scripts/validate-wanbao-pricing.mjs",
+    "test:prompt-injection": "node --experimental-strip-types scripts/validate-prompt-injection.mjs",
     "package:candidate": "node scripts/package-candidate.mjs",
-    "check": "pnpm typecheck && pnpm test:fixtures && pnpm test:spirit-stones && pnpm test:wanbao-transactions && pnpm test:wanbao-pricing && pnpm test:trends-ui && pnpm test:forum-news-ui && pnpm test:v08 && pnpm build && pnpm package:candidate"
+    "check": "pnpm typecheck && pnpm test:fixtures && pnpm test:spirit-stones && pnpm test:wanbao-transactions && pnpm test:wanbao-pricing && pnpm test:prompt-injection && pnpm test:trends-ui && pnpm test:forum-news-ui && pnpm test:v08 && pnpm build && pnpm package:candidate"
   },
   "dependencies": {
     "vue": "^3.5.34",

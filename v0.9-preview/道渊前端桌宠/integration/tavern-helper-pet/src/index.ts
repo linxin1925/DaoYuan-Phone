@@ -5,7 +5,7 @@ import { changeContext, createHudSession, destroyHudSession, type HudSession } f
 import { ChatVariableRepository, createTavernChatVariableAdapter } from './services/chatRepository';
 import { loadUiPreferences, saveUiPreferences, type UiPreferences } from './services/storageService';
 import { initPortraits, onPortraitsUpdated } from './services/portraitService';
-import { getWorldDataCapability, projectInventory, projectNpcContacts, projectSpiritStones, projectWorldStatus, projectYujianAffections, projectYujianContacts, type InventoryItemSnapshot, type SpiritStoneSnapshot, type WorldStatusSnapshot, type YujianContactSnapshot } from './services/worldDataBridge';
+import { getWorldDataCapability, projectInventory, projectNpcContacts, projectProtagonistRealm, projectSpiritStones, projectWorldStatus, projectYujianAffections, projectYujianContacts, type InventoryItemSnapshot, type SpiritStoneSnapshot, type WorldStatusSnapshot, type YujianContactSnapshot } from './services/worldDataBridge';
 import { MVU_CHANNEL_NAME, MvuChannelTool } from './services/mvuChannel';
 import { appendStandaloneYujianRecord, clearStandaloneYujianHistory, deleteStandaloneYujianRecord, extractStoryYujianEvents, fetchYujianModels, importStatusYujianHistories, loadStandaloneKnownContacts, loadStandaloneYujianHistories, readYujianStoryTime, reconcileAutoYujianRecords, rememberStandaloneKnownContacts, removeAutoYujianRecordsForFloor, resetYujianRuntimeContext, sendYujianMessageWithProgress } from './services/yujianRuntime';
 import { mountUi } from './ui/renderUi';
@@ -15,7 +15,7 @@ import { generateTrends, retainTrendPosts, type XianwangApiSettings } from './se
 import { normalizePlayerAlias } from './services/playerAlias';
 import { generateForumPosts, generateForumReplies, generateNewsPapers, normalizeNewsIssueSequence, retainNewest } from './services/xianwangForumNewsRuntime';
 import { normalizeMapNode, type MapRealm } from './services/mapService';
-import { applyPromptInjection, buildPromptInjectionContent, DEFAULT_PROMPT_INJECTION_SETTINGS, normalizePromptInjectionSettings, type MerchantTransactionFact, type PromptInjectionApi, type PromptInjectionSettings, type YujianInjectionMessage } from './services/promptInjectionRuntime';
+import { applyPromptInjection, buildPromptInjectionContent, DAOYUAN_PROMPT_INJECTION_ID, DEFAULT_PROMPT_INJECTION_SETTINGS, normalizePromptInjectionSettings, type MerchantTransactionFact, type PromptInjectionApi, type PromptInjectionSettings, type YujianInjectionMessage } from './services/promptInjectionRuntime';
 import appCss from './styles.css?inline';
 import shellCss from './shell.css?inline';
 import { ZiweiPetController, type PetSize } from './petController';
@@ -54,6 +54,7 @@ function savePetSize(hostWindow: Window, size: PetSize): void {
 }
 
 const MERCHANT_TRANSACTION_STORAGE_KEY = 'daoyuan_wanbao_transaction_facts_v1';
+const MERCHANT_GENERATION_STATE_KEY = 'daoyuan_wanbao_generation_state_v1';
 const MERCHANT_AUTO_STATE_STORAGE_KEY = 'daoyuan_wanbao_auto_state_v1';
 
 interface MerchantAutoState { autoCounter: number; processedMessageIds: string[]; }
@@ -84,6 +85,23 @@ function readMerchantTransactionFacts(hostWindow: Window, chatId: string): Merch
   } catch { return []; }
 }
 
+function readMerchantGenerationState(hostWindow: Window, chatId: string): { status: 'idle' | 'running' | 'success' | 'error'; message?: string; startedAt?: string; finishedAt?: string; count?: number } {
+  try {
+    const root = JSON.parse(hostWindow.localStorage.getItem(MERCHANT_GENERATION_STATE_KEY) || '{}') as Record<string, unknown>;
+    const value = root[chatId] as Record<string, unknown> | undefined;
+    const status = value?.status;
+    return { status: status === 'running' || status === 'success' || status === 'error' ? status : 'idle', message: typeof value?.message === 'string' ? value.message : undefined, startedAt: typeof value?.startedAt === 'string' ? value.startedAt : undefined, finishedAt: typeof value?.finishedAt === 'string' ? value.finishedAt : undefined, count: typeof value?.count === 'number' ? value.count : undefined };
+  } catch { return { status: 'idle' }; }
+}
+
+function writeMerchantGenerationState(hostWindow: Window, chatId: string, state: { status: 'running' | 'success' | 'error'; message?: string; startedAt?: string; finishedAt?: string; count?: number }): void {
+  try {
+    const root = JSON.parse(hostWindow.localStorage.getItem(MERCHANT_GENERATION_STATE_KEY) || '{}') as Record<string, unknown>;
+    root[chatId] = state;
+    hostWindow.localStorage.setItem(MERCHANT_GENERATION_STATE_KEY, JSON.stringify(root));
+  } catch { /* optional UI state */ }
+}
+
 function deleteMerchantTransactionFacts(hostWindow: Window, chatId: string, id?: string): void {
   try {
     const root = JSON.parse(hostWindow.localStorage.getItem(MERCHANT_TRANSACTION_STORAGE_KEY) || '{}') as Record<string, unknown>;
@@ -105,6 +123,7 @@ function appendMerchantTransactionFact(hostWindow: Window, chatId: string, fact:
 interface RuntimeGlobals {
   $?: (callback: () => void) => void;
   eventOn?: (eventName: string, callback: () => void) => void | (() => void);
+  eventEmit?: (eventName: string, ...data: unknown[]) => void | Promise<void>;
   tavern_events?: { CHAT_CHANGED?: string };
   TavernHelper?: Window['TavernHelper'];
   SillyTavern?: Window['SillyTavern'];
@@ -115,6 +134,7 @@ interface RuntimeGlobals {
   generate?: (input: unknown) => unknown | Promise<unknown>;
   refreshOneMessage?: (messageId: string | number) => unknown | Promise<unknown>;
   injectPrompts?: PromptInjectionApi['injectPrompts'];
+  uninjectPrompts?: PromptInjectionApi['uninjectPrompts'];
   getCharWorldbookNames?: (scope?: string) => { primary?: string; additional?: string[] };
   getWorldbook?: (name: string) => Promise<Array<{ uid?: unknown; name?: unknown; comment?: unknown; content?: unknown; enabled?: unknown; disable?: unknown; constant?: unknown; key?: unknown[]; strategy?: { type?: unknown; keys?: unknown[] } }>>;
 }
@@ -358,6 +378,7 @@ class FeatureShell {
   private pendingYujianStoryParse: { messageId: string; story: string } | null = null;
   private autoSchedulerInFlight = false;
   private promptInjectionCleanup: (() => void) | null = null;
+  private promptInjectionRevision = 0;
 
   start(): void {
     if (typeof document === 'undefined' || typeof window === 'undefined') return;
@@ -890,31 +911,60 @@ class FeatureShell {
     if (apiSettings.enabled) return createMerchantApiGenerator(apiSettings);
     const hostGenerate = (this.hostWindow as Window & { TavernHelper?: { generate?: (input: unknown) => unknown | Promise<unknown> } }).TavernHelper?.generate;
     const generate = runtime.generate ?? hostGenerate;
-    return typeof generate === 'function' ? (prompt: string) => generate({ user_input: prompt }) : null;
+    // 万宝货单只依赖世界书规则、当前时间和地点，不应把整段聊天历史再次送入模型。
+    // 静默生成也避免在正文区制造额外楼层，降低等待和上下文开销。
+    return typeof generate === 'function' ? (prompt: string) => generate({ user_input: prompt, max_chat_history: 0, max_tokens: 8000, should_silence: true }) : null;
   }
 
   private async generateWanbao(payload: Record<string, unknown>, manual = true): Promise<void> {
     if (!this.hostWindow || this.merchantGenerationInFlight) return;
     const settings: MerchantSettings = {
-      batchSize: 10,
+      batchSize: payload.itemDataMode === 'combat' ? 4 : 10,
       maxItems: Math.max(1, Math.min(60, Math.floor(finiteNumber(payload.maxItems, 12)))),
       refreshInterval: Math.max(0, Math.min(99, Math.floor(finiteNumber(payload.refreshInterval, 3)))),
       itemDataMode: payload.itemDataMode === 'combat' ? 'combat' : readMerchantUiSettings(this.hostWindow).itemDataMode,
     };
     const generate = this.merchantGenerator();
     if (!generate) return this.wanbaoStatus(false, '酒馆生成能力不可用；可在万宝商行设置中启用独立 API');
+    const chatId = this.session.chatId ?? '__default__';
+    const startedAt = new Date().toISOString();
+    writeMerchantGenerationState(this.hostWindow, chatId, { status: 'running', startedAt, message: '万宝货单正在后台生成' });
+    this.sendContext();
     this.merchantGenerationInFlight = true;
     try {
-      const generated = await generateMerchantProducts(generate, settings, `当前时间：${this.worldStatus.time}\n当前地点：${this.worldStatus.location}`);
-      const chatId = this.session.chatId ?? '__default__';
-      this.merchantProducts = [...generated, ...this.merchantProducts].slice(0, settings.maxItems);
+      const loreWindow = typeof runtime.getCharWorldbookNames === 'function' && typeof runtime.getWorldbook === 'function'
+        ? runtime as unknown as Window
+        : this.hostWindow;
+      const loreEntries = await readYujianLore(loreWindow);
+      const merchantKeywords = /灵石|货币|物价|价格|境界|修炼|品阶|器物|法器|法宝|古宝|灵宝|功法|心法|武技|秘术|技能|丹药|灵材|药材|材料|符箓|阵盘|阵法|战斗|五维|本源|万宝|万宝楼/;
+      const merchantLoreEntries = loreEntries
+        .filter(entry => merchantKeywords.test(`${entry.name}\n${entry.content}`))
+        .sort((a, b) => Number(merchantKeywords.test(b.name)) - Number(merchantKeywords.test(a.name)))
+        .slice(0, 24)
+        .map(entry => ({ ...entry, content: entry.content.slice(0, 900) }));
+      if (!merchantLoreEntries.length) throw new Error('未读取到战斗版世界书中的灵石、境界或物品规则条目，已停止生成以避免设定幻觉');
+      const loreText = buildXianwangLore(merchantLoreEntries).slice(0, 12000);
+      const protagonistRealm = projectProtagonistRealm(this.worldData);
+      if (!/炼气|筑基|金丹|元婴|化神|炼虚|合体|大乘/.test(protagonistRealm)) throw new Error('未读取到主角当前境界，已停止生成以避免生成低于主角境界的货品');
+      const worldContext = `【战斗版世界书·万宝相关规则条目（本次生成唯一设定依据）】\n${loreText}`;
+      const generated = await generateMerchantProducts(generate, { ...settings, minRealm: protagonistRealm }, `${worldContext}\n【主角当前境界（来自当前 MVU/stat_data）】\n${protagonistRealm}`, this.merchantProducts.map(product => product.name));
+      const seenNames = new Set<string>();
+      this.merchantProducts = [...generated, ...this.merchantProducts].filter(product => {
+        const key = product.name.trim();
+        if (seenNames.has(key)) return false;
+        seenNames.add(key);
+        return true;
+      }).slice(0, settings.maxItems);
       writeMerchantProducts(this.hostWindow, chatId, this.merchantProducts);
       if (manual) writeMerchantAutoState(this.hostWindow, chatId, { ...readMerchantAutoState(this.hostWindow, chatId), autoCounter:0 });
       this.frame?.contentWindow?.postMessage(makeBridgeMessage('event', 'WANBAO_GENERATION_STATUS', { ok: true, count: generated.length }), '*');
       this.wanbaoStatus(true, `已生成 ${generated.length} 件万宝货品`);
+      writeMerchantGenerationState(this.hostWindow, chatId, { status: 'success', startedAt, finishedAt: new Date().toISOString(), count: generated.length, message: `已生成 ${generated.length} 件万宝货品` });
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
       this.frame?.contentWindow?.postMessage(makeBridgeMessage('event', 'WANBAO_GENERATION_STATUS', { ok: false, error: error instanceof Error ? error.message : String(error) }), '*');
-      this.wanbaoStatus(false, `万宝货单生成失败：${error instanceof Error ? error.message : String(error)}`);
+      writeMerchantGenerationState(this.hostWindow, chatId, { status: 'error', startedAt, finishedAt: new Date().toISOString(), message: `万宝货单生成失败：${errorMessage}` });
+      this.wanbaoStatus(false, `万宝货单生成失败：${errorMessage}`);
     } finally {
       this.merchantGenerationInFlight = false;
     }
@@ -962,6 +1012,7 @@ class FeatureShell {
         { contextRevision: snapshot.contextRevision, messageId: snapshot.messageId },
       );
       if (!result.written) return this.wanbaoStatus(false, `交易写回失败：${result.reason}`);
+      const recalculated = await this.recalculateCombatStatsAfterTrade(snapshot.variables, result.data, snapshot.messageId, snapshot.contextRevision);
       if (kind === 'buy') this.merchantProducts = this.merchantProducts.map(item => item.id === itemId ? { ...item, stock: item.stock - quantity } : item);
       if (this.hostWindow) writeMerchantProducts(this.hostWindow, this.session.chatId ?? '__default__', this.merchantProducts);
       const tradeFact = completedTrade.current;
@@ -976,7 +1027,7 @@ class FeatureShell {
         storyTime: projectWorldStatus(snapshot.variables).time,
         createdAt: new Date().toISOString(),
       });
-      const persisted = this.mvuChannel.getSnapshot().variables ?? result.data;
+      const persisted = recalculated ?? this.mvuChannel.getSnapshot().variables ?? result.data;
       this.applyMerchantWorldData(persisted, snapshot.messageId);
       await this.refreshPromptInjection();
       const refreshed = await this.refreshRolecardStatusBar(snapshot.messageId);
@@ -985,6 +1036,45 @@ class FeatureShell {
       this.wanbaoStatus(false, error instanceof Error ? error.message : String(error));
     } finally {
       this.merchantTradeInFlight = false;
+    }
+  }
+
+  /**
+   * 交易只负责写入主角.储物袋/器物；战斗五维继续由战斗系统 V0.7 的
+   * VARIABLE_UPDATE_ENDED 监听器计算。发出同一事件后，把监听器修改过的
+   * stat_data 写回当前楼层，避免商行复制一套战斗公式。
+   */
+  private async recalculateCombatStatsAfterTrade(
+    beforeEnvelope: unknown,
+    persistedEnvelope: unknown,
+    messageId: string | number,
+    contextRevision: number,
+  ): Promise<unknown | null> {
+    const current = record(persistedEnvelope);
+    const before = record(beforeEnvelope);
+    const hostRuntime = this.hostWindow as Window & RuntimeGlobals;
+    const emit = runtime.eventEmit ?? hostRuntime.eventEmit;
+    const eventName = runtime.Mvu?.events?.VARIABLE_UPDATE_ENDED ?? hostRuntime.Mvu?.events?.VARIABLE_UPDATE_ENDED;
+    if (!current || !record(current.stat_data) || typeof emit !== 'function' || typeof eventName !== 'string' || !this.mvuChannel) {
+      console.warn('[万宝商行][战斗重算] 未找到 VARIABLE_UPDATE_ENDED 发射能力，保留交易写回');
+      return null;
+    }
+    const mutableEnvelope = structuredClone(current) as Record<string, unknown>;
+    const mutableBefore = structuredClone(before ?? current);
+    try {
+      await emit(eventName, mutableEnvelope, mutableBefore);
+      const statData = record(mutableEnvelope.stat_data);
+      if (!statData) return null;
+      const writeBack = await this.mvuChannel.replaceLatestStatData(statData, { contextRevision, messageId });
+      if (!writeBack.written) {
+        console.warn('[万宝商行][战斗重算] 五维计算结果未持久化', writeBack.reason);
+        return null;
+      }
+      console.info('[万宝商行][战斗重算] 已触发战斗脚本并持久化主角.五维');
+      return writeBack.data;
+    } catch (error) {
+      console.warn('[万宝商行][战斗重算] 触发失败，交易本身已完成', error);
+      return null;
     }
   }
 
@@ -1375,13 +1465,18 @@ class FeatureShell {
     this.sendContext();
   }
 
-  private clearPromptInjection(): void {
+  private clearPromptInjection(invalidatePending = true): void {
+    if (invalidatePending) this.promptInjectionRevision += 1;
     try { this.promptInjectionCleanup?.(); } catch { /* host injection may already be gone */ }
     this.promptInjectionCleanup = null;
+    const hostRuntime = this.hostWindow as (Window & RuntimeGlobals) | null;
+    const uninjectPrompts = runtime.uninjectPrompts ?? hostRuntime?.uninjectPrompts;
+    try { uninjectPrompts?.([DAOYUAN_PROMPT_INJECTION_ID]); } catch { /* host injection may already be gone */ }
   }
 
   private async refreshPromptInjection(): Promise<boolean> {
-    this.clearPromptInjection();
+    const revision = ++this.promptInjectionRevision;
+    this.clearPromptInjection(false);
     if (!this.hostWindow || !this.session.chatId || new URLSearchParams(window.location.search).has('preview')) return false;
     const settings = readPromptInjectionSettings(this.hostWindow);
     const merchantTransactions = readMerchantApiSettings(this.hostWindow).transactionInjectionEnabled
@@ -1389,6 +1484,7 @@ class FeatureShell {
       : [];
     if (!Object.values(settings).some(Boolean) && !merchantTransactions.length) return false;
     const histories = await loadStandaloneYujianHistories(this.hostWindow, this.session.chatId);
+    if (revision !== this.promptInjectionRevision) return false;
     const yujianMessages: YujianInjectionMessage[] = Object.entries(histories).flatMap(([contact, messages]) =>
       messages.slice(-4).map(message => ({ contact, from: message.from, text: message.text, time: message.time })),
     );
@@ -1401,9 +1497,11 @@ class FeatureShell {
     });
     const hostRuntime = this.hostWindow as Window & RuntimeGlobals;
     const injectPrompts = runtime.injectPrompts ?? hostRuntime.injectPrompts;
+    const uninjectPrompts = runtime.uninjectPrompts ?? hostRuntime.uninjectPrompts;
     if (typeof injectPrompts !== 'function') return false;
     try {
-      this.promptInjectionCleanup = applyPromptInjection({ injectPrompts }, content);
+      if (revision !== this.promptInjectionRevision) return false;
+      this.promptInjectionCleanup = applyPromptInjection({ injectPrompts, uninjectPrompts }, content);
       return Boolean(content);
     } catch (error) {
       console.warn('[道渊主线注入] 当前运行环境未能建立提示词注入', error);
@@ -1812,6 +1910,8 @@ class FeatureShell {
       merchantSellItems: this.worldData ? projectSellItems(this.worldData, this.merchantQuotes) : [],
       merchantTransactions: this.hostWindow ? readMerchantTransactionFacts(this.hostWindow, this.session.chatId ?? '__default__') : [],
       merchantCounter: this.hostWindow ? readMerchantAutoState(this.hostWindow, this.session.chatId ?? '__default__').autoCounter : 0,
+      merchantGenerationState: this.hostWindow ? readMerchantGenerationState(this.hostWindow, this.session.chatId ?? '__default__') : { status: 'idle' },
+      protagonistRealm: projectProtagonistRealm(this.worldData),
       worldStatus: this.worldStatus,
       context: { chatId: this.session.chatId, messageId: this.session.messageId },
       mvuChannel: {

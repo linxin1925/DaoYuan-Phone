@@ -11,6 +11,13 @@ assert.match(runtime, /合体:\s*\{\s*丹药:\{grade:'极品灵石',min:10,max:5
 assert.match(runtime, /大乘:\s*\{\s*丹药:\{grade:'极品灵石',min:100,max:500\}/);
 assert.match(runtime, /\/渡劫\|仙境\|真仙\|仙阶\//);
 assert.match(runtime, /filter\(validateMerchantWorldbookPrice\)/);
+assert.match(runtime, /只有功法\/心法\/武技\/秘术和器物/);
+assert.match(runtime, /\['items', 'products', 'data', 'result', '货品', '货品列表', '商品', '商品列表'\]/);
+assert.match(runtime, /物品名.*名称/);
+assert.match(runtime, /COMBAT_DIMENSIONS = \['攻伐', '御守', '遁速', '神魂', '灵压'\]/);
+assert.match(runtime, /五维数值由战斗脚本计算/);
+assert.match(runtime, /荒阶\|仙阶\|仙品/);
+assert.match(runtime, /描述至少30字|description\.length < 20/);
 assert.match(styles, /\.app-root\[data-layout='phone'\] \.wanbao-product-grid \{ grid-template-columns: 1fr;/);
 assert.match(runtime, /当前售价的50%-90%/);
 assert.match(runtime, /estimateMerchantItems/);

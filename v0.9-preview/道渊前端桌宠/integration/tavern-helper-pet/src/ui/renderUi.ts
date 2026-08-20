@@ -39,9 +39,10 @@ interface InventoryItem { name: string; quantity: number | null; description: st
 interface WanbaoCurrencyPayload { mode?: string; balances?: Array<{ grade?: string; quantity?: number; source?: string }>; warning?: string; }
 interface WanbaoSettingsDraft { batchSize: number; maxItems: number; refreshInterval: number; currencyMode: 'auto' | 'legacy-bag' | 'combat-separate'; itemDataMode: 'legacy' | 'combat'; }
 interface WanbaoApiSettingsDraft { enabled: boolean; transactionInjectionEnabled: boolean; apiBaseUrl: string; apiKey: string; apiModel: string; }
-interface WanbaoProductPayload { id: string; name: string; category: string; grade: string; description: string; priceGrade: string; price: number; stock: number; itemDataMode?: 'legacy' | 'combat'; 五维?: Record<string, number>; 技能?: Array<Record<string, string>>; }
+interface WanbaoProductPayload { id: string; name: string; category: string; grade: string; description: string; priceGrade: string; price: number; stock: number; itemDataMode?: 'legacy' | 'combat'; 战斗属性?: Record<string, unknown>; }
 interface WanbaoSellPayload { id: string; name: string; category: string; quantity: number; description: string; quote?: { priceGrade: string; price: number; reason: string }; }
 interface WanbaoTransactionPayload { id: string; kind: 'buy' | 'sell'; itemName: string; quantity: number; description: string; amount: number; grade: string; storyTime: string; createdAt: string; }
+interface WanbaoGenerationState { status: 'idle' | 'running' | 'success' | 'error'; message?: string; startedAt?: string; finishedAt?: string; count?: number; }
 interface WorldStatus { time: string; location: string; energy: string; }
 interface YujianSettingsDraft { customPrompt: string; apiBaseUrl: string; apiKey: string; apiModel: string; storyParseEnabled: boolean; }
 interface BeautyApiSettingsDraft { apiBaseUrl: string; apiKey: string; apiModel: string; autoEnabled: boolean; autoInterval: number; }
@@ -384,6 +385,8 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
   let wanbaoApiSettings: WanbaoApiSettingsDraft = { enabled: false, transactionInjectionEnabled: true, apiBaseUrl: '', apiKey: '', apiModel: '' };
   let merchantTransactions: WanbaoTransactionPayload[] = [];
   let merchantCounter = 0;
+  let merchantGenerationState: WanbaoGenerationState = { status: 'idle' };
+  let protagonistRealm = '';
   let layout: Layout = 'phone';
   let data: AppData = emptyAppData;
   let spiritStones: WanbaoCurrencyPayload = { mode: 'auto', balances: [] };
@@ -449,7 +452,7 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
   try {
     const storage = uiView.parent !== uiView ? uiView.parent.localStorage : uiView.localStorage;
     const saved = JSON.parse(storage.getItem('daoyuan_wanbao_settings_v1') || '{}') as Partial<WanbaoSettingsDraft>;
-    wanbaoSettings.batchSize = 10;
+    wanbaoSettings.batchSize = saved.itemDataMode === 'combat' ? 4 : 10;
     if (Number.isFinite(saved.maxItems)) wanbaoSettings.maxItems = Math.max(1, Math.min(60, Math.floor(saved.maxItems as number)));
     if (Number.isFinite(saved.refreshInterval)) wanbaoSettings.refreshInterval = Math.max(0, Math.min(99, Math.floor(saved.refreshInterval as number)));
     if (saved.currencyMode === 'auto' || saved.currencyMode === 'legacy-bag' || saved.currencyMode === 'combat-separate') wanbaoSettings.currencyMode = saved.currencyMode;
@@ -745,7 +748,8 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
         const input = doc.createElement('input'); input.type = 'number'; input.min = String(min); input.max = String(max); input.value = String(wanbaoSettings[key]); input.dataset.wanbaoSetting = key;
         wrap.append(input, element(doc, 'small', 'settings-section-note', note)); panel.append(wrap);
       };
-      field('每轮新增货品数量', 'batchSize', 10, 10, '固定 10 件，覆盖炼气至大乘八个玄天界境界。');
+      const combatBatch = wanbaoSettings.itemDataMode === 'combat';
+      field('每轮新增货品数量', 'batchSize', combatBatch ? 4 : 10, combatBatch ? 4 : 10, combatBatch ? '战斗版分两次各4件，合计8件，八境界各一件。' : '原版固定 10 件，覆盖炼气至大乘八个玄天界境界。');
       field('最多保留售卖货品', 'maxItems', 1, 60, '超过上限时只保留最新货品，不触碰玩家物品。');
       field('自动更新间隔（0 关闭）', 'refreshInterval', 0, 99, '按完成的 AI 正文楼层计数；达到间隔后自动生成新货单。');
       const modeWrap = element(doc, 'label', 'settings-field');
@@ -759,13 +763,16 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
       const itemModeWrap = element(doc, 'label', 'settings-field');
       itemModeWrap.append(element(doc, 'span', 'settings-label', '物品/功法结构'));
       const itemModeSelect = doc.createElement('select'); itemModeSelect.dataset.wanbaoItemMode = 'true';
-      for (const [value, label] of [['legacy', '原版卡（描述+数量）'], ['combat', '战斗版（五维；功法附技能）']] as const) {
+      for (const [value, label] of [['legacy', '原版卡（描述+数量）'], ['combat', '战斗版（世界书定性字段）']] as const) {
         const option = doc.createElement('option'); option.value = value; option.textContent = label; option.selected = wanbaoSettings.itemDataMode === value; itemModeSelect.append(option);
       }
       itemModeWrap.append(itemModeSelect, element(doc, 'small', 'settings-section-note', '生成货品与购买写回均按此模式，只触碰储物袋和器物。'));
       panel.append(itemModeWrap);
       panel.append(element(doc, 'p', 'notice muted', '购买区与出售区使用不同数据源：购买读取 AI 货单，出售读取 stat_data.主角.储物袋 与 stat_data.主角.器物。'));
       panel.append(button(doc, 'primary-button', '保存万宝商行设置', 'wanbao-settings-save'));
+      const debugPanel = appendPanel(doc, content, '万宝商行诊断日志', '仅保留最近 40 条，单条原始响应也会截断；可随时清空，不影响货单、交易或设置。');
+      debugPanel.classList.add('wanbao-debug-settings-panel');
+      debugPanel.append(button(doc, 'secondary-button', '清空诊断日志', 'wanbao-debug-clear'));
       content.append(element(doc, 'p', 'notice muted', '设置保存在当前浏览器本地，不会写入角色卡、聊天变量或 V0.8 正式文件。'));
       return;
     }
@@ -1242,12 +1249,14 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
       if (wanbaoSection === 'market') {
         const toolbar = element(doc, 'div', 'wanbao-toolbar');
         const toolbarCopy = element(doc, 'div', 'wanbao-toolbar-copy');
-        toolbarCopy.append(element(doc, 'span', 'wanbao-toolbar-label', '万宝货单 · 本轮 10 件'), element(doc, 'span', 'wanbao-toolbar-meta', '覆盖各境界 · 仅可购买'));
+        const batchLabel = wanbaoSettings.itemDataMode === 'combat' ? '4×2（合计8）' : '10';
+        toolbarCopy.append(element(doc, 'span', 'wanbao-toolbar-label', `万宝货单 · 本轮 ${batchLabel} 件`), element(doc, 'span', 'wanbao-toolbar-meta', wanbaoSettings.itemDataMode === 'combat' ? '战斗版分两次生成 · 仅可购买' : '覆盖各境界 · 仅可购买'));
         const generate = button(doc, 'primary-button wanbao-generate-button', '立即生成（测试）', 'wanbao-generate');
         toolbar.append(toolbarCopy, generate);
         content.append(toolbar);
         const merchantRemaining = wanbaoSettings.refreshInterval > 0 ? Math.max(0, wanbaoSettings.refreshInterval - merchantCounter) : null;
         content.append(element(doc, 'p', 'xianwang-counter-line wanbao-counter-line', merchantRemaining === null ? '自动货单更新已关闭' : merchantRemaining === 0 ? '本轮将更新万宝货单' : `还有 ${merchantRemaining} 轮对话后更新万宝货单`));
+        if (merchantGenerationState.status === 'running') content.append(element(doc, 'p', 'notice muted wanbao-generation-running', '万宝货单正在后台生成；离开此页面不会取消任务，完成后重新进入即可查看。'));
 
         const products = element(doc, 'div', 'wanbao-product-grid');
         const visibleProducts = merchantProducts.map(item => ({ ...item, price: `${item.price} ${item.priceGrade}`, stockLabel: `库存 ${item.stock} 件`, stockCount: item.stock, id: item.id }));
@@ -1258,7 +1267,32 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
         title.append(element(doc, 'strong', undefined, product.name), element(doc, 'span', 'wanbao-product-grade', product.grade));
         head.append(title);
         card.append(head, element(doc, 'span', 'wanbao-product-category', product.category), element(doc, 'p', 'wanbao-product-description', product.description));
-        if (product.itemDataMode === 'combat') card.append(element(doc, 'p', 'wanbao-product-stats', `战斗版五维：${Object.entries(product.五维 ?? {}).map(([key, value]) => `${key}${value}`).join(' · ') || '未填'}${product.技能?.length ? `｜技能 ${product.技能.map(skill => skill.技能名称 || '未命名').join('、')}` : ''}`));
+        if (product.itemDataMode === 'combat') {
+          const combatData = product.战斗属性 ?? {};
+          const combatSummary = ['类型', '等级', '本源', '品阶', '效果类型', '主维', '辅维', '祭炼度', '损耗度', '状态', '时效', '触发', '技能'].flatMap(key => {
+            const value = combatData[key];
+            if (value === undefined || value === null || value === '' || (Array.isArray(value) && !value.length)) return [];
+            const display = Array.isArray(value)
+              ? value.map(entry => typeof entry === 'object' && entry ? Object.entries(entry as Record<string, unknown>).map(([name, detail]) => `${name}=${String(detail)}`).join('，') : String(entry)).join('；')
+              : typeof value === 'object' && value
+                ? Object.entries(value as Record<string, unknown>).map(([name, detail]) => {
+                  const detailText = typeof detail === 'object' && detail ? Object.entries(detail as Record<string, unknown>).map(([key, item]) => `${key}=${String(item)}`).join('，') : String(detail);
+                  return `${name}=${detailText}`;
+                }).join('；')
+                : String(value);
+            return [`${key}：${display}`];
+          }).join(' · ');
+          card.append(element(doc, 'p', 'wanbao-product-stats', `战斗属性：${combatSummary || '未填'}（五维数值由战斗脚本计算）`));
+          const level = String(combatData.等级 ?? '').split('/')[0].trim();
+          const requiredRealmByLevel: Record<string, string> = { 法器:'炼气', 法宝:'筑基', 古宝:'金丹', 通天灵宝:'元婴', 仿制灵宝:'元婴', 先天灵宝:'化神', 仙器胚:'合体', 仙器胚子:'合体', 伪仙器:'合体', 仙器:'大乘' };
+          const realmOrder = ['炼气','筑基','金丹','元婴','化神','炼虚','合体','大乘'];
+          const requiredRealm = requiredRealmByLevel[level];
+          const currentIndex = realmOrder.findIndex(realm => protagonistRealm.includes(realm));
+          const requiredIndex = realmOrder.indexOf(requiredRealm);
+          if (requiredIndex >= 0 && currentIndex >= 0 && currentIndex < requiredIndex) {
+            card.append(element(doc, 'p', 'notice muted wanbao-usability-note', `境界不足：需达到${requiredRealm}初期才计入五维；仍可提前购买并持有。`));
+          }
+        }
         const footer = element(doc, 'div', 'wanbao-product-footer');
         const price = element(doc, 'div', 'wanbao-product-price');
         price.append(element(doc, 'span', 'wanbao-product-price-label', '售价'), element(doc, 'strong', undefined, product.price));
@@ -1679,18 +1713,26 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
         const value = Number(input?.value);
         return Number.isFinite(value) ? Math.floor(value) : fallback;
       };
-      wanbaoSettings = {
-        batchSize: Math.max(1, Math.min(12, readNumber('batchSize', wanbaoSettings.batchSize))),
+        const selectedItemMode = root.querySelector<HTMLSelectElement>('[data-wanbao-item-mode]')?.value === 'combat' ? 'combat' : 'legacy';
+        wanbaoSettings = {
+          batchSize: selectedItemMode === 'combat' ? 4 : 10,
         maxItems: Math.max(1, Math.min(60, readNumber('maxItems', wanbaoSettings.maxItems))),
         refreshInterval: Math.max(0, Math.min(99, readNumber('refreshInterval', wanbaoSettings.refreshInterval))),
         currencyMode: (() => { const value = root.querySelector<HTMLSelectElement>('[data-wanbao-currency-mode]')?.value; return value === 'legacy-bag' || value === 'combat-separate' ? value : 'auto'; })(),
-        itemDataMode: root.querySelector<HTMLSelectElement>('[data-wanbao-item-mode]')?.value === 'combat' ? 'combat' : 'legacy',
+          itemDataMode: selectedItemMode,
       };
       try {
         const storage = uiView.parent !== uiView ? uiView.parent.localStorage : uiView.localStorage;
         storage.setItem('daoyuan_wanbao_settings_v1', JSON.stringify(wanbaoSettings));
       } catch { /* optional local preference */ }
       announcement = '万宝商行设置已保存（仅本地偏好，尚未触发生成）'; render();
+    } else if (action === 'wanbao-debug-clear') {
+      try {
+        const storage = uiView.parent !== uiView ? uiView.parent.localStorage : uiView.localStorage;
+        storage.removeItem('daoyuan_wanbao_debug_logs_v1');
+        announcement = '万宝商行诊断日志已清空';
+      } catch { announcement = '诊断日志清空失败'; }
+      render();
     } else if (action === 'wanbao-api-save') {
       root.querySelectorAll<HTMLInputElement>('[data-wanbao-api-setting]').forEach(node => { const key = node.dataset.wanbaoApiSetting as 'apiBaseUrl' | 'apiKey' | 'apiModel'; if (key) wanbaoApiSettings[key] = node.value; });
       wanbaoApiSettings.enabled = root.querySelector<HTMLInputElement>('[data-wanbao-api-enabled]')?.checked === true;
@@ -1706,7 +1748,7 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
       if (fetchingWanbaoModels) return; fetchingWanbaoModels = true; announcement = '正在获取万宝商行模型列表…'; render();
       sendAction('REQUEST_WANBAO_MODELS', { apiBaseUrl: wanbaoApiSettings.apiBaseUrl, apiKey: wanbaoApiSettings.apiKey });
     } else if (action === 'wanbao-generate') {
-      announcement = `正在生成 ${wanbaoSettings.batchSize} 件万宝货品…`;
+      announcement = wanbaoSettings.itemDataMode === 'combat' ? '正在分两次生成万宝货品（每次4件，合计8件）…' : '正在生成 10 件万宝货品…';
       render();
       sendAction('GENERATE_WANBAO', { ...wanbaoSettings });
     } else if (action === 'wanbao-buy') {
@@ -2134,6 +2176,11 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
       if (Array.isArray(message.payload.merchantSellItems)) merchantSellItems = (message.payload.merchantSellItems as WanbaoSellPayload[]).filter(item => item && typeof item.id === 'string' && typeof item.name === 'string');
       if (Array.isArray(message.payload.merchantTransactions)) merchantTransactions = (message.payload.merchantTransactions as WanbaoTransactionPayload[]).filter(item => item && (item.kind === 'buy' || item.kind === 'sell'));
       merchantCounter = typeof message.payload.merchantCounter === 'number' && Number.isFinite(message.payload.merchantCounter) ? Math.max(0, Math.floor(message.payload.merchantCounter)) : 0;
+      protagonistRealm = typeof message.payload.protagonistRealm === 'string' ? message.payload.protagonistRealm : '';
+      if (message.payload.merchantGenerationState && typeof message.payload.merchantGenerationState === 'object') {
+        const state = message.payload.merchantGenerationState as Partial<WanbaoGenerationState>;
+        merchantGenerationState = { status: state.status === 'running' || state.status === 'success' || state.status === 'error' ? state.status : 'idle', message: typeof state.message === 'string' ? state.message : undefined, startedAt: typeof state.startedAt === 'string' ? state.startedAt : undefined, finishedAt: typeof state.finishedAt === 'string' ? state.finishedAt : undefined, count: typeof state.count === 'number' ? state.count : undefined };
+      }
       if (message.payload.worldStatus && typeof message.payload.worldStatus === 'object') {
         const status = message.payload.worldStatus as Partial<WorldStatus>;
         worldStatus = {
