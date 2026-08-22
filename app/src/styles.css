@@ -553,6 +553,8 @@ button:focus-visible, select:focus-visible, input:focus-visible {
 .panel-card .settings-section-note { margin: 0 0 4px; color: var(--c-text-dim); font-size: 11px; line-height: 1.55; }
 .settings-auto-toggle { display: flex; align-items: flex-start; gap: 10px; margin-top: 10px; padding: 11px 12px; border: 1px solid var(--c-border-gold); border-radius: 5px; background: rgba(216,193,136,.06); cursor: pointer; }
 .settings-auto-toggle input { width: 18px; height: 18px; margin: 2px 0 0; accent-color: var(--c-primary); }
+.settings-auto-toggle input:focus-visible { outline: 2px solid var(--c-focus); outline-offset: 2px; }
+.settings-auto-toggle:has(input:disabled) { cursor: not-allowed; opacity: .58; }
 .settings-auto-toggle-copy { display: flex; min-width: 0; flex-direction: column; gap: 3px; }
 .settings-auto-toggle-copy strong { color: var(--c-text); font-size: 13px; font-weight: 500; }
 .settings-auto-toggle-copy small { color: var(--c-text-dim); font-size: 11px; line-height: 1.5; }
@@ -571,6 +573,7 @@ button:focus-visible, select:focus-visible, input:focus-visible {
 .settings-control-group .secondary-button { align-self: flex-start; }
 .settings-control-group.is-inline { flex-direction: row; flex-wrap: wrap; }
 .settings-control-group.is-inline .secondary-button { flex: 1 1 88px; }
+.settings-control-group button:disabled { cursor: not-allowed; opacity: .5; filter: saturate(.45); }
 .beauty-model-select { color-scheme: dark; color: var(--c-text); background-color: var(--c-bg) !important; border-color: var(--c-border-gold) !important; }
 .beauty-model-select option { background: #10151e; color: #eee6cf; }
 .beauty-model-select option:checked { background: #6d5a32; color: #fff5d8; }

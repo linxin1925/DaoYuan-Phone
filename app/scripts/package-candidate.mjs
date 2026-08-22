@@ -20,7 +20,7 @@ const candidate = {
   scriptId: 'daoyuan-feature-frontend-hud-v09',
   enabled: true,
   runtimeStatus: '待目标 SillyTavern 环境执行正式发布回归',
-  scope: 'V0.9：万宝商行世界书货单、储物袋与器物批量估价、可控正文注入、交易记录与删除管理、受限 MVU 写回和状态栏同步',
+  scope: 'V0.9：万宝商行功能；万年仇怨、合欢宗、洛阳、蜀山四本 DLC 世界书的缺失安装、附属挂载、只补缺失条目、独立开关及地点/境界自动控制；受限 MVU 读写和状态栏同步',
   dataBoundary: {
     chatVariables: ['daoyuan_yujian_data', 'daoyuan_web_beauty_data', 'daoyuan_web_trends_data', 'daoyuan_forum_data', 'daoyuan_news_data', 'daoyuan_map_state'],
     statDataWrites: ['stat_data.主角.储物袋', 'stat_data.主角.器物', 'stat_data.主角.功法', 'stat_data.主角.极品灵石', 'stat_data.主角.上品灵石', 'stat_data.主角.中品灵石', 'stat_data.主角.下品灵石'],
@@ -45,7 +45,7 @@ const importableScript = {
   name: packageName,
   id: 'daoyuan-feature-frontend-hud-v09',
   content: source,
-  info: `道渊小手机 V0.9${formal ? '' : ' 测试版'}：万宝商行支持世界书物价货单、储物袋与器物一次性估价、独立交易事实注入开关、交易记录与货单删除、售罄保护、受限 MVU 写回及状态栏同步。`,
+  info: `道渊小手机 V0.9${formal ? '' : ' 测试版'}：包含万宝商行，以及万年仇怨、合欢宗·百花谷、洛阳、蜀山剑门四本 DLC 世界书的缺失安装、附属挂载、只补缺失条目、独立开关和地点/境界自动控制。默认关闭 DLC，不覆盖角色主世界书。`,
   button: {
     enabled: false,
     buttons: [],

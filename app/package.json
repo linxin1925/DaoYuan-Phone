@@ -15,8 +15,12 @@
     "test:wanbao-transactions": "node --experimental-strip-types scripts/validate-wanbao-transactions.mjs",
     "test:wanbao-pricing": "node scripts/validate-wanbao-pricing.mjs",
     "test:prompt-injection": "node --experimental-strip-types scripts/validate-prompt-injection.mjs",
+    "freeze:dlc-baseline": "node scripts/freeze-dlc-baseline.mjs",
+    "build:dlc-seeds": "node scripts/build-dlc-seeds.mjs",
+    "test:dlc-seeds": "node scripts/validate-dlc-seeds.mjs",
+    "test:dlc-manager": "node --experimental-strip-types scripts/validate-dlc-manager.mjs",
     "package:candidate": "node scripts/package-candidate.mjs",
-    "check": "pnpm typecheck && pnpm test:fixtures && pnpm test:spirit-stones && pnpm test:wanbao-transactions && pnpm test:wanbao-pricing && pnpm test:prompt-injection && pnpm test:trends-ui && pnpm test:forum-news-ui && pnpm test:v08 && pnpm build && pnpm package:candidate"
+    "check": "pnpm typecheck && pnpm test:fixtures && pnpm test:spirit-stones && pnpm test:wanbao-transactions && pnpm test:wanbao-pricing && pnpm test:prompt-injection && pnpm test:dlc-seeds && pnpm test:dlc-manager && pnpm test:trends-ui && pnpm test:forum-news-ui && pnpm test:v08 && pnpm build && pnpm package:candidate"
   },
   "dependencies": {
     "vue": "^3.5.34",

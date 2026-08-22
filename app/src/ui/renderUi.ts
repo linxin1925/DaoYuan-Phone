@@ -50,7 +50,10 @@ type ApiSettingsDraft = Pick<BeautyApiSettingsDraft, 'apiBaseUrl' | 'apiKey' | '
 interface XianwangSettingsDraft extends ApiSettingsDraft { playerAlias:string; trendsAutoEnabled:boolean; autoInterval: number; batchMin: number; batchMax: number; maxPosts: number; forumAutoEnabled:boolean; forumAutoInterval:number; forumBatchSize:number; forumMaxPosts:number; newsAutoEnabled:boolean; newsAutoInterval:number; newsBatchSize:number; newsMaxPapers:number; decentralizedMode:boolean; autoAiReply:boolean; showHeat:boolean; showCommentPreview:boolean; jailbreakPrompt:boolean; generatedCommentCount:number; }
 type XianwangNumberSetting = 'autoInterval'|'batchMin'|'batchMax'|'maxPosts'|'forumAutoInterval'|'forumBatchSize'|'forumMaxPosts'|'newsAutoInterval'|'newsBatchSize'|'newsMaxPapers'|'generatedCommentCount';
 interface PromptInjectionSettingsDraft { yujian: boolean; trends: boolean; forum: boolean; news: boolean; }
-type SettingsSection = 'home' | 'yujian' | 'beauty' | 'xianwang' | 'wanbao' | 'injection';
+interface DlcSettingsDraft { wan_nian_chou_yuan: boolean; he_huan_zong: boolean; luo_yang: boolean; shu_shan: boolean; }
+interface DlcStatusView { id: keyof DlcSettingsDraft; label: string; status: string; mounted: boolean; entryCount: number; missingEntries: string[]; duplicateEntries: string[]; userModified: boolean; reason: string; }
+interface DlcCapabilityView { canCreate?: boolean; canAppend?: boolean; canUpdate?: boolean; canAttach?: boolean; notes?: string[]; }
+type SettingsSection = 'home' | 'yujian' | 'beauty' | 'xianwang' | 'wanbao' | 'injection' | 'dlc';
 type PetSize = 'small' | 'medium' | 'large';
 interface YujianLoreEntry { uid: string; name: string; content: string; keys: string[]; }
 
@@ -440,6 +443,9 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
   let rerollCompatibilityEnabled = false;
   let petSize: PetSize = 'large';
   let settingsSection: SettingsSection = 'home';
+  let dlcSettings: DlcSettingsDraft = { wan_nian_chou_yuan: false, he_huan_zong: false, luo_yang: false, shu_shan: false };
+  let dlcStatus: DlcStatusView[] = [];
+  let dlcCapability: DlcCapabilityView = {};
   let beautyApiSettingsOpen = false;
   let beautyGenerating = false;
   let trendsGenerating = false;
@@ -782,6 +788,28 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
       renderPromptInjectionSettings(content);
       return;
     }
+    if (settingsSection === 'dlc') {
+      content.append(button(doc, 'settings-back-button', '← 返回设置', 'settings-home'));
+      appendPageHeading(doc, content, 'DLC 剧情拓展', '安装后作为当前角色的附属世界书运行；主世界书不会被覆盖。', '独立更新');
+      const labels: Record<keyof DlcSettingsDraft, string> = { wan_nian_chou_yuan: '万年仇怨', he_huan_zong: '合欢宗·百花谷', luo_yang: '洛阳', shu_shan: '蜀山剑门' };
+      for (const id of Object.keys(labels) as Array<keyof DlcSettingsDraft>) {
+        const status = dlcStatus.find((item) => item.id === id);
+        const panel = appendPanel(doc, content, labels[id], status?.reason ?? '尚未读取世界书状态');
+        const toggle = element(doc, 'label', 'settings-auto-toggle');
+        const input = doc.createElement('input'); input.type = 'checkbox'; input.checked = dlcSettings[id]; input.dataset.dlcSetting = id;
+        const copy = element(doc, 'span', 'settings-auto-toggle-copy');
+        copy.append(element(doc, 'strong', undefined, '允许自动控制'), element(doc, 'small', undefined, status ? `${status.entryCount} 条 · ${status.mounted ? '已挂载' : '未挂载'}${status.userModified ? ' · 用户修改版' : ''}` : '默认关闭，不会向模型注入 DLC 内容'));
+        toggle.append(input, copy); panel.append(toggle);
+      }
+      const controls = element(doc, 'div', 'settings-control-group');
+      const install = button(doc, 'primary-button', '创建不存在的 DLC 世界书', 'dlc-install'); install.disabled = dlcCapability.canCreate !== true;
+      const attach = button(doc, 'secondary-button', '挂载已有 DLC 到当前角色', 'dlc-attach'); attach.disabled = dlcCapability.canAttach !== true;
+      const repair = button(doc, 'secondary-button', '补回缺失的世界书条目', 'dlc-repair'); repair.disabled = dlcCapability.canAppend !== true;
+      controls.append(button(doc, 'primary-button', '保存并应用 DLC 开关', 'dlc-settings-save'), install, attach, repair, button(doc, 'secondary-button', '刷新 DLC 状态检查', 'dlc-check'));
+      content.append(controls);
+      if (Array.isArray(dlcCapability.notes) && dlcCapability.notes.length) content.append(element(doc, 'p', 'notice muted', dlcCapability.notes.join('；')));
+      return;
+    }
     content.append(button(doc, 'top-parent-back-button', '← 返回上一级', 'app', 'home'));
     appendPageHeading(doc, content, '设置', '生成服务彼此隔离；主线注入可按模块独立启用。', '独立配置');
     const grid = element(doc, 'div', 'settings-api-grid');
@@ -791,6 +819,7 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
       { key: 'xianwang', icon: '◌', title: '仙网内容 API', note: '风闻、论坛与天机日报', scope: '三应用共用' },
       { key: 'wanbao', icon: '♢', title: '万宝商行设置', note: '货单数量与保留上限', scope: '本地偏好' },
       { key: 'injection', icon: '◇', title: '主线注入', note: '选择可影响后续剧情的模块', scope: '默认关闭' },
+      { key: 'dlc', icon: '卷', title: 'DLC 剧情拓展', note: '安装、挂载与自动启停', scope: '默认关闭' },
     ];
     for (const entry of entries) {
       const card = button(doc, 'settings-api-card', '', 'settings-open', entry.key);
@@ -1707,6 +1736,17 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
       if (next && next !== 'home') { settingsSection = next; announcement = ''; render(); }
     } else if (action === 'settings-home') {
       settingsSection = 'home'; announcement = ''; render();
+    } else if (action === 'dlc-settings-save') {
+      root.querySelectorAll<HTMLInputElement>('[data-dlc-setting]').forEach((node) => { const id = node.dataset.dlcSetting as keyof DlcSettingsDraft; if (id) dlcSettings[id] = node.checked; });
+      sendAction('SAVE_DLC_SETTINGS', { ...dlcSettings }); announcement = '正在保存 DLC 开关并同步世界书…'; render();
+    } else if (action === 'dlc-install') {
+      sendAction('INSTALL_MISSING_DLCS'); announcement = '正在创建不存在的 DLC 世界书…'; render();
+    } else if (action === 'dlc-attach') {
+      sendAction('ATTACH_DLCS_TO_CURRENT_CHARACTER'); announcement = '正在把已有 DLC 挂载到当前角色…'; render();
+    } else if (action === 'dlc-repair') {
+      sendAction('REPAIR_DLC_MISSING_ENTRIES'); announcement = '正在补回缺失的世界书条目…'; render();
+    } else if (action === 'dlc-check') {
+      sendAction('CHECK_DLC_COMPATIBILITY'); announcement = '正在刷新 DLC 状态检查…'; render();
     } else if (action === 'wanbao-settings-save') {
       const readNumber = (key: keyof WanbaoSettingsDraft, fallback: number): number => {
         const input = root.querySelector<HTMLInputElement>(`[data-wanbao-setting="${key}"]`);
@@ -2129,6 +2169,9 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
       if (message.payload.xianwangApiSettings && typeof message.payload.xianwangApiSettings === 'object') xianwangApiSettings = { ...xianwangApiSettings, ...(message.payload.xianwangApiSettings as Partial<XianwangSettingsDraft>) };
       if (message.payload.wanbaoApiSettings && typeof message.payload.wanbaoApiSettings === 'object') wanbaoApiSettings = { ...wanbaoApiSettings, ...(message.payload.wanbaoApiSettings as Partial<WanbaoApiSettingsDraft>) };
       if (message.payload.promptInjectionSettings && typeof message.payload.promptInjectionSettings === 'object') promptInjectionSettings = { ...promptInjectionSettings, ...(message.payload.promptInjectionSettings as Partial<PromptInjectionSettingsDraft>) };
+      if (message.payload.dlcSettings && typeof message.payload.dlcSettings === 'object') dlcSettings = { ...dlcSettings, ...(message.payload.dlcSettings as Partial<DlcSettingsDraft>) };
+      if (Array.isArray(message.payload.dlcStatus)) dlcStatus = message.payload.dlcStatus as DlcStatusView[];
+      if (message.payload.dlcCapability && typeof message.payload.dlcCapability === 'object') dlcCapability = message.payload.dlcCapability as DlcCapabilityView;
       rerollCompatibilityEnabled = message.payload.rerollCompatibilityEnabled === true;
       if (message.payload.petSize === 'small' || message.payload.petSize === 'medium' || message.payload.petSize === 'large') petSize = message.payload.petSize;
       loreSelected = readLoreSelected();
@@ -2198,6 +2241,12 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
     if (message.action === 'REROLL_SETTINGS_STATUS') {
       rerollCompatibilityEnabled = message.payload.enabled === true;
       announcement = rerollCompatibilityEnabled ? '仙网重 Roll 兼容已开启。' : '仙网重 Roll 兼容已关闭。';
+      render();
+    }
+    if (message.action === 'DLC_STATUS_DATA' || message.action === 'DLC_COMPATIBILITY_DATA' || message.action === 'DLC_INSTALL_STATUS' || message.action === 'DLC_ATTACH_STATUS' || message.action === 'DLC_REPAIR_STATUS' || message.action === 'DLC_SETTINGS_STATUS') {
+      if (Array.isArray(message.payload.status)) dlcStatus = message.payload.status as DlcStatusView[];
+      if (message.payload.settings && typeof message.payload.settings === 'object') dlcSettings = { ...dlcSettings, ...(message.payload.settings as Partial<DlcSettingsDraft>) };
+      announcement = message.payload.ok === true ? 'DLC 操作完成，状态已重新读取。' : `DLC 操作失败：${typeof message.payload.error === 'string' ? message.payload.error : '未知错误'}`;
       render();
     }
     if (message.action === 'WANBAO_GENERATION_STATUS' || message.action === 'WANBAO_ESTIMATE_STATUS' || message.action === 'WANBAO_TRADE_STATUS') {

@@ -22,6 +22,14 @@ import { ZiweiPetController, type PetSize } from './petController';
 import { readProcessedYujianStories, writeProcessedYujianStories } from './services/yujianStorage';
 import { createMerchantApiGenerator, estimateMerchantItems, generateMerchantProducts, projectSellItems, readMerchantProducts, readMerchantQuotes, writeMerchantProducts, writeMerchantQuotes, type MerchantApiSettings, type MerchantProduct, type MerchantQuote, type MerchantSettings } from './services/merchantRuntime';
 import { applyMerchantTrade, type MerchantCurrencyMode } from './services/merchantCore';
+import { ExpansionManager } from './dlc/expansionManager';
+import { createTavernWorldbookAdapter, probeWorldbookRuntime, type TavernWorldbookRuntime } from './dlc/worldbookAdapter';
+import { DEFAULT_DLC_SETTINGS, type DlcId, type DlcSeed, type DlcSettings } from './dlc/types';
+import type { DlcDiagnostic } from './dlc/diagnostics';
+import wanNianSeedJson from './dlc/seeds/wanNianChouYuan.json';
+import heHuanSeedJson from './dlc/seeds/heHuanZong.json';
+import luoYangSeedJson from './dlc/seeds/luoYang.json';
+import shuShanSeedJson from './dlc/seeds/shuShan.json';
 
 const SCRIPT_ID = 'daoyuan-feature-frontend-hud';
 const HOST_ID = 'daoyuan-feature-hud';
@@ -30,6 +38,13 @@ const IPHONE_WIDTH = 390;
 const IPHONE_HEIGHT = 844;
 const IPHONE_RATIO = IPHONE_WIDTH / IPHONE_HEIGHT;
 const PET_SIZE_KEY = 'daoyuan_ziwei_pet_size_v1';
+const DLC_SETTINGS_KEY = 'daoyuan_dlc_settings_v1';
+const DLC_SEEDS = {
+  wan_nian_chou_yuan: wanNianSeedJson as DlcSeed,
+  he_huan_zong: heHuanSeedJson as DlcSeed,
+  luo_yang: luoYangSeedJson as DlcSeed,
+  shu_shan: shuShanSeedJson as DlcSeed,
+} satisfies Record<DlcId, DlcSeed>;
 
 type ShellMode = 'phone';
 type Layout = 'phone';
@@ -51,6 +66,17 @@ function readPetSize(hostWindow: Window): PetSize {
 
 function savePetSize(hostWindow: Window, size: PetSize): void {
   try { hostWindow.localStorage.setItem(PET_SIZE_KEY, size); } catch { /* optional preference */ }
+}
+
+function readDlcSettings(hostWindow: Window): DlcSettings {
+  try {
+    const value = JSON.parse(hostWindow.localStorage.getItem(DLC_SETTINGS_KEY) || '{}') as Partial<Record<DlcId, unknown>>;
+    return Object.fromEntries(Object.entries(DEFAULT_DLC_SETTINGS).map(([key, fallback]) => [key, typeof value[key as DlcId] === 'boolean' ? value[key as DlcId] : fallback])) as unknown as DlcSettings;
+  } catch { return { ...DEFAULT_DLC_SETTINGS }; }
+}
+
+function saveDlcSettings(hostWindow: Window, settings: DlcSettings): void {
+  try { hostWindow.localStorage.setItem(DLC_SETTINGS_KEY, JSON.stringify(settings)); } catch { /* optional local preference */ }
 }
 
 const MERCHANT_TRANSACTION_STORAGE_KEY = 'daoyuan_wanbao_transaction_facts_v1';
@@ -137,6 +163,11 @@ interface RuntimeGlobals {
   uninjectPrompts?: PromptInjectionApi['uninjectPrompts'];
   getCharWorldbookNames?: (scope?: string) => { primary?: string; additional?: string[] };
   getWorldbook?: (name: string) => Promise<Array<{ uid?: unknown; name?: unknown; comment?: unknown; content?: unknown; enabled?: unknown; disable?: unknown; constant?: unknown; key?: unknown[]; strategy?: { type?: unknown; keys?: unknown[] } }>>;
+  getWorldbookNames?: TavernWorldbookRuntime['getWorldbookNames'];
+  createWorldbook?: TavernWorldbookRuntime['createWorldbook'];
+  createWorldbookEntries?: TavernWorldbookRuntime['createWorldbookEntries'];
+  updateWorldbookWith?: TavernWorldbookRuntime['updateWorldbookWith'];
+  rebindCharWorldbooks?: TavernWorldbookRuntime['rebindCharWorldbooks'];
 }
 
 const runtime = globalThis as typeof globalThis & RuntimeGlobals;
@@ -379,12 +410,21 @@ class FeatureShell {
   private autoSchedulerInFlight = false;
   private promptInjectionCleanup: (() => void) | null = null;
   private promptInjectionRevision = 0;
+  private dlcManager: ExpansionManager | null = null;
+  private dlcStatus: DlcDiagnostic[] = [];
+  private dlcCapability = probeWorldbookRuntime({});
 
   start(): void {
     if (typeof document === 'undefined' || typeof window === 'undefined') return;
     const hostContext = resolveHostContext();
     this.hostWindow = hostContext.window;
     this.hostDocument = hostContext.document;
+    const dlcRuntime = runtime as unknown as TavernWorldbookRuntime;
+    this.dlcCapability = probeWorldbookRuntime(dlcRuntime);
+    if (this.dlcCapability.canList && this.dlcCapability.canRead) {
+      this.dlcManager = new ExpansionManager({ adapter: createTavernWorldbookAdapter(dlcRuntime), seeds: DLC_SEEDS, settings: readDlcSettings(this.hostWindow) });
+      void this.refreshDlcStatus();
+    }
     this.mvuChannel = new MvuChannelTool(
       () => runtime.Mvu ?? this.hostWindow?.Mvu ?? {},
       () => ({ contextRevision: this.session.contextRevision, messageId: this.session.messageId }),
@@ -521,6 +561,7 @@ class FeatureShell {
     }
     let data = snapshot.variables;
     this.worldData = snapshot.variables;
+    void this.applyDlcAutomation(snapshot.variables);
     this.inventoryItems = projectInventory(snapshot.variables);
     this.spiritStones = projectSpiritStones(snapshot.variables);
     this.worldStatus = projectWorldStatus(snapshot.variables);
@@ -1093,6 +1134,48 @@ class FeatureShell {
     this.sendContext();
   }
 
+  private async refreshDlcStatus(action: 'DLC_STATUS_DATA' | 'DLC_COMPATIBILITY_DATA' = 'DLC_STATUS_DATA'): Promise<void> {
+    try {
+      this.dlcStatus = this.dlcManager ? await this.dlcManager.refresh() : [];
+      this.frame?.contentWindow?.postMessage(makeBridgeMessage('event', action, { ok: Boolean(this.dlcManager), status: this.dlcStatus, capability: this.dlcCapability, error: this.dlcManager ? '' : this.dlcCapability.notes.join('；') }), '*');
+      this.sendContext();
+    } catch (error) {
+      this.frame?.contentWindow?.postMessage(makeBridgeMessage('event', action, { ok: false, status: this.dlcStatus, capability: this.dlcCapability, error: error instanceof Error ? error.message : String(error) }), '*');
+    }
+  }
+
+  private async runDlcOperation(operation: 'install' | 'attach' | 'repair'): Promise<void> {
+    const action = operation === 'install' ? 'DLC_INSTALL_STATUS' : operation === 'attach' ? 'DLC_ATTACH_STATUS' : 'DLC_REPAIR_STATUS';
+    try {
+      if (!this.dlcManager) throw new Error(this.dlcCapability.notes.join('；') || 'DLC 世界书运行时不可用');
+      this.dlcStatus = operation === 'install' ? await this.dlcManager.installMissing() : operation === 'attach' ? await this.dlcManager.attachMissing() : await this.dlcManager.repairMissing();
+      if (this.worldData) this.dlcStatus = await this.dlcManager.applyAutomation(this.worldData);
+      this.frame?.contentWindow?.postMessage(makeBridgeMessage('event', action, { ok: true, status: this.dlcStatus }), '*');
+      this.sendContext();
+    } catch (error) {
+      this.frame?.contentWindow?.postMessage(makeBridgeMessage('event', action, { ok: false, status: this.dlcStatus, error: error instanceof Error ? error.message : String(error) }), '*');
+    }
+  }
+
+  private async applyDlcAutomation(worldData: unknown): Promise<void> {
+    if (!this.dlcManager) return;
+    try { this.dlcStatus = await this.dlcManager.applyAutomation(worldData); this.sendContext(); }
+    catch (error) { console.warn('[道渊 DLC] 自动控制失败，保留现有世界书状态', error); }
+  }
+
+  private async saveDlcSettings(payload: Record<string, unknown>): Promise<void> {
+    try {
+      if (!this.hostWindow || !this.dlcManager) throw new Error(this.dlcCapability.notes.join('；') || 'DLC 世界书运行时不可用');
+      const next = Object.fromEntries((Object.keys(DEFAULT_DLC_SETTINGS) as DlcId[]).map((id) => [id, payload[id] === true])) as unknown as DlcSettings;
+      this.dlcManager.setSettings(next); saveDlcSettings(this.hostWindow, next);
+      if (this.worldData) this.dlcStatus = await this.dlcManager.applyAutomation(this.worldData);
+      this.frame?.contentWindow?.postMessage(makeBridgeMessage('event', 'DLC_SETTINGS_STATUS', { ok: true, settings: next, status: this.dlcStatus }), '*');
+      this.sendContext();
+    } catch (error) {
+      this.frame?.contentWindow?.postMessage(makeBridgeMessage('event', 'DLC_SETTINGS_STATUS', { ok: false, status: this.dlcStatus, error: error instanceof Error ? error.message : String(error) }), '*');
+    }
+  }
+
   private handleUiAction(action: Parameters<typeof makeBridgeMessage>[1], payload: Record<string, unknown> = {}): void {
     if (action === 'APP_READY' || action === 'REQUEST_CONTEXT') this.sendContext();
     if (action === 'SET_LAYOUT') {
@@ -1130,6 +1213,11 @@ class FeatureShell {
     if (action === 'SAVE_XIANWANG_SETTINGS') this.saveXianwangSettings(payload);
     if (action === 'SAVE_WANBAO_API_SETTINGS') this.saveWanbaoApiSettings(payload);
     if (action === 'SAVE_PROMPT_INJECTION_SETTINGS') this.savePromptInjectionSettings(payload);
+    if (action === 'REQUEST_DLC_STATUS' || action === 'CHECK_DLC_COMPATIBILITY') void this.refreshDlcStatus(action === 'CHECK_DLC_COMPATIBILITY' ? 'DLC_COMPATIBILITY_DATA' : 'DLC_STATUS_DATA');
+    if (action === 'INSTALL_MISSING_DLCS') void this.runDlcOperation('install');
+    if (action === 'ATTACH_DLCS_TO_CURRENT_CHARACTER') void this.runDlcOperation('attach');
+    if (action === 'REPAIR_DLC_MISSING_ENTRIES') void this.runDlcOperation('repair');
+    if (action === 'SAVE_DLC_SETTINGS') void this.saveDlcSettings(payload);
     if (action === 'GENERATE_TRENDS') void this.generateTrendPosts(undefined, false, true);
     if (action === 'DELETE_TREND') void this.deleteTrendPost(payload);
     if (action === 'GENERATE_FORUM') void this.generateForumContent(undefined, false, true);
@@ -1928,6 +2016,9 @@ class FeatureShell {
       promptInjectionSettings: this.hostWindow ? readPromptInjectionSettings(this.hostWindow) : DEFAULT_PROMPT_INJECTION_SETTINGS,
       rerollCompatibilityEnabled: this.hostWindow ? readRerollCompatibility(this.hostWindow) : false,
       petSize: this.hostWindow ? readPetSize(this.hostWindow) : 'large',
+      dlcStatus: this.dlcStatus,
+      dlcSettings: this.dlcManager?.getSettings() ?? (this.hostWindow ? readDlcSettings(this.hostWindow) : DEFAULT_DLC_SETTINGS),
+      dlcCapability: this.dlcCapability,
     }, this.session.contextRevision), '*');
     this.refreshPromptInjection();
   }

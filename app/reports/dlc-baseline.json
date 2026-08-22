@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-22T12:42:43.906Z",
+  "purpose": "DLC 阶段 0 原始世界书基线；仅供分析，不作为运行时正文真源。",
+  "sources": [
+    {
+      "id": "wan_nian_chou_yuan",
+      "source": "道渊世界观剧情拓展/万年仇怨/万年仇怨.json",
+      "sha256": "7a40ee3325a91b997f9a9d3f4b348dfca1eefb2bb8381b00e47c763713c2c9c8",
+      "bytes": 117057,
+      "entryCount": 22,
+      "constantCount": 7,
+      "enabledCount": 2,
+      "disabledCount": 20,
+      "assistantSourcesExcluded": true
+    },
+    {
+      "id": "he_huan_zong",
+      "source": "道渊世界观剧情拓展/合欢宗拓展/合欢宗扩展.json",
+      "sha256": "3fce4922ccb778c009331e54b4c521e03cc88bd80f924cc70c09524cc6a9cfac",
+      "bytes": 109374,
+      "entryCount": 50,
+      "constantCount": 14,
+      "enabledCount": 19,
+      "disabledCount": 31,
+      "assistantSourcesExcluded": true
+    },
+    {
+      "id": "luo_yang",
+      "source": "道渊世界观剧情拓展/洛阳拓展/洛阳扩展.json",
+      "sha256": "edeae32945fc532192e65e536f31fbbd275c0aea69df1459ec09fcdb51b26daf",
+      "bytes": 74679,
+      "entryCount": 20,
+      "constantCount": 6,
+      "enabledCount": 0,
+      "disabledCount": 20,
+      "assistantSourcesExcluded": true
+    },
+    {
+      "id": "shu_shan",
+      "source": "道渊世界观剧情拓展/蜀山拓展/蜀山扩展2.0.json",
+      "sha256": "af30ec417926d49a7af348e21018e8e8b38b985dbd8e5cc88106fc9f540c1285",
+      "bytes": 126277,
+      "entryCount": 20,
+      "constantCount": 13,
+      "enabledCount": 9,
+      "disabledCount": 11,
+      "assistantSourcesExcluded": true
+    }
+  ],
+  "runtimeProbes": [
+    {
+      "capability": "create_standalone_worldbook",
+      "status": "pending_real_host_probe"
+    },
+    {
+      "capability": "write_current_character_additional_worldbooks",
+      "status": "pending_real_host_probe"
+    },
+    {
+      "capability": "worldbook_scan_order_before_generation",
+      "status": "pending_real_host_probe"
+    }
+  ]
+}
