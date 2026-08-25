@@ -441,6 +441,7 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
   let fetchingXianwangModels = false;
   let fetchingWanbaoModels = false;
   let rerollCompatibilityEnabled = false;
+  let contentBeautifierEnabled = true;
   let petSize: PetSize = 'large';
   let settingsSection: SettingsSection = 'home';
   let dlcSettings: DlcSettingsDraft = { wan_nian_chou_yuan: false, he_huan_zong: false, luo_yang: false, shu_shan: false };
@@ -853,7 +854,14 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
       label.append(input, element(doc, 'span', undefined, entry.label), element(doc, 'small', undefined, entry.note)); petSizeRow.append(label);
     }
     petPanel.append(petSizeRow);
-    content.append(grid, rerollPanel, petPanel, element(doc, 'p', 'notice muted', 'API 密钥仅保存在当前浏览器本地设置中，不写入聊天变量或模型提示词。'));
+    const beautifierPanel = appendPanel(doc, content, '正文美化 V26', '控制正文阅读器是否扫描并美化 `<content>`；阅读器内部的字体、字号和术语注解仍由“阅”按钮独立管理。');
+    const beautifierToggle = element(doc, 'label', 'settings-auto-toggle');
+    const beautifierInput = doc.createElement('input'); beautifierInput.type = 'checkbox'; beautifierInput.checked = contentBeautifierEnabled; beautifierInput.dataset.contentBeautifierEnabled = 'true';
+    const beautifierCopy = element(doc, 'span', 'settings-auto-toggle-copy');
+    beautifierCopy.append(element(doc, 'strong', undefined, '启用正文美化'), element(doc, 'small', undefined, '默认开启。关闭后立即停止处理新正文；刷新酒馆页面后，已经美化的旧正文恢复为原始显示。'));
+    beautifierToggle.append(beautifierInput, beautifierCopy);
+    beautifierPanel.append(beautifierToggle, button(doc, 'primary-button', '保存正文美化开关', 'content-beautifier-save'));
+    content.append(grid, rerollPanel, petPanel, beautifierPanel, element(doc, 'p', 'notice muted', 'API 密钥仅保存在当前浏览器本地设置中，不写入聊天变量或模型提示词。'));
   }
 
   function renderPromptInjectionSettings(content: HTMLElement): void {
@@ -1739,6 +1747,10 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
     } else if (action === 'dlc-settings-save') {
       root.querySelectorAll<HTMLInputElement>('[data-dlc-setting]').forEach((node) => { const id = node.dataset.dlcSetting as keyof DlcSettingsDraft; if (id) dlcSettings[id] = node.checked; });
       sendAction('SAVE_DLC_SETTINGS', { ...dlcSettings }); announcement = '正在保存 DLC 开关并同步世界书…'; render();
+    } else if (action === 'content-beautifier-save') {
+      contentBeautifierEnabled = root.querySelector<HTMLInputElement>('[data-content-beautifier-enabled]')?.checked !== false;
+      sendAction('SAVE_CONTENT_BEAUTIFIER_SETTINGS', { enabled: contentBeautifierEnabled });
+      announcement = '正在保存正文美化开关…'; render();
     } else if (action === 'dlc-install') {
       sendAction('INSTALL_MISSING_DLCS'); announcement = '正在创建不存在的 DLC 世界书…'; render();
     } else if (action === 'dlc-attach') {
@@ -2235,12 +2247,20 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
       capabilityAvailable = message.payload.capabilities && typeof message.payload.capabilities === 'object'
         ? Object.values(message.payload.capabilities).includes('mvu-ready')
         : false;
+      contentBeautifierEnabled = message.payload.contentBeautifierEnabled !== false;
       render();
     }
     if (message.action === 'YUJIAN_LORE_DATA') { loreEntries = Array.isArray(message.payload.entries) ? message.payload.entries as YujianLoreEntry[] : []; render(); }
     if (message.action === 'REROLL_SETTINGS_STATUS') {
       rerollCompatibilityEnabled = message.payload.enabled === true;
       announcement = rerollCompatibilityEnabled ? '仙网重 Roll 兼容已开启。' : '仙网重 Roll 兼容已关闭。';
+      render();
+    }
+    if (message.action === 'CONTENT_BEAUTIFIER_SETTINGS_STATUS') {
+      contentBeautifierEnabled = message.payload.enabled !== false;
+      announcement = message.payload.ok === true
+        ? (contentBeautifierEnabled ? '正文美化已开启。' : '正文美化已关闭；刷新酒馆页面后旧正文恢复原始显示。')
+        : `正文美化设置失败：${typeof message.payload.error === 'string' ? message.payload.error : '未知错误'}`;
       render();
     }
     if (message.action === 'DLC_STATUS_DATA' || message.action === 'DLC_COMPATIBILITY_DATA' || message.action === 'DLC_INSTALL_STATUS' || message.action === 'DLC_ATTACH_STATUS' || message.action === 'DLC_REPAIR_STATUS' || message.action === 'DLC_SETTINGS_STATUS') {

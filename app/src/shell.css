@@ -55,6 +55,7 @@
   background: transparent;
   box-shadow: none;
   cursor: pointer;
+  pointer-events: none;
   touch-action: none;
   -webkit-tap-highlight-color: transparent;
   line-height: 0;
@@ -66,7 +67,16 @@
 #daoyuan-feature-orb:hover { filter: drop-shadow(0 8px 15px rgba(70, 34, 110, .38)); transform: translateY(-3px); }
 #daoyuan-feature-orb:active { transform: translateY(0); }
 #daoyuan-feature-orb:disabled { cursor: default; opacity: 1; }
-#daoyuan-feature-orb .ziwei-pet-frame { position: absolute; right: 50%; bottom: 0; display: block; width: 133.34%; height: 133.34%; max-width: none; object-fit: contain; object-position: center bottom; pointer-events: none; user-select: none; transform: translateX(50%); }
+#daoyuan-feature-orb .dsh-pet-stage { position: absolute; right: 50%; bottom: 0; display: block; width: 133.34%; height: 133.34%; pointer-events: none; user-select: none; transform: translateX(calc(50% + clamp(34px, 10vw, 64px))); }
+#daoyuan-feature-orb .dsh-pet-stage::after { content: ''; position: absolute; left: 30%; top: 5%; width: 40%; height: 95%; pointer-events: auto; }
+#daoyuan-feature-orb .dsh-pet-video { position: absolute; inset: 0; display: block; width: 100%; height: 100%; max-width: none; object-fit: contain; object-position: center bottom; opacity: 0; transition: opacity .16s ease; }
+#daoyuan-feature-orb .dsh-pet-video.is-front { opacity: 1; }
+#daoyuan-feature-orb .dsh-pet-fallback { position: absolute; right: 8%; bottom: 8%; display: none; font-size: clamp(34px, 5vw, 58px); line-height: 1; filter: drop-shadow(0 6px 10px rgba(70, 34, 110, .42)); }
+#daoyuan-feature-orb.is-pet-fallback .dsh-pet-fallback { display: block; }
+#daoyuan-feature-orb.is-pet-fallback .dsh-pet-video { display: none; }
+@media (prefers-reduced-motion: reduce) {
+  #daoyuan-feature-orb .dsh-pet-video { transition: none; }
+}
 @media (max-width: 600px), (pointer: coarse) {
   #daoyuan-feature-hud { border-radius: 0; }
   #daoyuan-feature-orb { width: 62px; height: 76px; }

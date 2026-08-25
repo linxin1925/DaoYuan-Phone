@@ -39,6 +39,7 @@ const IPHONE_HEIGHT = 844;
 const IPHONE_RATIO = IPHONE_WIDTH / IPHONE_HEIGHT;
 const PET_SIZE_KEY = 'daoyuan_ziwei_pet_size_v1';
 const DLC_SETTINGS_KEY = 'daoyuan_dlc_settings_v1';
+const CONTENT_BEAUTIFIER_ENABLED_KEY = 'daoyuan_content_beautifier_enabled_v1';
 const DLC_SEEDS = {
   wan_nian_chou_yuan: wanNianSeedJson as DlcSeed,
   he_huan_zong: heHuanSeedJson as DlcSeed,
@@ -66,6 +67,15 @@ function readPetSize(hostWindow: Window): PetSize {
 
 function savePetSize(hostWindow: Window, size: PetSize): void {
   try { hostWindow.localStorage.setItem(PET_SIZE_KEY, size); } catch { /* optional preference */ }
+}
+
+function readContentBeautifierEnabled(hostWindow: Window): boolean {
+  try { return hostWindow.localStorage.getItem(CONTENT_BEAUTIFIER_ENABLED_KEY) !== 'false'; }
+  catch { return true; }
+}
+
+function saveContentBeautifierEnabled(hostWindow: Window, enabled: boolean): void {
+  try { hostWindow.localStorage.setItem(CONTENT_BEAUTIFIER_ENABLED_KEY, String(enabled)); } catch { /* optional preference */ }
 }
 
 function readDlcSettings(hostWindow: Window): DlcSettings {
@@ -168,6 +178,8 @@ interface RuntimeGlobals {
   createWorldbookEntries?: TavernWorldbookRuntime['createWorldbookEntries'];
   updateWorldbookWith?: TavernWorldbookRuntime['updateWorldbookWith'];
   rebindCharWorldbooks?: TavernWorldbookRuntime['rebindCharWorldbooks'];
+  __daoyuanInstallContentBeautifierV26?: () => void;
+  __daoyuanCultivationReaderV2?: { destroy?: () => void };
 }
 
 const runtime = globalThis as typeof globalThis & RuntimeGlobals;
@@ -179,6 +191,8 @@ interface HostContext {
 
 interface DaoyuanHostWindow extends Window {
   __daoyuanFeatureCleanup?: () => void;
+  openJadeUI?: () => void;
+  closeJadeUI?: () => void;
 }
 
 interface YujianLoreEntry {
@@ -491,12 +505,18 @@ class FeatureShell {
     this.orb.type = 'button';
     this.orb.title = '打开天机阁随身玉简';
     this.orb.setAttribute('aria-label', '打开天机阁随身玉简');
-    this.orb.innerHTML = '<img class="ziwei-pet-frame" alt="紫薇桌宠" draggable="false">';
+    this.orb.innerHTML = '<span class="dsh-pet-stage" aria-hidden="true"><video class="dsh-pet-video" muted playsinline preload="auto"></video><video class="dsh-pet-video" muted playsinline preload="auto"></video><span class="dsh-pet-fallback">🐾</span></span>';
     this.hostDocument.body.append(this.orb);
-    const petImage = this.orb.querySelector<HTMLImageElement>('.ziwei-pet-frame');
-    if (petImage) {
-      this.petController = new ZiweiPetController(this.orb, petImage, () => this.open());
+    const petVideos = Array.from(this.orb.querySelectorAll<HTMLVideoElement>('.dsh-pet-video'));
+    if (petVideos.length === 2) {
+      this.petController = new ZiweiPetController(this.orb, [petVideos[0], petVideos[1]], () => this.open());
       this.petController.setSize(readPetSize(this.hostWindow));
+      hostRuntime.openJadeUI = () => this.petController?.openJadeUI();
+      hostRuntime.closeJadeUI = () => this.petController?.closeJadeUI();
+      this.session.disposers.push(() => {
+        delete hostRuntime.openJadeUI;
+        delete hostRuntime.closeJadeUI;
+      });
     }
     this.bindOrbDrag();
 
@@ -1176,6 +1196,20 @@ class FeatureShell {
     }
   }
 
+  private saveContentBeautifierSettings(payload: Record<string, unknown>): void {
+    if (!this.hostWindow) return;
+    const enabled = payload.enabled === true;
+    saveContentBeautifierEnabled(this.hostWindow, enabled);
+    try {
+      if (enabled) runtime.__daoyuanInstallContentBeautifierV26?.();
+      else runtime.__daoyuanCultivationReaderV2?.destroy?.();
+      this.frame?.contentWindow?.postMessage(makeBridgeMessage('event', 'CONTENT_BEAUTIFIER_SETTINGS_STATUS', { ok: true, enabled }), '*');
+      this.sendContext();
+    } catch (error) {
+      this.frame?.contentWindow?.postMessage(makeBridgeMessage('event', 'CONTENT_BEAUTIFIER_SETTINGS_STATUS', { ok: false, enabled, error: error instanceof Error ? error.message : String(error) }), '*');
+    }
+  }
+
   private handleUiAction(action: Parameters<typeof makeBridgeMessage>[1], payload: Record<string, unknown> = {}): void {
     if (action === 'APP_READY' || action === 'REQUEST_CONTEXT') this.sendContext();
     if (action === 'SET_LAYOUT') {
@@ -1218,6 +1252,7 @@ class FeatureShell {
     if (action === 'ATTACH_DLCS_TO_CURRENT_CHARACTER') void this.runDlcOperation('attach');
     if (action === 'REPAIR_DLC_MISSING_ENTRIES') void this.runDlcOperation('repair');
     if (action === 'SAVE_DLC_SETTINGS') void this.saveDlcSettings(payload);
+    if (action === 'SAVE_CONTENT_BEAUTIFIER_SETTINGS') this.saveContentBeautifierSettings(payload);
     if (action === 'GENERATE_TRENDS') void this.generateTrendPosts(undefined, false, true);
     if (action === 'DELETE_TREND') void this.deleteTrendPost(payload);
     if (action === 'GENERATE_FORUM') void this.generateForumContent(undefined, false, true);
@@ -2016,6 +2051,7 @@ class FeatureShell {
       promptInjectionSettings: this.hostWindow ? readPromptInjectionSettings(this.hostWindow) : DEFAULT_PROMPT_INJECTION_SETTINGS,
       rerollCompatibilityEnabled: this.hostWindow ? readRerollCompatibility(this.hostWindow) : false,
       petSize: this.hostWindow ? readPetSize(this.hostWindow) : 'large',
+      contentBeautifierEnabled: this.hostWindow ? readContentBeautifierEnabled(this.hostWindow) : true,
       dlcStatus: this.dlcStatus,
       dlcSettings: this.dlcManager?.getSettings() ?? (this.hostWindow ? readDlcSettings(this.hostWindow) : DEFAULT_DLC_SETTINGS),
       dlcCapability: this.dlcCapability,

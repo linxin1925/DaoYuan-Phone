@@ -1,6 +1,6 @@
 {
   "name": "daoyuan-feature-frontend",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -20,6 +20,8 @@
     "test:dlc-seeds": "node scripts/validate-dlc-seeds.mjs",
     "test:dlc-manager": "node --experimental-strip-types scripts/validate-dlc-manager.mjs",
     "package:candidate": "node scripts/package-candidate.mjs",
+    "package:v11-test": "node scripts/package-candidate.mjs --v11-test",
+    "package:formal": "node scripts/package-candidate.mjs --formal",
     "check": "pnpm typecheck && pnpm test:fixtures && pnpm test:spirit-stones && pnpm test:wanbao-transactions && pnpm test:wanbao-pricing && pnpm test:prompt-injection && pnpm test:dlc-seeds && pnpm test:dlc-manager && pnpm test:trends-ui && pnpm test:forum-news-ui && pnpm test:v08 && pnpm build && pnpm package:candidate"
   },
   "dependencies": {
