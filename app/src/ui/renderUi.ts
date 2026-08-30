@@ -2,6 +2,8 @@ import { parseBridgeMessage, type BridgeAction } from '../contract/bridge';
 import { emptyAppData, parseAppData, type AppData, type BeautyRankEntry, type BeautyRankReply, type TrendPost, type ForumPost, type NewsPaper } from '../contract/appData';
 import { loadUiPreferences, saveUiPreferences } from '../services/storageService';
 import { getConnections, MAPS, mapNodeClass, mapNodeColor, normalizeMapNode, resolveWorldMapLocation, type MapFaction, type MapRealm } from '../services/mapService';
+import type { EarthSimulationState, EarthTimeRatio } from '../earthSimulation/types';
+import type { XuantianSimulationState } from '../xuantianSimulation/types';
 import beautyPlaqueUrl from '../assets/beauty-plaque.png?inline';
 import {
   getDefaultPortraitUrl,
@@ -21,7 +23,7 @@ import {
   setSelectedSetIndex,
 } from '../services/portraitService';
 
-type AppKey = 'home' | 'yujian' | 'beauty' | 'trends' | 'wanbao' | 'inventory' | 'map' | 'forum' | 'news' | 'settings' | 'diagnostic';
+type AppKey = 'home' | 'world' | 'xuantian' | 'earth' | 'yujian' | 'beauty' | 'trends' | 'wanbao' | 'inventory' | 'map' | 'forum' | 'news' | 'settings' | 'diagnostic';
 type WanbaoSection = 'market' | 'owned';
 type Layout = 'phone';
 
@@ -46,15 +48,31 @@ interface WanbaoGenerationState { status: 'idle' | 'running' | 'success' | 'erro
 interface WorldStatus { time: string; location: string; energy: string; }
 interface YujianSettingsDraft { customPrompt: string; apiBaseUrl: string; apiKey: string; apiModel: string; storyParseEnabled: boolean; }
 interface BeautyApiSettingsDraft { apiBaseUrl: string; apiKey: string; apiModel: string; autoEnabled: boolean; autoInterval: number; }
+interface EarthApiSettingsDraft { enabled: boolean; apiBaseUrl: string; apiKey: string; apiModel: string; temperature: number; timeoutSeconds: number; replyInterval: number; maxWorldDays: number; timeRatio: EarthTimeRatio; }
+interface XuantianApiSettingsDraft { enabled: boolean; apiBaseUrl: string; apiKey: string; apiModel: string; temperature: number; timeoutSeconds: number; replyInterval: number; maxWorldDays: number; }
+const EARTH_TIME_RATIO_OPTIONS: Array<{ value: EarthTimeRatio; label: string; note: string }> = [
+  { value: '1:5', label: '地球 1 天＝玄天界 5 天', note: '地球较慢：玄天界累计经过 5 天，地球推进 1 天。' },
+  { value: '1:2', label: '地球 1 天＝玄天界 2 天', note: '地球较慢：玄天界累计经过 2 天，地球推进 1 天。' },
+  { value: '1:1', label: '地球 1 天＝玄天界 1 天', note: '两界同速：两边经过的天数完全相同。' },
+  { value: '2:1', label: '地球 2 天＝玄天界 1 天', note: '地球较快：玄天界每经过 1 天，地球推进 2 天。' },
+  { value: '5:1', label: '地球 5 天＝玄天界 1 天', note: '地球较快：玄天界每经过 1 天，地球推进 5 天。' },
+  { value: '10:1', label: '地球 10 天＝玄天界 1 天', note: '地球很快：玄天界每经过 1 天，地球推进 10 天。' },
+];
+const earthTimeRatioNote = (ratio: EarthTimeRatio): string => EARTH_TIME_RATIO_OPTIONS.find(option => option.value === ratio)?.note ?? EARTH_TIME_RATIO_OPTIONS[2].note;
 type ApiSettingsDraft = Pick<BeautyApiSettingsDraft, 'apiBaseUrl' | 'apiKey' | 'apiModel'>;
 interface XianwangSettingsDraft extends ApiSettingsDraft { playerAlias:string; trendsAutoEnabled:boolean; autoInterval: number; batchMin: number; batchMax: number; maxPosts: number; forumAutoEnabled:boolean; forumAutoInterval:number; forumBatchSize:number; forumMaxPosts:number; newsAutoEnabled:boolean; newsAutoInterval:number; newsBatchSize:number; newsMaxPapers:number; decentralizedMode:boolean; autoAiReply:boolean; showHeat:boolean; showCommentPreview:boolean; jailbreakPrompt:boolean; generatedCommentCount:number; }
 type XianwangNumberSetting = 'autoInterval'|'batchMin'|'batchMax'|'maxPosts'|'forumAutoInterval'|'forumBatchSize'|'forumMaxPosts'|'newsAutoInterval'|'newsBatchSize'|'newsMaxPapers'|'generatedCommentCount';
 interface PromptInjectionSettingsDraft { yujian: boolean; trends: boolean; forum: boolean; news: boolean; }
-interface DlcSettingsDraft { wan_nian_chou_yuan: boolean; he_huan_zong: boolean; luo_yang: boolean; shu_shan: boolean; }
-interface DlcStatusView { id: keyof DlcSettingsDraft; label: string; status: string; mounted: boolean; entryCount: number; missingEntries: string[]; duplicateEntries: string[]; userModified: boolean; reason: string; }
-interface DlcCapabilityView { canCreate?: boolean; canAppend?: boolean; canUpdate?: boolean; canAttach?: boolean; notes?: string[]; }
-type SettingsSection = 'home' | 'yujian' | 'beauty' | 'xianwang' | 'wanbao' | 'injection' | 'dlc';
+type FeatureModuleKey = 'yujian' | 'beauty' | 'xianwang' | 'wanbao' | 'world';
+type FeatureModuleFlags = Record<FeatureModuleKey, boolean>;
+interface UserScriptView { id: string; name: string; enabled: boolean; dlcId: string | null; active: boolean; }
+interface UserDlcStatusView { id: string; name: string; worldbookName: string; scriptId: string | null; scriptName: string | null; importedAt: string; worldbookExists: boolean; mounted: boolean; scriptStored: boolean; scriptEnabled: boolean; scriptActive: boolean; }
+interface EarthWorldbookStatusView { status: 'not-installed' | 'installed-unmounted' | 'mounted' | 'missing-entries' | 'duplicate-entries' | 'conflict' | 'empty-snapshot' | 'user-modified'; mounted: boolean; entryCount: number; missingEntries: string[]; duplicateEntries: string[]; userModified: boolean; canCreate: boolean; canRepairMissing: boolean; canAttach: boolean; reason: string; }
+type SettingsSection = 'home' | 'yujian' | 'beauty' | 'xianwang' | 'wanbao' | 'injection' | 'dlc' | 'earth' | 'xuantian' | 'world' | 'pet' | 'content-beautifier' | 'config-helper';
+type EarthSettingsTab = 'overview' | 'regions' | 'forces' | 'events';
+type XuantianSettingsTab = 'overview' | 'regions' | 'forces' | 'events';
 type PetSize = 'small' | 'medium' | 'large';
+type PetKind = 'whale' | 'ziwei';
 interface YujianLoreEntry { uid: string; name: string; content: string; keys: string[]; }
 
 const mapFactionPortraits: Record<string, string[]> = {
@@ -191,6 +209,26 @@ function appendPageHeading(doc: Document, parent: HTMLElement, title: string, de
   copy.append(element(doc, 'h1', undefined, title), element(doc, 'p', undefined, description));
   heading.append(copy, element(doc, 'span', `source-tag${rumor ? ' rumor' : ''}`, tag));
   parent.append(heading);
+}
+
+function upgradeNativeSelects(doc: Document, root: HTMLElement): void {
+  root.querySelectorAll<HTMLSelectElement>('select').forEach((select) => {
+    if (select.dataset.inlineSelectReady === 'true') return;
+    select.dataset.inlineSelectReady = 'true'; select.hidden = true; select.tabIndex = -1;
+    const wrapper = element(doc, 'div', 'inline-select');
+    const trigger = element(doc, 'button', 'inline-select-trigger'); trigger.type = 'button'; trigger.setAttribute('aria-haspopup', 'listbox'); trigger.setAttribute('aria-expanded', 'false');
+    const menu = element(doc, 'div', 'inline-select-menu'); menu.hidden = true; menu.setAttribute('role', 'listbox');
+    const sync = (): void => {
+      trigger.textContent = select.selectedOptions[0]?.textContent ?? '请选择';
+      menu.querySelectorAll<HTMLElement>('[data-inline-select-value]').forEach((item) => { const active = item.dataset.inlineSelectValue === select.value; item.classList.toggle('selected', active); item.setAttribute('aria-selected', String(active)); });
+    };
+    for (const option of Array.from(select.options)) {
+      const item = element(doc, 'button', 'inline-select-option', option.textContent ?? option.value); item.type = 'button'; item.dataset.inlineSelectValue = option.value; item.setAttribute('role', 'option'); item.disabled = option.disabled;
+      item.addEventListener('click', (event) => { event.stopPropagation(); select.value = option.value; sync(); menu.hidden = true; trigger.setAttribute('aria-expanded', 'false'); select.dispatchEvent(new Event('change', { bubbles: true })); }); menu.append(item);
+    }
+    trigger.addEventListener('click', (event) => { event.stopPropagation(); menu.hidden = !menu.hidden; trigger.setAttribute('aria-expanded', String(!menu.hidden)); });
+    select.before(wrapper); wrapper.append(trigger, menu, select); sync();
+  });
 }
 
 function appendPanel(doc: Document, parent: HTMLElement, title: string, copy: string): HTMLElement {
@@ -382,10 +420,14 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
   root.id = 'daoyuan-ui-root';
   doc.body.replaceChildren(root);
   const prefs = loadUiPreferences();
+  const featureModuleForApp: Partial<Record<AppKey, FeatureModuleKey>> = {
+    world: 'world', xuantian: 'world', earth: 'world', yujian: 'yujian', beauty: 'beauty',
+    trends: 'xianwang', forum: 'xianwang', news: 'xianwang', wanbao: 'wanbao',
+  };
   let active: AppKey = apps.some(item => item.key === prefs.lastApp) ? prefs.lastApp as AppKey : 'home';
   let wanbaoSection: WanbaoSection = 'market';
   let wanbaoSettings: WanbaoSettingsDraft = { batchSize: 10, maxItems: 30, refreshInterval: 3, currencyMode: 'auto', itemDataMode: 'legacy' };
-  let wanbaoApiSettings: WanbaoApiSettingsDraft = { enabled: false, transactionInjectionEnabled: true, apiBaseUrl: '', apiKey: '', apiModel: '' };
+  let wanbaoApiSettings: WanbaoApiSettingsDraft = { enabled: false, transactionInjectionEnabled: false, apiBaseUrl: '', apiKey: '', apiModel: '' };
   let merchantTransactions: WanbaoTransactionPayload[] = [];
   let merchantCounter = 0;
   let merchantGenerationState: WanbaoGenerationState = { status: 'idle' };
@@ -424,8 +466,9 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
   let zoomMapImage = false;
   let mapImageFailed = false;
   let yujianSettings: YujianSettingsDraft = { customPrompt: '', apiBaseUrl: '', apiKey: '', apiModel: '', storyParseEnabled: false };
-  let beautyApiSettings: BeautyApiSettingsDraft = { apiBaseUrl: '', apiKey: '', apiModel: '', autoEnabled: true, autoInterval: 1 };
-  let xianwangApiSettings: XianwangSettingsDraft = { apiBaseUrl: '', apiKey: '', apiModel: '', playerAlias:'我', trendsAutoEnabled:true, autoInterval: 3, batchMin: 2, batchMax: 3, maxPosts: 30, forumAutoEnabled:true, forumAutoInterval:3, forumBatchSize:2, forumMaxPosts:30, newsAutoEnabled:true, newsAutoInterval:5, newsBatchSize:1, newsMaxPapers:12, decentralizedMode:false, autoAiReply:true, showHeat:true, showCommentPreview:true, jailbreakPrompt:true, generatedCommentCount:3 };
+  let beautyApiSettings: BeautyApiSettingsDraft = { apiBaseUrl: '', apiKey: '', apiModel: '', autoEnabled: false, autoInterval: 1 };
+  let beautyCounter = 0;
+  let xianwangApiSettings: XianwangSettingsDraft = { apiBaseUrl: '', apiKey: '', apiModel: '', playerAlias:'我', trendsAutoEnabled:false, autoInterval: 3, batchMin: 2, batchMax: 3, maxPosts: 30, forumAutoEnabled:false, forumAutoInterval:3, forumBatchSize:2, forumMaxPosts:30, newsAutoEnabled:false, newsAutoInterval:5, newsBatchSize:1, newsMaxPapers:12, decentralizedMode:false, autoAiReply:false, showHeat:false, showCommentPreview:false, jailbreakPrompt:false, generatedCommentCount:3 };
   let promptInjectionSettings: PromptInjectionSettingsDraft = { yujian: false, trends: false, forum: false, news: false };
   let loreEntries: YujianLoreEntry[] = [];
   let loreSelected: Array<{ uid: string; content: string }> = [];
@@ -440,13 +483,42 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
   let wanbaoModelOptions: string[] = [];
   let fetchingXianwangModels = false;
   let fetchingWanbaoModels = false;
-  let rerollCompatibilityEnabled = false;
+  let earthApiSettings: EarthApiSettingsDraft = { enabled: false, apiBaseUrl: '', apiKey: '', apiModel: '', temperature: 0.3, timeoutSeconds: 120, replyInterval: 5, maxWorldDays: 30, timeRatio: '1:1' };
+  let xuantianApiSettings: XuantianApiSettingsDraft = { enabled: false, apiBaseUrl: '', apiKey: '', apiModel: '', temperature: 0.3, timeoutSeconds: 120, replyInterval: 5, maxWorldDays: 30 };
+  let worldSimulationFeatures = { earthEnabled: false, xuantianEnabled: false };
+  let featureModuleFlags: FeatureModuleFlags = { yujian:false, beauty:false, xianwang:false, wanbao:false, world:false };
+  const expandedXuantianForceRegions = new Set<string>(['中央神州']);
+  let earthModelOptions: string[] = [];
+  let fetchingEarthModels = false;
+  let xuantianModelOptions: string[] = [];
+  let fetchingXuantianModels = false;
+  let earthSimulationRunning = false;
+  let xuantianSimulationState: XuantianSimulationState | null = null;
+  let xuantianSimulationRunning = false;
   let contentBeautifierEnabled = true;
+  let configHelperEnabled = true;
+  let petKind: PetKind = 'whale';
   let petSize: PetSize = 'large';
   let settingsSection: SettingsSection = 'home';
-  let dlcSettings: DlcSettingsDraft = { wan_nian_chou_yuan: false, he_huan_zong: false, luo_yang: false, shu_shan: false };
-  let dlcStatus: DlcStatusView[] = [];
-  let dlcCapability: DlcCapabilityView = {};
+  let earthSettingsTab: EarthSettingsTab = 'overview';
+  let xuantianSettingsTab: XuantianSettingsTab = 'overview';
+  let selectedXuantianRegion = 'center';
+  let expandedEarthRegion: string | null = null;
+  let expandedEarthEvent: string | null = null;
+  let expandedEarthFaction: string | null = null;
+  let earthFactionGroupsInitialized = false;
+  const expandedEarthFactionCategories = new Set<string>();
+  let earthSimulationState: EarthSimulationState | null = null;
+  let userDlcName = '';
+  let selectedUserDlcId: string | null = null;
+  let userDlcWorldbookDraft: { fileName: string; value: Record<string, unknown>; name: string; count: number } | null = null;
+  let userDlcScriptDraft: { fileName: string; value: Record<string, unknown>; name: string } | null = null;
+  let contentPackageMode: 'safe-merge' | 'replace-matching' = 'replace-matching';
+  let userScripts: UserScriptView[] = [];
+  let userDlcs: UserDlcStatusView[] = [];
+  let earthWorldbookStatus: EarthWorldbookStatusView | null = null;
+  let earthWorldbookMountedEntryCount = 0;
+  let earthWorldbookRequested = false;
   let beautyApiSettingsOpen = false;
   let beautyGenerating = false;
   let trendsGenerating = false;
@@ -464,6 +536,19 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
     if (Number.isFinite(saved.refreshInterval)) wanbaoSettings.refreshInterval = Math.max(0, Math.min(99, Math.floor(saved.refreshInterval as number)));
     if (saved.currencyMode === 'auto' || saved.currencyMode === 'legacy-bag' || saved.currencyMode === 'combat-separate') wanbaoSettings.currencyMode = saved.currencyMode;
     if (saved.itemDataMode === 'combat' || saved.itemDataMode === 'legacy') wanbaoSettings.itemDataMode = saved.itemDataMode;
+  } catch { /* optional local preference */ }
+
+  try {
+    const storage = uiView.parent !== uiView ? uiView.parent.localStorage : uiView.localStorage;
+    const saved = JSON.parse(storage.getItem('daoyuan_world_simulation_features_v1') || '{}') as Partial<typeof worldSimulationFeatures>;
+    if (typeof saved.earthEnabled === 'boolean') worldSimulationFeatures.earthEnabled = saved.earthEnabled;
+    if (typeof saved.xuantianEnabled === 'boolean') worldSimulationFeatures.xuantianEnabled = saved.xuantianEnabled;
+  } catch { /* optional local preference */ }
+
+  try {
+    const storage = uiView.parent !== uiView ? uiView.parent.localStorage : uiView.localStorage;
+    const saved = JSON.parse(storage.getItem('daoyuan_xuantian_api_settings_v1') || '{}') as Partial<XuantianApiSettingsDraft>;
+    xuantianApiSettings = { ...xuantianApiSettings, ...saved };
   } catch { /* optional local preference */ }
 
   const configureApiUrlInput = (input: HTMLInputElement): void => {
@@ -706,7 +791,493 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
     if (!loreRequested) { loreRequested = true; sendAction('REQUEST_YUJIAN_LORE'); }
   }
 
+  function renderWorldSimulationHub(content: HTMLElement): void {
+    const page = element(doc, 'div', 'world-sim-hub');
+    const head = element(doc, 'header', 'world-sim-hub-head');
+    head.append(element(doc, 'p', undefined, '双界独立账本'), element(doc, 'h1', undefined, '世界推演'), element(doc, 'span', undefined, '选择要查看的世界。两套推演分别启停、分别记录，不共享事件链。'));
+    const grid = element(doc, 'div', 'world-sim-choice-grid');
+    for (const item of [
+      { key:'xuantian', mark:'玄', title:'玄天界推演', note:'五大地域、势力与多线事件', enabled:worldSimulationFeatures.xuantianEnabled },
+      { key:'earth', mark:'地', title:'地球推演', note:'灵气复苏、区域与势力演化', enabled:worldSimulationFeatures.earthEnabled },
+    ] as const) {
+      const card = button(doc, `world-sim-choice${item.enabled ? '' : ' disabled'}`, '', 'world-sim-open', item.key);
+      card.disabled = !item.enabled;
+      card.append(element(doc,'span','world-sim-choice-mark',item.mark),element(doc,'strong',undefined,item.title),element(doc,'p',undefined,item.note),element(doc,'small',undefined,item.enabled ? '进入推演 →' : '已在设置中关闭'));
+      grid.append(card);
+    }
+    const settings = button(doc,'secondary-button world-sim-settings-button','管理推演开关','settings-open','world');
+    page.append(head,grid,settings); content.append(page);
+  }
+
+  function renderEarthSimulation(content: HTMLElement): void {
+      content.append(button(doc, 'world-sim-back', '← 桌面', 'app', 'home'));
+      const earthPage = element(doc, 'div', 'earth-sim-page');
+      const hero = element(doc, 'header', 'earth-sim-hero');
+      const orbit = element(doc, 'div', 'earth-sim-orbit');
+      orbit.setAttribute('aria-hidden', 'true');
+      orbit.append(element(doc, 'span', 'earth-sim-planet'), element(doc, 'span', 'earth-sim-moon'));
+      const heroCopy = element(doc, 'div', 'earth-sim-hero-copy');
+      heroCopy.append(
+        element(doc, 'p', 'earth-sim-kicker', '道渊小手机 V1.2 · 双界推演'),
+        element(doc, 'h1', undefined, '地球世界推演'),
+        element(doc, 'p', undefined, '以当前聊天为边界，记录复苏、学校筹建、双界接触与虫群压力。'),
+      );
+      const heroStatus = element(doc, 'div', 'earth-sim-hero-status');
+      const worldbookReady = Boolean(earthWorldbookStatus?.mounted && earthWorldbookMountedEntryCount > 0);
+      const worldbookLabel = worldbookReady ? `世界书已挂载 · ${earthWorldbookMountedEntryCount} 条` : earthWorldbookStatus?.reason ?? '正在检查附属世界书';
+      heroStatus.append(element(doc, 'span', `earth-sim-pulse${worldbookReady ? '' : ' pending'}`), element(doc, 'span', undefined, worldbookLabel));
+      hero.append(orbit, heroCopy, heroStatus);
+
+      const worldbookPanel = element(doc, 'section', `earth-worldbook-status${worldbookReady ? ' ready' : ''}`);
+      const worldbookCopy = element(doc, 'div', 'earth-worldbook-status-copy');
+      worldbookCopy.append(element(doc, 'strong', undefined, worldbookReady ? '推演依据已连接' : '推演依据尚未就绪'), element(doc, 'small', undefined, earthWorldbookStatus?.reason ?? '等待宿主世界书能力检测。'));
+      const worldbookActions = element(doc, 'div', 'earth-worldbook-actions');
+      if (earthWorldbookStatus?.status === 'not-installed') { const install = button(doc, 'secondary-button', '安装世界书', 'earth-worldbook-install'); install.disabled = !earthWorldbookStatus.canCreate; worldbookActions.append(install); }
+      else if (earthWorldbookStatus && !earthWorldbookStatus.mounted && !['conflict', 'duplicate-entries', 'empty-snapshot'].includes(earthWorldbookStatus.status)) { const attach = button(doc, 'secondary-button', '挂载到当前角色', 'earth-worldbook-attach'); attach.disabled = !earthWorldbookStatus.canAttach; worldbookActions.append(attach); }
+      if (earthWorldbookStatus?.status === 'missing-entries') { const repair = button(doc, 'secondary-button', `补回 ${earthWorldbookStatus.missingEntries.length} 条`, 'earth-worldbook-repair'); repair.disabled = !earthWorldbookStatus.canRepairMissing; worldbookActions.append(repair); }
+      if (earthWorldbookStatus?.status === 'user-modified') worldbookActions.append(button(doc, 'secondary-button', '更新内置规则与 EJS', 'earth-worldbook-repair'));
+      worldbookActions.append(button(doc, 'earth-worldbook-refresh', '刷新', 'earth-worldbook-refresh'));
+      worldbookPanel.append(worldbookCopy, worldbookActions);
+
+      const manualPanel = element(doc, 'section', 'earth-sim-panel earth-manual-simulation');
+      const manualCopy = element(doc, 'div', 'earth-manual-simulation-copy');
+      manualCopy.append(element(doc, 'strong', undefined, '手动推演'), element(doc, 'small', undefined, '只读取最近 5 条 AI 回复；用户输入不占层数。'));
+      const manualButton = button(doc, 'primary-button earth-manual-simulation-button', earthSimulationRunning ? '推演中…' : '开始手动推演', 'earth-simulation-run');
+      manualButton.disabled = earthSimulationRunning || !worldbookReady;
+      manualPanel.append(manualCopy, manualButton);
+
+      const tabs = element(doc, 'div', 'earth-sim-tabs');
+      tabs.setAttribute('role', 'tablist');
+      const tabItems: Array<[EarthSettingsTab, string]> = [['overview', '总览'], ['regions', '区域'], ['forces', '势力'], ['events', '事件']];
+      for (const [key, label] of tabItems) {
+        const tab = button(doc, `earth-sim-tab${earthSettingsTab === key ? ' active' : ''}`, label, 'earth-sim-tab', key);
+        tab.setAttribute('role', 'tab'); tab.setAttribute('aria-selected', String(earthSettingsTab === key));
+        tabs.append(tab);
+      }
+      earthPage.append(hero, worldbookPanel, manualPanel, tabs);
+      if (!earthWorldbookRequested) { earthWorldbookRequested = true; sendAction('REQUEST_EARTH_WORLDBOOK_STATUS'); }
+
+      if (earthSettingsTab === 'overview') {
+        const clock = element(doc, 'section', 'earth-sim-clock');
+        const dateCopy = element(doc, 'div', 'earth-sim-date');
+        const earthRemaining = featureModuleFlags.world && worldSimulationFeatures.earthEnabled && earthApiSettings.enabled ? Math.max(0, earthApiSettings.replyInterval - (earthSimulationState?.autoCounter ?? 0)) : null;
+        dateCopy.append(element(doc, 'span', undefined, '地球日期'), element(doc, 'strong', undefined, earthSimulationState?.earthDate ?? '2026-08-26'), element(doc, 'small', undefined, `玄天界日期 ${earthSimulationState?.xuantianDate ?? '2026-08-26'} · 复苏纪元第 ${earthSimulationState?.revivalYear ?? 0} 年 · 序列 ${earthSimulationState?.sequence ?? 0}`), element(doc, 'small', undefined, earthRemaining === null ? '自动推演已关闭' : `还有 ${earthRemaining} 轮对话后自动推演`));
+        const activeRatio = earthSimulationState?.timeRatio ?? earthApiSettings.timeRatio;
+        const sync = element(doc, 'div', 'earth-sim-sync'); sync.append(element(doc, 'span', undefined, '地球'), element(doc, 'i'), element(doc, 'span', undefined, '玄天界'), element(doc, 'b', undefined, EARTH_TIME_RATIO_OPTIONS.find(option => option.value === activeRatio)?.label ?? activeRatio));
+        clock.append(dateCopy, sync); earthPage.append(clock);
+
+        const metrics = element(doc, 'div', 'earth-sim-metrics');
+        for (const [label, value, tone, note] of [
+          ['灵力复苏', earthSimulationState?.revivalStage ?? '复苏初现', 'jade', '地球独立演化阶段'],
+          ['双界接触', earthSimulationState?.contactStage ?? '互不知情', 'gold', '只随可验证接触证据推进'],
+          ['相交秘境', earthSimulationState?.secretRealmStage ?? '未激活', 'violet', '与虫群通道分开记录'],
+          ['学校计划', '筹备启动', 'blue', '第一所灵力学校'],
+        ] as const) {
+          const card = element(doc, 'article', 'earth-sim-metric'); card.dataset.tone = tone;
+          card.append(element(doc, 'span', undefined, label), element(doc, 'strong', undefined, value), element(doc, 'small', undefined, note)); metrics.append(card);
+        }
+        earthPage.append(metrics);
+
+        const pressure = element(doc, 'section', 'earth-sim-panel earth-sim-pressure');
+        const pressureHead = element(doc, 'div', 'earth-sim-panel-head'); pressureHead.append(element(doc, 'div', undefined, '虫群压力'), element(doc, 'span', 'earth-sim-state-tag warning', '通道独立'));
+        const lanes = element(doc, 'div', 'earth-sim-lanes');
+        for (const [world, stage] of [['地球', earthSimulationState?.swarmEarthStage ?? '零星迹象'], ['玄天界', earthSimulationState?.swarmXuantianStage ?? '零星迹象']] as const) {
+          const lane = element(doc, 'div', 'earth-sim-lane'); lane.append(element(doc, 'span', undefined, world), element(doc, 'div', 'earth-sim-lane-track'), element(doc, 'strong', undefined, stage)); lanes.append(lane);
+        }
+        pressure.append(pressureHead, lanes, element(doc, 'p', 'earth-sim-panel-note', '虫群通道与相交秘境分开记录；控制秘境不会关闭虫群通道。'));
+        earthPage.append(pressure);
+
+        const eventPanel = element(doc, 'section', 'earth-sim-panel');
+        const stateEvents = earthSimulationState?.events.filter(event => event.status === 'active') ?? [];
+        const eventHead = element(doc, 'div', 'earth-sim-panel-head'); eventHead.append(element(doc, 'div', undefined, '活跃事件'), element(doc, 'span', 'earth-sim-count', `${stateEvents.length} / 20`));
+        const events = element(doc, 'div', 'earth-sim-events');
+        const activeEvents: ReadonlyArray<readonly [string,string,string,string,string,string,string,string]> = stateEvents.map(event => [event.id,event.kind,event.summary.split(/[，。；]/)[0]?.trim().slice(0, 32) || `${event.kind}事件`,event.stage,event.summary,`世界日期 ${event.worldDate} 已提交到状态账本。`,'下一阶段必须由后续推演逐级提交。','仅展示状态账本已确认的信息。'] as const);
+        for (const [key, kind, title, stage, copy, progress, condition, boundary] of activeEvents) {
+          const isExpanded = expandedEarthEvent === key;
+          const row = button(doc, `earth-sim-event${isExpanded ? ' expanded' : ''}`, '', 'earth-event-toggle', key);
+          row.setAttribute('aria-expanded', String(isExpanded)); row.setAttribute('aria-controls', `earth-event-detail-${key}`);
+          row.append(element(doc, 'span', 'earth-sim-event-kind', kind), element(doc, 'div', 'earth-sim-event-copy'), element(doc, 'span', 'earth-sim-event-stage', stage));
+          row.children[1].append(element(doc, 'strong', undefined, title), element(doc, 'small', undefined, copy));
+          row.append(element(doc, 'span', 'earth-event-indicator', isExpanded ? '收起 −' : '查看详情 ＋'));
+          if (isExpanded) {
+            const details = element(doc, 'div', 'earth-event-details'); details.id = `earth-event-detail-${key}`;
+            for (const [label, value] of [['已确认进展', progress], ['下一推进条件', condition], ['信息边界', boundary]] as const) { const item = element(doc, 'div', 'earth-event-detail-row'); item.append(element(doc, 'span', undefined, label), element(doc, 'p', undefined, value)); details.append(item); }
+            row.append(details);
+          }
+          events.append(row);
+        }
+        if (!activeEvents.length) events.append(element(doc, 'p', 'earth-sim-empty-state', '尚无推演提交的活跃事件。完成一次手动推演后才会出现。'));
+        eventPanel.append(eventHead, events); earthPage.append(eventPanel);
+      }
+
+      if (earthSettingsTab === 'regions') {
+        const statusPanel = element(doc, 'section', 'earth-sim-panel earth-sim-book-status');
+        const head = element(doc, 'div', 'earth-sim-panel-head'); head.append(element(doc, 'div', undefined, '全球复苏观测'), element(doc, 'span', 'earth-sim-state-tag ready', '4 个核心区域'));
+        statusPanel.append(head, element(doc, 'p', 'earth-sim-panel-note', '各区域刚开始确认灵力现象，尚未形成公开的超凡社会。'));
+        const regionList = element(doc, 'div', 'earth-region-list');
+        const regionRows = [
+          ['china', '中国', '国家统筹', '修真科学与教育筹备', '北京 · 武汉 · 上海 · 成都', '灵力异常已进入跨部门观测，公开口径仍保持为新型自然现象。', '教育标准、公共安全与基础研究同步筹备。', '尚无公开修行体系；异常个体仍以零星观察为主。'],
+          ['usa', '美国', '多中心竞合', '灵能研究与私营机构', '华盛顿 · 波士顿 · 旧金山', '联邦机构、大学与私营实验室分别建立观察项目，尚未形成统一解释。', '仪器测量、人体反应与潜在商业用途并行研究。', '信息分散且互相竞争，玩家尚未掌握任何秘密项目细节。'],
+          ['russia', '俄罗斯', '安全体系主导', '共鸣学与极端环境', '莫斯科 · 新西伯利亚 · 摩尔曼斯克', '高纬度与极端环境中的异常读数受到安全体系持续关注。', '共鸣现象、寒区样本与封闭环境安全。', '现阶段只有观测迹象，没有确认可控的超凡力量。'],
+          ['eu', '欧盟', '跨国协调', '以太工程与伦理治理', '布鲁塞尔 · 柏林 · 巴黎', '多个成员体系开始交换异常报告，并讨论共同研究规范。', '跨国数据协调、伦理边界与以太工程假说。', '协调仍在早期，尚无统一机构或公开超凡政策。'],
+        ] as const;
+        for (const [key, name, policy, focus, city, situation, priority, boundary] of regionRows) {
+          const stateRegion = earthSimulationState?.regions[key];
+          const isExpanded = expandedEarthRegion === key;
+          const row = button(doc, `earth-region-card${isExpanded ? ' expanded' : ''}`, '', 'earth-region-toggle', key);
+          const detailId = `earth-region-detail-${key}`;
+          row.setAttribute('aria-expanded', String(isExpanded)); row.setAttribute('aria-controls', detailId);
+          const head = element(doc, 'div', 'earth-region-head'); head.append(element(doc, 'strong', undefined, name), element(doc, 'span', undefined, `${policy} · ${stateRegion?.status ?? '异常迹象'}`));
+          const summary = element(doc, 'div', 'earth-region-summary'); summary.append(element(doc, 'p', undefined, focus), element(doc, 'small', undefined, city));
+          const indicator = element(doc, 'span', 'earth-region-indicator', isExpanded ? '收起 −' : '查看当前信息 ＋');
+          row.append(head, summary, indicator);
+          if (isExpanded) {
+            const details = element(doc, 'div', 'earth-region-details'); details.id = detailId;
+            for (const [label, value] of [['当前态势', stateRegion?.summary ?? situation], ['观察重点', priority], ['最后更新', stateRegion?.updatedAt ?? boundary]] as const) { const item = element(doc, 'div', 'earth-region-detail-row'); item.append(element(doc, 'span', undefined, label), element(doc, 'p', undefined, value)); details.append(item); }
+            row.append(details);
+          }
+          regionList.append(row);
+        }
+        statusPanel.append(regionList); earthPage.append(statusPanel);
+        const nodes = element(doc, 'section', 'earth-sim-panel'); nodes.append(element(doc, 'div', 'earth-sim-panel-head'));
+        nodes.children[0].append(element(doc, 'div', undefined, '其他观测节点'), element(doc, 'span', 'earth-sim-count', '12 个地球城市'));
+        nodes.append(element(doc, 'p', 'earth-sim-panel-note', '东亚、南亚、中东、非洲、拉丁美洲与大洋洲均保持独立发展线；本轮仅展示进入玩家认知的节点。'));
+        earthPage.append(nodes);
+      }
+
+      if (earthSettingsTab === 'forces') {
+        const school = element(doc, 'section', 'earth-sim-panel'); const schoolHead = element(doc, 'div', 'earth-sim-panel-head'); schoolHead.append(element(doc, 'div', undefined, '灵力教育'), element(doc, 'span', 'earth-sim-state-tag warning', '筹备期')); school.append(schoolHead, element(doc, 'h2', 'earth-force-title', '第一所灵力学校'), element(doc, 'p', 'earth-sim-panel-note', '尚未选址，尚未招生。当前重点是课程标准、安全边界与师资征集。')); earthPage.append(school);
+        const groups = element(doc, 'section', 'earth-sim-panel'); const factionValues = earthSimulationState ? Object.values(earthSimulationState.factions) : []; groups.append(element(doc, 'div', 'earth-sim-panel-head')); groups.children[0].append(element(doc, 'div', undefined, '势力动态档案'), element(doc, 'span', 'earth-sim-count', `${factionValues.length} 个势力`));
+        const categoryOrder = ['国家与区域','财团与跨国组织','民间与地下组织','玄天界势力'] as const;
+        if (!earthFactionGroupsInitialized) {
+          for (const category of categoryOrder) if (factionValues.some(faction => faction.category === category && (faction.status !== '潜伏' || faction.activity !== '尚未进入公开行动阶段。'))) expandedEarthFactionCategories.add(category);
+          if (!expandedEarthFactionCategories.size) expandedEarthFactionCategories.add(categoryOrder[0]);
+          earthFactionGroupsInitialized = true;
+        }
+        const categoryList = element(doc, 'div', 'earth-faction-groups');
+        for (const category of categoryOrder) {
+          const categoryFactions = factionValues.filter(faction => faction.category === category);
+          const categoryOpen = expandedEarthFactionCategories.has(category);
+          const section = element(doc, 'section', `earth-faction-group${categoryOpen ? ' expanded' : ''}`);
+          const categoryButton = button(doc, 'earth-faction-group-toggle', '', 'earth-faction-category-toggle', category);
+          categoryButton.setAttribute('aria-expanded', String(categoryOpen)); categoryButton.setAttribute('aria-controls', `earth-faction-group-${category}`);
+          const changedCount = categoryFactions.filter(faction => faction.status !== '潜伏' || faction.activity !== '尚未进入公开行动阶段。').length;
+          categoryButton.append(element(doc, 'span', undefined, category), element(doc, 'small', undefined, `${categoryFactions.length} 个${changedCount ? ` · ${changedCount} 个有变化` : ''}`), element(doc, 'b', undefined, categoryOpen ? '−' : '＋'));
+          section.append(categoryButton);
+          if (categoryOpen) {
+            const list = element(doc, 'div', 'earth-faction-list'); list.id = `earth-faction-group-${category}`;
+            const orderedFactions = [...categoryFactions].sort((a, b) => Number(b.status !== '潜伏' || b.activity !== '尚未进入公开行动阶段。') - Number(a.status !== '潜伏' || a.activity !== '尚未进入公开行动阶段。'));
+            for (const faction of orderedFactions) { const changed = faction.status !== '潜伏' || faction.activity !== '尚未进入公开行动阶段。'; const open = expandedEarthFaction === faction.id; const card = button(doc, `earth-faction-card${changed ? ' changed' : ''}${open ? ' expanded' : ''}`, '', 'earth-faction-toggle', faction.id); card.setAttribute('aria-expanded', String(open)); const top = element(doc,'div','earth-faction-head'); top.append(element(doc,'strong',undefined,faction.name)); const tags = element(doc,'div','earth-faction-tags'); if(changed) tags.append(element(doc,'span','earth-faction-change-tag','有变化')); tags.append(element(doc,'span','earth-sim-state-tag',faction.status)); top.append(tags); const activity = changed && faction.activity === '尚未进入公开行动阶段。' ? `已进入${faction.status}阶段，具体行动尚未记录。` : faction.activity; card.append(top,element(doc,'small','earth-faction-category',`影响 ${faction.influence}/100`),element(doc,'p','earth-faction-activity',activity)); if(open){const detail=element(doc,'div','earth-faction-details'); detail.append(element(doc,'span',undefined,'长期目标'),element(doc,'p',undefined,faction.objective),element(doc,'span',undefined,'更新时间'),element(doc,'p',undefined,faction.updatedAt)); card.append(detail);} list.append(card); }
+            section.append(list);
+          }
+          categoryList.append(section);
+        }
+        groups.append(categoryList, element(doc, 'p', 'earth-sim-panel-note earth-faction-clock-note', '势力活动由地球独立时钟推进；正文未提及地球时也不会停止。')); earthPage.append(groups);
+      }
+
+      if (earthSettingsTab === 'events') {
+        const timelinePanel = element(doc, 'section', 'earth-sim-panel earth-event-timeline-panel');
+        const timeline = element(doc, 'div', 'earth-event-timeline');
+        const committedEvents = earthSimulationState?.events ?? [];
+        for (const event of committedEvents) { const summaryLead = event.summary.split(/[，。；]/)[0]?.trim().slice(0, 28); const title = summaryLead || `${event.kind}事件`; const row = element(doc, 'article', 'earth-event-timeline-row'); row.append(element(doc, 'span', 'earth-event-dot'), element(doc, 'div')); row.children[1].append(element(doc, 'span', 'earth-sim-event-stage', event.stage), element(doc, 'strong', undefined, title), element(doc, 'p', undefined, event.summary), element(doc, 'small', undefined, `${event.kind} · ${event.worldDate} · ${event.status === 'active' ? '进行中' : '已关闭'}`)); timeline.append(row); }
+        if (!committedEvents.length) timeline.append(element(doc, 'p', 'earth-sim-empty-state', '尚无已提交事件。这里不显示演示内容，只显示已经成功保存的推演结果。'));
+        timelinePanel.append(timeline, element(doc, 'p', 'earth-sim-panel-note earth-event-clock-note', '地球世界日由每次独立推演前进，不依赖玄天界正文是否提及地球。')); earthPage.append(timelinePanel);
+      }
+      content.append(earthPage);
+  }
+
+  function renderXuantianSimulation(content: HTMLElement): void {
+    content.append(button(doc, 'world-sim-back', '← 桌面', 'app', 'home'));
+    const page = element(doc, 'div', 'xuantian-sim-page');
+    const hero = element(doc, 'header', 'xuantian-sim-hero');
+    const seal = element(doc, 'div', 'xuantian-sim-seal', '玄');
+    seal.setAttribute('aria-hidden', 'true');
+    const heroCopy = element(doc, 'div', 'xuantian-sim-hero-copy');
+    heroCopy.append(
+      element(doc, 'p', 'xuantian-sim-kicker', '原版世界推进 · 当前聊天独立账本'),
+      element(doc, 'h1', undefined, '玄天界推演'),
+      element(doc, 'p', undefined, '观五域风云，辨宗门进退。此页仅展示原版世界的已确认状态，DLC 不参与核心推演。'),
+    );
+    const tide = element(doc, 'div', 'xuantian-tide');
+    tide.append(element(doc, 'span', 'xuantian-tide-mark'), element(doc, 'span', undefined, '天下大势'), element(doc, 'strong', undefined, '暗流'));
+    hero.append(heroCopy, seal, tide);
+
+    const tabs = element(doc, 'nav', 'xuantian-sim-tabs');
+    tabs.setAttribute('aria-label', '玄天界推演栏目');
+    tabs.setAttribute('role', 'tablist');
+    const tabItems: Array<[XuantianSettingsTab, string]> = [['overview', '总览'], ['regions', '地域'], ['forces', '势力'], ['events', '事件线']];
+    for (const [key, label] of tabItems) {
+      const tab = button(doc, `xuantian-sim-tab${xuantianSettingsTab === key ? ' active' : ''}`, label, 'xuantian-sim-tab', key);
+      tab.setAttribute('role', 'tab');
+      tab.setAttribute('aria-selected', String(xuantianSettingsTab === key));
+      tabs.append(tab);
+    }
+    page.append(hero, tabs);
+
+    if (xuantianSettingsTab === 'overview') {
+      const clock = element(doc, 'section', 'xuantian-clock');
+      const date = element(doc, 'div', 'xuantian-clock-date');
+      const xuantianRemaining = featureModuleFlags.world && worldSimulationFeatures.xuantianEnabled && xuantianApiSettings.enabled ? Math.max(0, xuantianApiSettings.replyInterval - (xuantianSimulationState?.autoCounter ?? 0)) : null;
+      date.append(element(doc, 'span', undefined, '玄天历'), element(doc, 'strong', undefined, xuantianSimulationState?.calendarLabel ?? '元会历·未校准'), element(doc, 'small', undefined, `世界日 ${xuantianSimulationState?.worldDay ?? 0}　·　推演序列 ${xuantianSimulationState?.sequence ?? 0}`), element(doc, 'small', undefined, xuantianRemaining === null ? '自动推演已关闭' : `还有 ${xuantianRemaining} 轮对话后自动推演`));
+      const action = button(doc, 'xuantian-simulate-button', xuantianSimulationRunning ? '推演中…' : '进行一次推演', 'xuantian-simulation-run');
+      action.disabled = xuantianSimulationRunning;
+      clock.append(date, action);
+      page.append(clock);
+
+      const metrics = element(doc, 'section', 'xuantian-metric-grid');
+      for (const [label, value, note, tone] of [
+        ['大陆地域', '5', '五域，不是五座城市', 'gold'],
+        ['活跃事件线', String(xuantianSimulationState?.events.filter(event=>event.status==='active').length ?? 0), '多条事件可同时推进', 'red'],
+        ['势力档案', String(Object.keys(xuantianSimulationState?.factions ?? {}).length || 28), '按所在地与性质归档', 'jade'],
+        ['周期秘境', '原版有载', '可生成独立事件线', 'blue'],
+      ] as const) {
+        const card = element(doc, 'article', 'xuantian-metric-card'); card.dataset.tone = tone;
+        card.append(element(doc, 'span', undefined, label), element(doc, 'strong', undefined, value), element(doc, 'small', undefined, note));
+        metrics.append(card);
+      }
+      page.append(metrics);
+
+      const layout = element(doc, 'div', 'xuantian-overview-grid');
+      const regions = element(doc, 'section', 'xuantian-panel');
+      const regionHead = element(doc, 'div', 'xuantian-panel-head');
+      regionHead.append(element(doc, 'div', undefined, '五大地域'), element(doc, 'span', 'xuantian-badge', '原版世界书'));
+      const strip = element(doc, 'div', 'xuantian-region-strip');
+      for (const [key, name, state, pressure] of [
+        ['center', '中央神州', xuantianSimulationState?.regions.center.status ?? '暗流', String(xuantianSimulationState?.regions.center.pressure ?? 30)], ['north', '北冥雪原', xuantianSimulationState?.regions.north.status ?? '暗流', String(xuantianSimulationState?.regions.north.pressure ?? 34)], ['south', '南离火洲', xuantianSimulationState?.regions.south.status ?? '紧张', String(xuantianSimulationState?.regions.south.pressure ?? 46)], ['east', '东极青木域', xuantianSimulationState?.regions.east.status ?? '暗流', String(xuantianSimulationState?.regions.east.pressure ?? 28)], ['west', '西漠佛国', xuantianSimulationState?.regions.west.status ?? '平稳', String(xuantianSimulationState?.regions.west.pressure ?? 22)],
+      ] as const) {
+        const region = button(doc, `xuantian-region-chip${selectedXuantianRegion === key ? ' active' : ''}`, '', 'xuantian-region-select', key);
+        region.setAttribute('aria-pressed', String(selectedXuantianRegion === key));
+        region.append(element(doc, 'span', undefined, name), element(doc, 'strong', undefined, state), element(doc, 'i'));
+        region.style.setProperty('--region-pressure', `${pressure}%`);
+        strip.append(region);
+      }
+      regions.append(regionHead, strip, element(doc, 'p', 'xuantian-panel-note', '城市、坊市是地域下的动态地点节点，由原版“玄天界城市生成”规则产生，不存在固定“五城”。'));
+
+      const events = element(doc, 'section', 'xuantian-panel');
+      const eventHead = element(doc, 'div', 'xuantian-panel-head');
+      const currentEvents=xuantianSimulationState?.events.filter(event=>event.status==='active')??[];
+      eventHead.append(element(doc, 'div', undefined, '当前事件线'), element(doc, 'span', 'xuantian-badge warning', `${currentEvents.length} 条进行中`));
+      const eventList = element(doc, 'div', 'xuantian-event-list');
+      for(const event of currentEvents.slice(0,4)){const item=element(doc,'article','xuantian-event-summary');item.append(element(doc,'span','xuantian-event-kind',event.kind),element(doc,'strong',undefined,event.name),element(doc,'small',undefined,`${event.phase} · ${event.progress}% · ${event.summary}`));eventList.append(item);}
+      if(!currentEvents.length)eventList.append(element(doc, 'p', 'xuantian-empty', '暂无已确认事件。完成一次推演后，各事件会独立记录阶段、地域、参与势力与进度。'));
+      events.append(eventHead, eventList);
+      layout.append(regions, events);
+      page.append(layout, element(doc, 'p', 'xuantian-preview-note', '推演结果写入当前聊天的独立状态账本；原版世界书保持只读。'));
+    }
+
+    if (xuantianSettingsTab === 'regions') {
+      const intro = element(doc, 'section', 'xuantian-panel xuantian-region-focus');
+      const badges = element(doc, 'div', 'xuantian-region-badges'); badges.setAttribute('aria-label', '选择玄天界地域');
+      for (const [key, label, sub] of [['center','中央神州','中州'],['east','东极青木域','东极'],['south','南离火洲','南离'],['north','北冥雪原','北冥'],['west','西漠佛国','西漠']] as const) {
+        const node = button(doc, `xuantian-region-badge${selectedXuantianRegion === key ? ' active' : ''}`, '', 'xuantian-region-select', key);
+        node.setAttribute('aria-pressed', String(selectedXuantianRegion === key)); node.append(element(doc,'strong',undefined,label),element(doc,'small',undefined,sub)); badges.append(node);
+      }
+      const selected = ({ center:['中央神州','人族正道势力','玄天界地理中心；平原、山脉、水系与大量仙城、凡人城郭并存。'], north:['北冥雪原','无归属','玄天界最北方的极地冻土，分布玄冰层、冰川与北冥黑渊。'], south:['南离火洲','魔道势力','玄天界最南方，地火炎山、熔岩裂谷与劫灰构成主要环境。'], east:['东极青木域','妖族','玄天界最东方，又称万妖国度，以莽荒密林和浓郁草木精气为主。'], west:['西漠佛国','佛门势力','玄天界最西方，以荒漠、寺庙、佛塔、石窟及叹息沙海为核心地貌。'] } as const)[selectedXuantianRegion as 'center'|'north'|'south'|'east'|'west'];
+      const selectedState=xuantianSimulationState?.regions[selectedXuantianRegion as keyof XuantianSimulationState['regions']];
+      const detail = element(doc, 'div', 'xuantian-region-detail');
+      detail.append(element(doc, 'span', undefined, '当前查看'), element(doc, 'h2', undefined, selected[0]), element(doc, 'strong', undefined, selected[1]), element(doc, 'p', undefined, selected[2]));
+      const facts = element(doc, 'dl', 'xuantian-region-facts');
+      for (const [label, value] of [['层级','大陆级地域'],['当前状态',selectedState?.status??'未推演'],['局势压力',`${selectedState?.pressure??0}/100`],['已确认态势',selectedState?.summary??'尚无推演记录'],['城市体系','按灵脉与势力动态生成'],['资料来源','原版世界书地域条目']] as const) { facts.append(element(doc,'dt',undefined,label),element(doc,'dd',undefined,value)); }
+      detail.append(facts); intro.append(badges, detail); page.append(intro);
+    }
+
+    if (xuantianSettingsTab === 'forces') {
+      const panel = element(doc, 'section', 'xuantian-panel');
+      const head = element(doc, 'div', 'xuantian-panel-head'); head.append(element(doc,'div',undefined,'原版势力索引'),element(doc,'span','xuantian-badge','所在地 → 性质'));
+      const list = element(doc, 'div', 'xuantian-force-groups');
+      const groups = [
+        ['中央神州', [['顶尖宗门',['蜀山剑门','昆仑道门','万法宗','合欢宗','星道宗','桃花宗']],['大型宗门',['湮丹宗','灵墟宗','青玉宗','符韵门','阵天宗']],['仙朝与属国',['大周仙朝','南梁古国']],['地下组织',['斩仙盟']]]],
+        ['东极青木域', [['顶尖妖族',['九尾天狐族','神猿族','五色孔雀族']],['大型妖族',['柳蛇族']]]],
+        ['南离火洲', [['顶尖正道',['太阳神宫']],['顶尖魔道',['血神宫','万魂殿','尸魔宗']]]],
+        ['北冥雪原', [['宗门',['广寒宫']],['妖族',['蛟龙一族']]]],
+        ['西漠佛国', [['佛门',['大雷音寺']]]],
+        ['跨域／无固定驻地', [['情报',['天机阁']],['商会',['万宝楼']],['地下黑市',['黑金阁']]]],
+      ] as const;
+      for (const [region, categories] of groups) {
+        const expanded=expandedXuantianForceRegions.has(region);
+        const group = element(doc,'section',`xuantian-force-group${expanded?' expanded':''}`);
+        const title = button(doc,'xuantian-force-region-toggle','', 'xuantian-force-region-toggle',region);
+        title.setAttribute('aria-expanded',String(expanded));
+        title.append(element(doc,'span',undefined,region),element(doc,'small',undefined,`${categories.reduce((sum,[,names])=>sum+names.length,0)} 个势力`),element(doc,'i',undefined,expanded?'−':'+'));
+        group.append(title);
+        if(!expanded){list.append(group);continue;}
+        for (const [type,names] of categories) {
+          const category=element(doc,'section','xuantian-force-category'); category.append(element(doc,'h4',undefined,type)); const entries=element(doc,'div','xuantian-force-entries');
+          for(const name of names){const state=Object.values(xuantianSimulationState?.factions??{}).find(faction=>faction.name===name);const entry=element(doc,'article','xuantian-force-entry'); const top=element(doc,'div','xuantian-force-entry-head'); top.append(element(doc,'strong',undefined,name),element(doc,'span','xuantian-force-status',state?.status??'未记录')); const facts=element(doc,'dl','xuantian-force-entry-facts'); facts.append(element(doc,'dt',undefined,'当前动向'),element(doc,'dd',undefined,state?.activity??'尚无推演记录'),element(doc,'dt',undefined,'与玩家关系'),element(doc,'dd','xuantian-player-relation',state?.relation??'未知'),element(doc,'dt',undefined,'影响力'),element(doc,'dd',undefined,state?`${state.influence}/100`:'未记录')); entry.append(top,facts); entries.append(entry);} category.append(entries); group.append(category);
+        }
+        list.append(group);
+      }
+      panel.append(head,list,element(doc,'p','xuantian-panel-note','以上只收录世界书中有明确势力身份的玄天界条目；人物条目与仙界 DLC 势力未混入。')); page.append(panel);
+    }
+
+    if (xuantianSettingsTab === 'events') {
+      const panel = element(doc, 'section', 'xuantian-panel');
+      const head = element(doc, 'div', 'xuantian-panel-head'); head.append(element(doc,'div',undefined,'并行事件线'),element(doc,'span','xuantian-badge warning',`${xuantianSimulationState?.events.length??0} 条账本记录`));
+      const cards = element(doc, 'div', 'xuantian-event-cards');
+      const regionNames={center:'中央神州',east:'东极青木域',south:'南离火洲',north:'北冥雪原',west:'西漠佛国',cross:'跨域'} as const;
+      for (const event of xuantianSimulationState?.events ?? []) {
+        const {name:title,kind,phase:stage,progress,summary:copy}=event;const region=regionNames[event.regionId];const time=`世界日 ${event.startedAtDay} → ${event.updatedAtDay}`;
+        const card=element(doc,'article','xuantian-event-card');
+        const cardHead=element(doc,'div','xuantian-event-card-head'); cardHead.append(element(doc,'span','xuantian-event-kind',kind),element(doc,'span','xuantian-event-card-stage',stage));
+        const meta=element(doc,'dl','xuantian-event-meta'); meta.append(element(doc,'dt',undefined,'时间'),element(doc,'dd',undefined,time),element(doc,'dt',undefined,'地域'),element(doc,'dd',undefined,region));
+        const progressWrap=element(doc,'div','xuantian-event-progress'); const progressHead=element(doc,'div'); progressHead.append(element(doc,'span',undefined,'事件进度'),element(doc,'strong',undefined,`${progress}%`));
+        const bar=element(doc,'i'); bar.style.setProperty('--event-progress',`${progress}%`); progressWrap.append(progressHead,bar);
+        card.append(cardHead,element(doc,'h3',undefined,title),meta,progressWrap,element(doc,'p',undefined,copy)); cards.append(card);
+      }
+      if(!cards.childElementCount)cards.append(element(doc,'p','xuantian-empty','尚无已提交事件线。推演器会根据原版周期秘境、宗门动向与正文证据分别创建事件卡。'));
+      panel.append(head,cards,element(doc,'p','xuantian-panel-note','每条事件独立记录名称、时间、地域、阶段与进度；多条事件可在同一轮分别推进。')); page.append(panel);
+    }
+    content.append(page);
+  }
+
+  function appendSimulationModelSelect(target: HTMLElement, realm: 'earth' | 'xuantian'): void {
+    const models = realm === 'earth' ? earthModelOptions : xuantianModelOptions;
+    if (!models.length) return;
+    const settings = realm === 'earth' ? earthApiSettings : xuantianApiSettings;
+    const field = element(doc, 'label', 'settings-field earth-api-model-field');
+    field.append(element(doc, 'span', 'settings-label', '选择已获取模型'));
+    const select = doc.createElement('select');
+    select.className = 'earth-api-model-select';
+    select.dataset[realm === 'earth' ? 'earthModelSelect' : 'xuantianModelSelect'] = 'true';
+    select.setAttribute('aria-label', `${realm === 'earth' ? '地球' : '玄天界'}推演模型列表`);
+    const placeholder = element(doc, 'option', undefined, '请选择模型');
+    placeholder.value = '';
+    placeholder.selected = !models.includes(settings.apiModel);
+    select.append(placeholder);
+    for (const model of models) {
+      const option = element(doc, 'option', undefined, model);
+      option.value = model;
+      option.selected = model === settings.apiModel;
+      select.append(option);
+    }
+    field.append(select);
+    target.append(field);
+  }
+
+  function appendSimulationModelControls(target: HTMLElement, realm: 'earth' | 'xuantian'): void {
+    const fetching = realm === 'earth' ? fetchingEarthModels : fetchingXuantianModels;
+    const controls = element(doc, 'div', 'earth-api-model-controls');
+    const fetchButton = button(
+      doc,
+      'secondary-button earth-api-fetch-button',
+      fetching ? '获取中…' : '获取模型列表',
+      realm === 'earth' ? 'earth-models-fetch' : 'xuantian-models-fetch',
+    );
+    fetchButton.disabled = fetching;
+    fetchButton.setAttribute('aria-busy', String(fetching));
+    controls.append(fetchButton);
+    appendSimulationModelSelect(controls, realm);
+    target.append(controls);
+  }
+
+  function renderXuantianApiSettings(content: HTMLElement): void {
+    content.append(button(doc, 'settings-back-button', '← 返回设置', 'settings-home'));
+    appendPageHeading(doc, content, '玄天界推演 API', '仅服务玄天界事件线、地域与势力演化；不与地球推演共用。', '独立接口');
+    const intro = element(doc, 'section', 'earth-sim-panel xuantian-api-toggle-panel');
+    const toggle = element(doc, 'label', 'settings-auto-toggle'); const toggleInput = doc.createElement('input'); toggleInput.type = 'checkbox'; toggleInput.checked = xuantianApiSettings.enabled; toggleInput.dataset.xuantianApiSetting = 'enabled';
+    const toggleCopy = element(doc, 'span', 'settings-auto-toggle-copy'); toggleCopy.append(element(doc, 'strong', undefined, '启用玄天界推演 API'), element(doc, 'small', undefined, '此开关只控制接口调用；“世界推演设置”控制应用入口是否显示。')); toggle.append(toggleInput, toggleCopy); intro.append(toggle); content.append(intro);
+    const form = element(doc, 'section', 'earth-sim-panel earth-sim-api-form');
+    for (const [label, key, type, placeholder] of [['基础 URL','apiBaseUrl','url','https://api.example.com/v1'],['API 密钥','apiKey','password','仅保存在宿主本地设置'],['模型名称','apiModel','text','例如：推演专用模型']] as const) {
+      const wrap=element(doc,'label','settings-field'); wrap.append(element(doc,'span','settings-label',label)); const input=doc.createElement('input'); input.type=type; input.placeholder=placeholder; input.value=String(xuantianApiSettings[key]); input.dataset.xuantianApiSetting=key; if(key==='apiBaseUrl') configureApiUrlInput(input); wrap.append(input); form.append(wrap);
+    }
+    appendSimulationModelControls(form, 'xuantian');
+    const twoCol=element(doc,'div','earth-sim-form-grid');
+    for (const [label,key] of [['温度','temperature'],['超时（秒）','timeoutSeconds'],['自动推进间隔（轮）','replyInterval'],['单次最大世界日','maxWorldDays']] as const) { const wrap=element(doc,'label','settings-field'); wrap.append(element(doc,'span','settings-label',label)); const input=doc.createElement('input'); input.type='number'; input.value=String(xuantianApiSettings[key]); input.dataset.xuantianApiSetting=key; wrap.append(input); twoCol.append(wrap); }
+    form.append(twoCol,button(doc,'primary-button','保存玄天界推演设置','xuantian-api-save')); content.append(form,element(doc,'p','earth-sim-disabled-note','启用后按“自动推进间隔”统计新的 AI 回复；推演只读原版主世界书，并写入当前聊天的独立状态账本。'));
+  }
+
+  function renderEarthApiSettings(content: HTMLElement): void {
+    content.append(button(doc, 'settings-back-button', '← 返回设置', 'settings-home'));
+    appendPageHeading(doc, content, '地球推演 API', '只服务地球后台演化；不与仙网、绝色榜或万宝商行共用。', 'V1.2 · 独立接口');
+    const intro = element(doc, 'section', 'earth-sim-panel'); const toggle = element(doc, 'label', 'settings-auto-toggle'); const toggleInput = doc.createElement('input'); toggleInput.type = 'checkbox'; toggleInput.checked = earthApiSettings.enabled; toggleInput.dataset.earthApiSetting = 'enabled'; const toggleCopy = element(doc, 'span', 'settings-auto-toggle-copy'); toggleCopy.append(element(doc, 'strong', undefined, '启用独立推演 API'), element(doc, 'small', undefined, '默认关闭；AI 会先提出世界变化，检查通过后才会保存。')); toggle.append(toggleInput, toggleCopy); intro.append(toggle); content.append(intro);
+    const form = element(doc, 'section', 'earth-sim-panel earth-sim-api-form');
+    for (const [label, key, type, placeholder] of [['基础 URL', 'apiBaseUrl', 'url', 'https://api.example.com/v1'], ['API 密钥', 'apiKey', 'password', '仅保存在宿主本地设置'], ['模型名称', 'apiModel', 'text', '可手动输入或从列表选择']] as const) { const wrap = element(doc, 'label', 'settings-field'); wrap.append(element(doc, 'span', 'settings-label', label)); const input = doc.createElement('input'); input.type = type; input.placeholder = placeholder; input.value = String(earthApiSettings[key]); input.dataset.earthApiSetting = key; if (key === 'apiBaseUrl') configureApiUrlInput(input); wrap.append(input); form.append(wrap); }
+    const ratioField = element(doc, 'label', 'settings-field earth-time-ratio-field'); ratioField.append(element(doc, 'span', 'settings-label', '双界时间流速（地球 : 玄天界）'));
+    const ratioSelect = doc.createElement('select'); ratioSelect.className = 'earth-time-ratio-select'; ratioSelect.dataset.earthApiSetting = 'timeRatio';
+    for (const option of EARTH_TIME_RATIO_OPTIONS) { const node = element(doc, 'option', undefined, option.label); node.value = option.value; node.selected = option.value === earthApiSettings.timeRatio; ratioSelect.append(node); }
+    ratioField.append(ratioSelect, element(doc, 'small', 'earth-time-ratio-note', earthTimeRatioNote(earthApiSettings.timeRatio)));
+    const twoCol = element(doc, 'div', 'earth-sim-form-grid'); for (const [label, key] of [['温度', 'temperature'], ['超时（秒）', 'timeoutSeconds'], ['有效回复间隔', 'replyInterval'], ['单次最大世界日', 'maxWorldDays']] as const) { const wrap = element(doc, 'label', 'settings-field'); wrap.append(element(doc, 'span', 'settings-label', label)); const input = doc.createElement('input'); input.type = 'number'; input.value = String(earthApiSettings[key]); input.dataset.earthApiSetting = key; wrap.append(input); twoCol.append(wrap); }
+    appendSimulationModelControls(form, 'earth');
+    form.append(ratioField, twoCol, button(doc, 'primary-button', '保存推演设置', 'earth-api-save'));
+    const privacyNote = element(doc, 'p', 'earth-sim-disabled-note', '获取模型列表或手动推演时，会将填写的 URL 与 API 密钥发送给该服务。');
+    const resetPanel = element(doc, 'section', 'earth-reset-panel');
+    const resetCopy = element(doc, 'div', 'earth-reset-copy'); resetCopy.append(element(doc, 'strong', undefined, '重新开始地球推演'), element(doc, 'small', undefined, '清除当前聊天的日期、事件与势力进度；保留 API 设置和附属世界书。'));
+    const resetButton = button(doc, 'earth-reset-button', '清空当前对话的地球推演', 'earth-simulation-clear');
+    resetPanel.append(resetCopy, resetButton); content.append(form, privacyNote, resetPanel);
+  }
+
+  function renderConfigHelperSettings(content: HTMLElement): void {
+    const helperPanel = element(doc, 'section', 'panel-card config-helper-settings-panel');
+    helperPanel.append(element(doc, 'h3', undefined, '道渊配置小助手 V1.3.4'));
+    const helperToggle = element(doc, 'label', 'settings-auto-toggle');
+    const helperInput = doc.createElement('input'); helperInput.type = 'checkbox'; helperInput.checked = configHelperEnabled; helperInput.dataset.configHelperEnabled = 'true';
+    const helperCopy = element(doc, 'span', 'settings-auto-toggle-copy');
+    helperCopy.append(element(doc, 'strong', undefined, '显示配置小助手悬浮球'));
+    helperToggle.append(helperInput, helperCopy);
+    helperPanel.append(helperToggle, button(doc, 'primary-button settings-panel-save', '保存悬浮球显示设置', 'config-helper-save'));
+    content.append(helperPanel);
+  }
+
   function renderSettings(content: HTMLElement): void {
+    if (settingsSection === 'pet') {
+      content.append(button(doc, 'settings-back-button', '← 返回设置', 'settings-home'));
+      appendPageHeading(doc, content, '桌宠外观与大小', '切换桌宠形象与显示尺寸，设置仅保存在当前浏览器。', '本地偏好');
+      const petPanel = appendPanel(doc, content, '桌宠设置', '鲸鱼娘与紫薇共用同一尺寸和窄屏边界约束。');
+      const petKindRow = element(doc, 'div', 'pet-size-options pet-kind-options');
+      for (const entry of [{ value: 'whale', label: '鲸鱼娘', note: '动态 WebM' }, { value: 'ziwei', label: '紫薇', note: '透明 PNG 序列' }] as const) {
+        const label = element(doc, 'label', 'pet-size-option'); const input = doc.createElement('input'); input.type = 'radio'; input.name = 'daoyuan-pet-kind'; input.value = entry.value; input.checked = petKind === entry.value;
+        input.addEventListener('change', () => { if (input.checked) { petKind = entry.value; sendAction('SET_PET_KIND', { kind: entry.value }); announcement = `桌宠已切换为${entry.label}。`; render(); } });
+        label.append(input, element(doc, 'span', undefined, entry.label), element(doc, 'small', undefined, entry.note)); petKindRow.append(label);
+      }
+      const petSizeRow = element(doc, 'div', 'pet-size-options');
+      for (const entry of [{ value: 'small', label: '小', note: '最省空间' }, { value: 'medium', label: '中', note: '适中尺寸' }, { value: 'large', label: '大', note: '当前默认' }] as const) {
+        const label = element(doc, 'label', 'pet-size-option'); const input = doc.createElement('input'); input.type = 'radio'; input.name = 'daoyuan-pet-size'; input.value = entry.value; input.checked = petSize === entry.value;
+        input.addEventListener('change', () => { if (input.checked) { petSize = entry.value; sendAction('SET_PET_SIZE', { size: entry.value }); announcement = `桌宠已调整为${entry.label}号。`; render(); } });
+        label.append(input, element(doc, 'span', undefined, entry.label), element(doc, 'small', undefined, entry.note)); petSizeRow.append(label);
+      }
+      petPanel.append(petKindRow, petSizeRow); return;
+    }
+    if (settingsSection === 'content-beautifier') {
+      content.append(button(doc, 'settings-back-button', '← 返回设置', 'settings-home'));
+      appendPageHeading(doc, content, '正文美化 V26', '独立控制正文阅读器是否扫描并美化 `<content>`。', '阅读显示');
+      const panel = appendPanel(doc, content, '正文美化开关', '阅读器内部的字体、字号和术语注解仍由“阅”按钮独立管理。');
+      const toggle = element(doc, 'label', 'settings-auto-toggle'); const input = doc.createElement('input'); input.type = 'checkbox'; input.checked = contentBeautifierEnabled; input.dataset.contentBeautifierEnabled = 'true';
+      const copy = element(doc, 'span', 'settings-auto-toggle-copy'); copy.append(element(doc, 'strong', undefined, '启用正文美化'), element(doc, 'small', undefined, '关闭后立即停止处理新正文；刷新酒馆页面后，已美化的旧正文恢复为原始显示。'));
+      toggle.append(input, copy); panel.append(toggle, button(doc, 'primary-button settings-panel-save', '保存正文美化开关', 'content-beautifier-save')); return;
+    }
+    if (settingsSection === 'config-helper') {
+      content.append(button(doc, 'settings-back-button', '← 返回设置', 'settings-home'));
+      appendPageHeading(doc, content, '道渊配置小助手', '独立管理配置小助手悬浮球的显示状态。', 'V1.3.4');
+      renderConfigHelperSettings(content); return;
+    }
+    if (settingsSection === 'world') {
+      content.append(button(doc, 'settings-back-button', '← 返回设置', 'settings-home'));
+      appendPageHeading(doc, content, '世界推演设置', '在同一页面管理双界入口与两套独立 API；数据和接口不会互相混用。', '统一入口');
+      const panel = appendPanel(doc, content, '推演功能开关', '关闭后对应入口将不可进入，重新开启即可继续使用原有数据。'); panel.classList.add('world-settings-section');
+      for (const [key,title,note,checked] of [
+        ['xuantian','启用玄天界推演','原版五域、势力与事件线。',worldSimulationFeatures.xuantianEnabled],
+        ['earth','启用地球推演','地球附属世界书与独立推演服务。',worldSimulationFeatures.earthEnabled],
+      ] as const) {
+        const toggle=element(doc,'label','settings-auto-toggle'); const input=doc.createElement('input'); input.type='checkbox'; input.checked=checked; input.dataset.worldSimulationFeature=key;
+        const copy=element(doc,'span','settings-auto-toggle-copy'); copy.append(element(doc,'strong',undefined,title),element(doc,'small',undefined,note)); toggle.append(input,copy); panel.append(toggle);
+      }
+      panel.append(button(doc,'primary-button settings-panel-save','保存推演开关','world-simulation-settings-save'));
+
+      const appendApiFields = (target:HTMLElement, prefix:'xuantian'|'earth', settings:XuantianApiSettingsDraft|EarthApiSettingsDraft):void => {
+        for (const [label,key,type,placeholder] of [['基础 URL','apiBaseUrl','url','https://api.example.com/v1'],['API 密钥','apiKey','password','仅保存在宿主本地设置'],['模型名称','apiModel','text','例如：推演专用模型']] as const) { const wrap=element(doc,'label','settings-field'); wrap.append(element(doc,'span','settings-label',label)); const input=doc.createElement('input'); input.type=type; input.placeholder=placeholder; input.value=String(settings[key]); if(prefix==='xuantian') input.dataset.xuantianApiSetting=key; else input.dataset.earthApiSetting=key; if(key==='apiBaseUrl') configureApiUrlInput(input); wrap.append(input); target.append(wrap); }
+        appendSimulationModelControls(target, prefix);
+        const twoCol=element(doc,'div','earth-sim-form-grid'); for(const [label,key] of [['温度','temperature'],['超时（秒）','timeoutSeconds'],['自动推进间隔（轮）','replyInterval'],['单次最大世界日','maxWorldDays']] as const){const wrap=element(doc,'label','settings-field');wrap.append(element(doc,'span','settings-label',label));const input=doc.createElement('input');input.type='number';input.value=String(settings[key]);if(prefix==='xuantian')input.dataset.xuantianApiSetting=key;else input.dataset.earthApiSetting=key;wrap.append(input);twoCol.append(wrap);} target.append(twoCol);
+      };
+
+      const xuantianPanel=appendPanel(doc,content,'玄天界推演 API','服务原版五域、势力与并行事件线；读取主世界书，状态写入当前聊天独立账本。'); xuantianPanel.classList.add('earth-sim-api-form','world-settings-section');
+      const xuantianToggle=element(doc,'label','settings-auto-toggle'); const xuantianInput=doc.createElement('input'); xuantianInput.type='checkbox'; xuantianInput.checked=xuantianApiSettings.enabled; xuantianInput.dataset.xuantianApiSetting='enabled'; const xuantianCopy=element(doc,'span','settings-auto-toggle-copy'); xuantianCopy.append(element(doc,'strong',undefined,'启用玄天界推演 API'),element(doc,'small',undefined,'仅控制玄天界接口调用。')); xuantianToggle.append(xuantianInput,xuantianCopy); xuantianPanel.append(xuantianToggle); appendApiFields(xuantianPanel,'xuantian',xuantianApiSettings); xuantianPanel.append(button(doc,'primary-button','保存玄天界 API','xuantian-api-save'),element(doc,'p','world-clear-note','危险操作：只清空当前对话的玄天界势力、事件线、时间和正文注入。'),button(doc,'earth-reset-button','清空当前对话的玄天界推演','xuantian-simulation-clear'));
+
+      const earthPanel=appendPanel(doc,content,'地球推演 API','服务地球附属世界书与独立演化，不读取玄天界 API 配置。'); earthPanel.classList.add('earth-sim-api-form','world-settings-section');
+      const earthToggle=element(doc,'label','settings-auto-toggle'); const earthInput=doc.createElement('input'); earthInput.type='checkbox'; earthInput.checked=earthApiSettings.enabled; earthInput.dataset.earthApiSetting='enabled'; const earthCopy=element(doc,'span','settings-auto-toggle-copy'); earthCopy.append(element(doc,'strong',undefined,'启用地球推演 API'),element(doc,'small',undefined,'AI 提出变化并通过检查后才保存。')); earthToggle.append(earthInput,earthCopy); earthPanel.append(earthToggle); appendApiFields(earthPanel,'earth',earthApiSettings);
+      const ratioField=element(doc,'label','settings-field'); ratioField.append(element(doc,'span','settings-label','双界时间流速（地球 : 玄天界）')); const ratioSelect=doc.createElement('select'); ratioSelect.className='earth-time-ratio-select'; ratioSelect.dataset.earthApiSetting='timeRatio'; for(const option of EARTH_TIME_RATIO_OPTIONS){const node=element(doc,'option',undefined,option.label);node.value=option.value;node.selected=option.value===earthApiSettings.timeRatio;ratioSelect.append(node);} ratioField.append(ratioSelect,element(doc,'small','earth-time-ratio-note',earthTimeRatioNote(earthApiSettings.timeRatio))); earthPanel.append(ratioField,button(doc,'primary-button','保存地球 API','earth-api-save'),element(doc,'p','world-clear-note','危险操作：只清空当前对话的地球区域、势力、事件、时间和正文注入。'),button(doc,'earth-reset-button','清空当前对话的地球推演','earth-simulation-clear'));
+      return;
+    }
+    if (settingsSection === 'earth') { renderEarthApiSettings(content); return; }
     if (settingsSection === 'yujian') { renderYujianSettings(content); return; }
     if (settingsSection === 'beauty') {
       content.append(button(doc, 'settings-back-button', '← 返回 API 设置', 'settings-home'));
@@ -791,24 +1362,43 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
     }
     if (settingsSection === 'dlc') {
       content.append(button(doc, 'settings-back-button', '← 返回设置', 'settings-home'));
-      appendPageHeading(doc, content, 'DLC 剧情拓展', '安装后作为当前角色的附属世界书运行；主世界书不会被覆盖。', '独立更新');
-      const labels: Record<keyof DlcSettingsDraft, string> = { wan_nian_chou_yuan: '万年仇怨', he_huan_zong: '合欢宗·百花谷', luo_yang: '洛阳', shu_shan: '蜀山剑门' };
-      for (const id of Object.keys(labels) as Array<keyof DlcSettingsDraft>) {
-        const status = dlcStatus.find((item) => item.id === id);
-        const panel = appendPanel(doc, content, labels[id], status?.reason ?? '尚未读取世界书状态');
-        const toggle = element(doc, 'label', 'settings-auto-toggle');
-        const input = doc.createElement('input'); input.type = 'checkbox'; input.checked = dlcSettings[id]; input.dataset.dlcSetting = id;
-        const copy = element(doc, 'span', 'settings-auto-toggle-copy');
-        copy.append(element(doc, 'strong', undefined, '允许自动控制'), element(doc, 'small', undefined, status ? `${status.entryCount} 条 · ${status.mounted ? '已挂载' : '未挂载'}${status.userModified ? ' · 用户修改版' : ''}` : '默认关闭，不会向模型注入 DLC 内容'));
-        toggle.append(input, copy); panel.append(toggle);
+      appendPageHeading(doc, content, 'DLC 剧情拓展', '手动导入世界书与对应脚本；小手机不再内置或自动管理 DLC。', '手动导入');
+      const importPanel = appendPanel(doc, content, '添加或更新 DLC', '填写 DLC 名称并选择世界书；脚本可不选。提交前会先校验两个文件。');
+      importPanel.classList.add('content-package-panel');
+      const targetField = element(doc, 'div', 'settings-field'); targetField.append(element(doc, 'span', 'settings-label', '操作目标'));
+      const targetOptions = element(doc, 'div', 'user-dlc-choice-group');
+      const createTarget = button(doc, `user-dlc-choice${selectedUserDlcId === null ? ' selected' : ''}`, '新建 DLC（生成新 ID）', 'user-dlc-target', ''); createTarget.setAttribute('aria-pressed', String(selectedUserDlcId === null)); targetOptions.append(createTarget);
+      for (const dlc of userDlcs) { const selected = selectedUserDlcId === dlc.id; const option = button(doc, `user-dlc-choice${selected ? ' selected' : ''}`, `更新：${dlc.name}`, 'user-dlc-target', dlc.id); option.setAttribute('aria-pressed', String(selected)); targetOptions.append(option); }
+      targetField.append(targetOptions); importPanel.append(targetField);
+      const nameField = element(doc, 'label', 'settings-field'); nameField.append(element(doc, 'span', 'settings-label', 'DLC 名称（必填）'));
+      const nameInput = doc.createElement('input'); nameInput.type = 'text'; nameInput.value = userDlcName; nameInput.placeholder = '例如：万年仇怨'; nameInput.dataset.userDlcName = 'true'; nameField.append(nameInput); importPanel.append(nameField);
+      const addFile = (label: string, key: 'worldbook' | 'script', required: boolean, selected: boolean): void => {
+        const field = element(doc, 'label', 'settings-field content-package-file'); field.append(element(doc, 'span', 'settings-label', `${label}${required ? '（必选）' : '（可选）'}`));
+        const input = doc.createElement('input'); input.type = 'file'; input.accept = 'application/json,.json'; input.dataset.userDlcFile = key; input.className = 'content-package-file-native';
+        const status = element(doc, 'span', 'content-package-file-status', selected ? '已选择 1 个文件' : '未选择任何文件'); status.dataset.userDlcFileStatus = key;
+        const picker = element(doc, 'span', 'content-package-file-picker'); picker.append(element(doc, 'span', 'content-package-file-button', '选择文件'), status);
+        field.append(input, picker); importPanel.append(field);
+      };
+      addFile('世界书 JSON', 'worldbook', true, Boolean(userDlcWorldbookDraft)); if (userDlcWorldbookDraft) { const summary = element(doc, 'p', 'notice', `世界书：${userDlcWorldbookDraft.name} · ${userDlcWorldbookDraft.count} 条`); summary.dataset.userDlcFileSummary = 'worldbook'; importPanel.append(summary); }
+      addFile('脚本 JSON', 'script', false, Boolean(userDlcScriptDraft)); if (userDlcScriptDraft) { const summary = element(doc, 'p', 'notice muted', `脚本：${userDlcScriptDraft.name}`); summary.dataset.userDlcFileSummary = 'script'; importPanel.append(summary); }
+      const modeField = element(doc, 'div', 'settings-field'); modeField.append(element(doc, 'span', 'settings-label', '同名世界书处理'));
+      const modeOptions = element(doc, 'div', 'user-dlc-choice-group');
+      for (const [value, label] of [['replace-matching', '更新同名条目并补新增条目'], ['safe-merge', '只补新增条目（保留同名正文）']] as const) { const selected = contentPackageMode === value; const option = button(doc, `user-dlc-choice${selected ? ' selected' : ''}`, label, 'user-dlc-mode', value); option.setAttribute('aria-pressed', String(selected)); modeOptions.append(option); }
+      modeField.append(modeOptions); importPanel.append(modeField);
+      const submit = button(doc, 'primary-button', selectedUserDlcId ? '更新所选 DLC' : '导入并新建 DLC', 'user-dlc-import'); submit.disabled = !userDlcName.trim() || !userDlcWorldbookDraft; importPanel.append(submit);
+      const managedPanel = appendPanel(doc, content, '已导入 DLC', userDlcs.length ? '检测世界书存在与当前角色挂载状态；可修复挂载或移除登记。' : '尚未登记 DLC。');
+      managedPanel.classList.add('user-dlc-manager-panel');
+      for (const dlc of userDlcs) {
+        const card = element(doc, 'article', 'user-dlc-card');
+        const status = dlc.worldbookExists ? dlc.mounted ? '世界书已挂载' : '世界书存在但未挂载' : '世界书不存在';
+        card.append(element(doc, 'strong', undefined, dlc.name), element(doc, 'small', 'user-dlc-id', `ID：${dlc.id}`), element(doc, 'small', undefined, `${dlc.worldbookName} · ${status}`), element(doc, 'small', undefined, dlc.scriptStored ? `脚本：${dlc.scriptName ?? '已导入'}${dlc.scriptActive ? ' · 本轮运行中' : dlc.scriptEnabled ? ' · 等待运行' : ' · 已关闭'}` : '未配置脚本'));
+        const actions = element(doc, 'div', 'user-dlc-actions');
+        actions.append(button(doc, 'secondary-button', '更新世界书/脚本', 'user-dlc-select-update', dlc.id));
+        const repair = button(doc, 'secondary-button', dlc.mounted ? '重新检测挂载' : '修复挂载', 'user-dlc-repair', dlc.id); repair.disabled = !dlc.worldbookExists;
+        actions.append(repair);
+        if (dlc.scriptStored) actions.append(button(doc, 'secondary-button', '移除脚本', 'user-dlc-remove-script', dlc.id));
+        actions.append(button(doc, 'danger-button', '移除 DLC', 'user-dlc-remove', dlc.id)); card.append(actions); managedPanel.append(card);
       }
-      const controls = element(doc, 'div', 'settings-control-group');
-      const install = button(doc, 'primary-button', '创建不存在的 DLC 世界书', 'dlc-install'); install.disabled = dlcCapability.canCreate !== true;
-      const attach = button(doc, 'secondary-button', '挂载已有 DLC 到当前角色', 'dlc-attach'); attach.disabled = dlcCapability.canAttach !== true;
-      const repair = button(doc, 'secondary-button', '补回缺失的世界书条目', 'dlc-repair'); repair.disabled = dlcCapability.canAppend !== true;
-      controls.append(button(doc, 'primary-button', '保存并应用 DLC 开关', 'dlc-settings-save'), install, attach, repair, button(doc, 'secondary-button', '刷新 DLC 状态检查', 'dlc-check'));
-      content.append(controls);
-      if (Array.isArray(dlcCapability.notes) && dlcCapability.notes.length) content.append(element(doc, 'p', 'notice muted', dlcCapability.notes.join('；')));
       return;
     }
     content.append(button(doc, 'top-parent-back-button', '← 返回上一级', 'app', 'home'));
@@ -820,48 +1410,35 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
       { key: 'xianwang', icon: '◌', title: '仙网内容 API', note: '风闻、论坛与天机日报', scope: '三应用共用' },
       { key: 'wanbao', icon: '♢', title: '万宝商行设置', note: '货单数量与保留上限', scope: '本地偏好' },
       { key: 'injection', icon: '◇', title: '主线注入', note: '选择可影响后续剧情的模块', scope: '默认关闭' },
-      { key: 'dlc', icon: '卷', title: 'DLC 剧情拓展', note: '安装、挂载与自动启停', scope: '默认关闭' },
+      { key: 'dlc', icon: '卷', title: 'DLC 剧情拓展', note: '成组导入、挂载检测与修复', scope: '用户管理' },
+      { key: 'world', icon: '界', title: '世界推演设置', note: '双界启停、玄天界 API 与地球 API', scope: '统一入口' },
+      { key: 'pet', icon: '宠', title: '桌宠外观与大小', note: '切换形象与显示尺寸', scope: '本地偏好' },
+      { key: 'content-beautifier', icon: '阅', title: '正文美化', note: '正文阅读器扫描开关', scope: 'V26' },
+      { key: 'config-helper', icon: '助', title: '道渊配置小助手', note: '悬浮球显示设置', scope: 'V1.3.4' },
     ];
+    const switchable = new Set<SettingsSection>(['yujian','beauty','xianwang','wanbao','world']);
     for (const entry of entries) {
-      const card = button(doc, 'settings-api-card', '', 'settings-open', entry.key);
-      card.append(
+      const card = element(doc, 'article', `settings-api-card${switchable.has(entry.key) && !featureModuleFlags[entry.key as FeatureModuleKey] ? ' module-disabled' : ''}`);
+      const open = button(doc, 'settings-api-card-open', '', 'settings-open', entry.key);
+      open.append(
         element(doc, 'span', 'settings-api-icon', entry.icon),
         element(doc, 'span', 'settings-api-title', entry.title),
         element(doc, 'span', 'settings-api-note', entry.note),
         element(doc, 'span', 'settings-api-scope', entry.scope),
       );
+      card.append(open);
+      if (switchable.has(entry.key)) {
+        const moduleKey = entry.key as FeatureModuleKey;
+        const toggle = element(doc, 'label', 'module-master-toggle');
+        const input = doc.createElement('input'); input.type='checkbox'; input.checked=featureModuleFlags[moduleKey]; input.dataset.featureModule=moduleKey;
+        input.setAttribute('aria-label', `${entry.title}总开关`);
+        toggle.append(input, element(doc,'span','module-master-toggle-track'), element(doc,'span','module-master-toggle-copy',input.checked ? '功能已开启' : '功能已关闭'));
+        card.append(toggle);
+      }
       grid.append(card);
     }
-    const rerollPanel = appendPanel(doc, content, '仙网重 Roll 兼容', '开启后，同一触发楼层出现不同 Swipe 时，仙网会重新请求 API，并替换该楼层上一 Swipe 生成的内容。间隔仍按不同楼层计算，重 Roll 不会累计层数。');
-    rerollPanel.classList.add('reroll-settings-panel');
-    const rerollToggle = element(doc, 'label', 'settings-auto-toggle');
-    const rerollInput = doc.createElement('input'); rerollInput.type = 'checkbox'; rerollInput.checked = rerollCompatibilityEnabled; rerollInput.dataset.rerollCompatibility = 'true';
-    const rerollCopy = element(doc, 'span', 'settings-auto-toggle-copy');
-    rerollCopy.append(element(doc, 'strong', undefined, '兼容仙网重 Roll'), element(doc, 'small', undefined, '会产生额外 API 调用与费用。玉简不受此开关控制：每次不同重 Roll 都必定重新解析。'));
-    rerollToggle.append(rerollInput, rerollCopy);
-    rerollPanel.append(rerollToggle, button(doc, 'primary-button', '保存重 Roll 设置', 'reroll-settings-save'));
-    const petPanel = appendPanel(doc, content, '紫薇桌宠大小', '桌宠尺寸只影响页面上的紫薇，不影响玉简窗口；设置会保存在当前浏览器本地。');
-    const petSizeRow = element(doc, 'div', 'pet-size-options');
-    const petSizeEntries: Array<{ value: PetSize; label: string; note: string }> = [
-      { value: 'small', label: '小', note: '最省空间' },
-      { value: 'medium', label: '中', note: '适中尺寸' },
-      { value: 'large', label: '大', note: '当前默认' },
-    ];
-    for (const entry of petSizeEntries) {
-      const label = element(doc, 'label', 'pet-size-option');
-      const input = doc.createElement('input'); input.type = 'radio'; input.name = 'daoyuan-pet-size'; input.value = entry.value; input.checked = petSize === entry.value;
-      input.addEventListener('change', () => { if (input.checked) { petSize = entry.value; sendAction('SET_PET_SIZE', { size: entry.value }); announcement = `紫薇桌宠已调整为${entry.label}号。`; render(); } });
-      label.append(input, element(doc, 'span', undefined, entry.label), element(doc, 'small', undefined, entry.note)); petSizeRow.append(label);
-    }
-    petPanel.append(petSizeRow);
-    const beautifierPanel = appendPanel(doc, content, '正文美化 V26', '控制正文阅读器是否扫描并美化 `<content>`；阅读器内部的字体、字号和术语注解仍由“阅”按钮独立管理。');
-    const beautifierToggle = element(doc, 'label', 'settings-auto-toggle');
-    const beautifierInput = doc.createElement('input'); beautifierInput.type = 'checkbox'; beautifierInput.checked = contentBeautifierEnabled; beautifierInput.dataset.contentBeautifierEnabled = 'true';
-    const beautifierCopy = element(doc, 'span', 'settings-auto-toggle-copy');
-    beautifierCopy.append(element(doc, 'strong', undefined, '启用正文美化'), element(doc, 'small', undefined, '默认开启。关闭后立即停止处理新正文；刷新酒馆页面后，已经美化的旧正文恢复为原始显示。'));
-    beautifierToggle.append(beautifierInput, beautifierCopy);
-    beautifierPanel.append(beautifierToggle, button(doc, 'primary-button', '保存正文美化开关', 'content-beautifier-save'));
-    content.append(grid, rerollPanel, petPanel, beautifierPanel, element(doc, 'p', 'notice muted', 'API 密钥仅保存在当前浏览器本地设置中，不写入聊天变量或模型提示词。'));
+    content.append(grid);
+    content.append(element(doc, 'p', 'notice muted', 'API 密钥仅保存在当前浏览器本地设置中，不写入聊天变量或模型提示词。'));
   }
 
   function renderPromptInjectionSettings(content: HTMLElement): void {
@@ -1092,6 +1669,8 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
 
     const grid = element(doc, 'div', 'app-grid');
     for (const item of apps) {
+      const moduleKey = featureModuleForApp[item.key];
+      if (moduleKey && !featureModuleFlags[moduleKey]) continue;
       const card = button(doc, 'app-card', '', 'app', item.key);
       card.append(element(doc, 'span', 'app-card-icon', item.icon), element(doc, 'div', 'app-card-title', item.label), element(doc, 'div', 'app-card-note', item.note));
       const badge=unreadBadge(item.key); if (badge > 0) card.append(element(doc, 'span', 'app-card-badge', String(badge)));
@@ -1104,6 +1683,9 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
     const definition = apps.find(item => item.key === active);
     const title = definition?.label ?? '天机阁随身玉简';
     if (active === 'settings') { renderSettings(content); return; }
+    if (active === 'world') { renderWorldSimulationHub(content); return; }
+    if (active === 'xuantian') { if (worldSimulationFeatures.xuantianEnabled) renderXuantianSimulation(content); else renderWorldSimulationHub(content); return; }
+    if (active === 'earth') { if (worldSimulationFeatures.earthEnabled) renderEarthSimulation(content); else renderWorldSimulationHub(content); return; }
     if (active === 'yujian') {
       const availableContacts = worldContacts.length > 0 ? worldContacts : previewContacts;
       const selectedContact = availableContacts.find(contact => contact.name === selectedContactName);
@@ -1130,7 +1712,11 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
         person.append(avatar, personCopy, element(doc, 'span', 'chat-person-detail', selectedContact.detail));
         const clearButton = button(doc, `chat-clear-button${clearChatArmedFor === selectedContact.name ? ' is-armed' : ''}`, clearChatArmedFor === selectedContact.name ? '确认清空' : '清空记录', 'chat-clear');
         clearButton.setAttribute('aria-label', clearChatArmedFor === selectedContact.name ? `确认清空与${selectedContact.name}的全部聊天记录` : `清空与${selectedContact.name}的全部聊天记录`);
-        chatHeader.append(person, clearButton);
+        const deleteContactButton = button(doc, 'chat-delete-contact-button', '删除联系人', 'chat-contact-delete');
+        deleteContactButton.setAttribute('aria-label', `删除联系人${selectedContact.name}`);
+        const headerActions = element(doc, 'div', 'chat-header-actions');
+        headerActions.append(clearButton, deleteContactButton);
+        chatHeader.append(person, headerActions);
         chatPage.append(chatHeader);
 
         const messages = element(doc, 'div', 'chat-messages');
@@ -1212,7 +1798,8 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
       const generateButton = button(doc, 'primary-button', beautyGenerating ? '推演中…' : '✦ 推演／更新绝色榜', 'beauty-generate');
       generateButton.disabled = beautyGenerating;
       const generationPanel = element(doc, 'section', 'beauty-action-panel');
-      generationPanel.append(element(doc, 'h3', undefined, '榜单推演'), generateButton);
+      const beautyRemaining = beautyApiSettings.autoEnabled && beautyApiSettings.autoInterval > 0 ? Math.max(0, beautyApiSettings.autoInterval - beautyCounter) : null;
+      generationPanel.append(element(doc, 'h3', undefined, '榜单推演'), generateButton, element(doc, 'span', 'xianwang-counter-line', beautyRemaining === null ? '自动绝色榜已关闭' : beautyRemaining === 0 ? '本轮将更新绝色榜' : `还有 ${beautyRemaining} 轮对话后更新绝色榜`));
       toolbar.append(generationPanel);
       content.append(toolbar);
       renderBeautyPortraitModal(content);
@@ -1639,17 +2226,33 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
     content.append(grid);
   };
 
-  function render(preserveScroll = true): void {
-    const previousScrollTop = preserveScroll ? root.querySelector<HTMLElement>('.content')?.scrollTop ?? 0 : 0;
+  function render(): void {
+    const previousScrollTop = root.querySelector<HTMLElement>('.content')?.scrollTop ?? 0;
     root.dataset.layout = layout;
     root.replaceChildren();
-    const topbar = element(doc, 'header', 'topbar');
-    topbar.append(element(doc, 'span', 'topbar-mark', '☷'));
-    const copy = element(doc, 'div', 'topbar-copy'); copy.append(element(doc, 'p', 'eyebrow', '天机阁 · 灵力驱动'), element(doc, 'p', 'topbar-title', active === 'home' ? '天机阁随身玉简' : (apps.find(item => item.key === active)?.label ?? '玉简')));
-    const closeButton = button(doc, 'topbar-action close-button', '×', 'close');
-    closeButton.title = '关闭玉简页面';
-    closeButton.setAttribute('aria-label', '关闭玉简页面');
-    topbar.append(copy, element(doc, 'div', 'topbar-meta', '玄天界 · 天机阁　辰时'), button(doc, 'topbar-action', '⚙', 'app', 'settings'), closeButton);
+    const topbar = element(doc, 'header', 'topbar topbar-empty');
+    topbar.setAttribute('aria-hidden', 'true');
+    const spiritStatus = element(doc, 'div', 'phone-spirit-status');
+    const signal = element(doc, 'div', 'spirit-signal');
+    signal.setAttribute('aria-label', '灵力信号模拟动画');
+    for (let index = 1; index <= 4; index += 1) signal.append(element(doc, 'span', `spirit-signal-bar spirit-signal-bar-${index}`));
+    const rawEnergy = worldStatus.energy.trim();
+    const ratioMatch = rawEnergy.match(/(-?\d+(?:\.\d+)?)\s*[/|]\s*(\d+(?:\.\d+)?)/);
+    const numericMatch = rawEnergy.match(/-?\d+(?:\.\d+)?/);
+    const energyPercent = ratioMatch
+      ? Math.min(100, Math.max(0, Number(ratioMatch[1]) / Math.max(1, Number(ratioMatch[2])) * 100))
+      : numericMatch ? Math.min(100, Math.max(0, Number(numericMatch[0]))) : 0;
+    const energyKnown = Boolean(numericMatch) && rawEnergy !== '未知' && rawEnergy !== '未接入';
+    const energy = element(doc, 'div', `spirit-battery${energyKnown ? energyPercent <= 20 ? ' low' : '' : ' unknown'}`);
+    energy.setAttribute('aria-label', energyKnown ? `当前灵力 ${rawEnergy}` : '当前灵力未知');
+    const batteryShell = element(doc, 'span', 'spirit-battery-shell');
+    const batteryFill = element(doc, 'span', 'spirit-battery-fill');
+    batteryFill.style.width = `${energyPercent}%`;
+    batteryShell.append(batteryFill);
+    energy.append(batteryShell);
+    const realTime = element(doc, 'time', 'spirit-real-time', new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false }));
+    realTime.setAttribute('aria-label', '当前现实时间');
+    spiritStatus.append(signal, realTime, energy);
     const workspace = element(doc, 'div', 'workspace');
     const sidebar = element(doc, 'aside', 'sidebar');
     sidebar.append(element(doc, 'div', 'sidebar-caption', '随身应用'));
@@ -1658,7 +2261,10 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
     homeButton.append(element(doc, 'span', 'app-nav-icon', '⌂'), element(doc, 'span', 'app-nav-label', '玉简桌面'));
     nav.append(homeButton);
     for (const item of apps) {
-      const navButton = button(doc, `app-nav-button${active === item.key ? ' active' : ''}`, '', 'app', item.key);
+      const moduleKey = featureModuleForApp[item.key];
+      if (moduleKey && !featureModuleFlags[moduleKey]) continue;
+      const navActive = active === item.key || (item.key === 'world' && (active === 'earth' || active === 'xuantian'));
+      const navButton = button(doc, `app-nav-button${navActive ? ' active' : ''}`, '', 'app', item.key);
       navButton.append(element(doc, 'span', 'app-nav-icon', item.icon), element(doc, 'span', 'app-nav-label', item.label));
       const badge=unreadBadge(item.key); if (badge > 0) navButton.append(element(doc, 'span', 'app-nav-badge', String(badge)));
       nav.append(navButton);
@@ -1666,19 +2272,37 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
     sidebar.append(nav, element(doc, 'div', 'sidebar-footer', '数据主源：chat 变量\n世界事实：可选只读通道'));
     const content = element(doc, 'main', 'content');
     const inner = element(doc, 'div', 'content-inner');
+    inner.append(spiritStatus);
     if (active === 'home') renderHome(inner); else renderPage(inner);
     if (announcement) inner.append(element(doc, 'p', 'notice', announcement));
     content.append(inner); workspace.append(sidebar, content);
     const mobile = element(doc, 'nav', 'mobile-nav');
-    (['home', 'yujian', 'forum', 'settings'] as AppKey[]).forEach(key => mobile.append(button(doc, `mobile-nav-button${active === key ? ' active' : ''}`, `${key === 'home' ? '⌂ 桌面' : key === 'yujian' ? '⌁ 传讯' : key === 'forum' ? '☷ 论坛' : '⚙ 设置'}`, 'app', key)));
+    mobile.setAttribute('aria-label', '小手机主导航');
+    mobile.append(
+      button(doc, `mobile-nav-button${active === 'home' ? ' active' : ''}`, '⌂ 桌面', 'app', 'home'),
+      button(doc, `mobile-nav-button${active === 'yujian' ? ' active' : ''}`, '⌁ 传讯', 'app', 'yujian'),
+    );
+    const worldLauncher = element(doc, 'div', `mobile-world-launcher${active === 'xuantian' || active === 'earth' ? ' active' : ''}${featureModuleFlags.world?'':' module-disabled'}`);
+    const xuantianButton = button(doc, `mobile-world-half mobile-world-xuantian${active === 'xuantian' ? ' active' : ''}`, '', 'app', 'xuantian');
+    xuantianButton.setAttribute('aria-label', '直接打开玄天界推演');
+    xuantianButton.disabled=!featureModuleFlags.world;
+    xuantianButton.append(element(doc, 'span', 'mobile-world-glyph', '玄'), element(doc, 'span', 'mobile-world-label', '玄天'));
+    const earthButton = button(doc, `mobile-world-half mobile-world-earth${active === 'earth' ? ' active' : ''}`, '', 'app', 'earth');
+    earthButton.setAttribute('aria-label', '直接打开地球推演');
+    earthButton.disabled=!featureModuleFlags.world;
+    earthButton.append(element(doc, 'span', 'mobile-world-glyph', '地'), element(doc, 'span', 'mobile-world-label', '地球'));
+    worldLauncher.append(xuantianButton, earthButton);
+    mobile.append(
+      worldLauncher,
+      button(doc, `mobile-nav-button${active === 'forum' ? ' active' : ''}`, '☷ 论坛', 'app', 'forum'),
+      button(doc, `mobile-nav-button${active === 'settings' ? ' active' : ''}`, '⚙ 设置', 'app', 'settings'),
+    );
     root.append(topbar, workspace, mobile);
+    upgradeNativeSelects(doc, root);
     applyContactFilter();
-    if (preserveScroll && previousScrollTop > 0) {
-      uiView.requestAnimationFrame(() => {
-        const nextContent = root.querySelector<HTMLElement>('.content');
-        if (nextContent) nextContent.scrollTop = previousScrollTop;
-      });
-    }
+    const restoreScroll = () => { const nextContent = root.querySelector<HTMLElement>('.content'); if (nextContent) nextContent.scrollTop = previousScrollTop; };
+    restoreScroll();
+    uiView.requestAnimationFrame(() => { restoreScroll(); uiView.requestAnimationFrame(restoreScroll); });
   }
 
   const onClick = (event: Event): void => {
@@ -1691,10 +2315,18 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
     if (action === 'map-faction-portrait-zoom-close' && actionNode.classList.contains('map-faction-image-overlay') && target !== actionNode) return;
     if (action === 'app') {
       const next = actionNode.dataset.key as AppKey | undefined;
-      if (next) { markAppRead(next); active = next; if (next === 'settings') settingsSection = 'home'; selectedNewsId = null; selectedContactName = null; announcement = ''; saveUiPreferences({ layoutMode: 'phone', lastApp: active }); sendAction('SET_ACTIVE_APP', { app: active }); render(false); }
+      const moduleKey = next ? featureModuleForApp[next] : undefined;
+      if (moduleKey && !featureModuleFlags[moduleKey]) { announcement='该功能已在设置中关闭。';render();return; }
+      if (next) { markAppRead(next); active = next; if (next === 'settings') settingsSection = 'home'; selectedNewsId = null; selectedContactName = null; announcement = ''; saveUiPreferences({ layoutMode: 'phone', lastApp: active }); sendAction('SET_ACTIVE_APP', { app: active }); render(); }
+    } else if(action==='xuantian-force-region-toggle'){
+      const region=actionNode.dataset.key??'';if(expandedXuantianForceRegions.has(region))expandedXuantianForceRegions.delete(region);else expandedXuantianForceRegions.add(region);render();
+    } else if (action === 'world-sim-open') {
+      const next = actionNode.dataset.key === 'earth' ? 'earth' : 'xuantian';
+      const enabled = next === 'earth' ? worldSimulationFeatures.earthEnabled : worldSimulationFeatures.xuantianEnabled;
+      if (enabled) { active = next; announcement = ''; render(); }
     } else if (action === 'wanbao-section') {
       wanbaoSection = actionNode.dataset.key === 'owned' ? 'owned' : 'market';
-      render(false);
+      render();
     } else if (action === 'map-realm') {
       const selectedRealm: MapRealm = actionNode.dataset.key === '仙界' ? '仙界' : '玄天界';
       const selectedNode = normalizeMapNode(selectedRealm, data.map.selectedNode);
@@ -1741,24 +2373,76 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
       zoomMapImage = false; render();
     } else if (action === 'settings-open') {
       const next = actionNode.dataset.key as SettingsSection | undefined;
-      if (next && next !== 'home') { settingsSection = next; announcement = ''; render(); }
+      if (next && next !== 'home') { active = 'settings'; settingsSection = next; announcement = ''; if (next === 'dlc') sendAction('REQUEST_USER_DLC_STATUS'); render(); }
     } else if (action === 'settings-home') {
       settingsSection = 'home'; announcement = ''; render();
-    } else if (action === 'dlc-settings-save') {
-      root.querySelectorAll<HTMLInputElement>('[data-dlc-setting]').forEach((node) => { const id = node.dataset.dlcSetting as keyof DlcSettingsDraft; if (id) dlcSettings[id] = node.checked; });
-      sendAction('SAVE_DLC_SETTINGS', { ...dlcSettings }); announcement = '正在保存 DLC 开关并同步世界书…'; render();
+    } else if (action === 'earth-sim-tab') {
+      const next = actionNode.dataset.key as EarthSettingsTab | undefined;
+      if (next) { earthSettingsTab = next; announcement = ''; render(); }
+    } else if (action === 'xuantian-sim-tab') {
+      const next = actionNode.dataset.key as XuantianSettingsTab | undefined;
+      if (next) { xuantianSettingsTab = next; announcement = ''; render(); }
+    } else if (action === 'xuantian-region-select') {
+      const next = actionNode.dataset.key;
+      if (next) { selectedXuantianRegion = next; render(); }
+    } else if (action === 'xuantian-simulation-run') {
+      if(xuantianSimulationRunning)return;xuantianSimulationRunning=true;announcement='正在读取原版主世界书与最近五条可见 AI 回复…';render();sendAction('GENERATE_XUANTIAN_SIMULATION');
+    } else if (action === 'earth-region-toggle') {
+      const key = actionNode.dataset.key;
+      if (key) {
+        expandedEarthRegion = expandedEarthRegion === key ? null : key;
+        render();
+        root.querySelector<HTMLButtonElement>(`.earth-region-card[data-key="${key}"]`)?.focus();
+      }
+    } else if (action === 'earth-event-toggle') {
+      const key = actionNode.dataset.key;
+      if (key) {
+        expandedEarthEvent = expandedEarthEvent === key ? null : key;
+        render();
+        root.querySelector<HTMLButtonElement>(`.earth-sim-event[data-key="${key}"]`)?.focus();
+      }
+    } else if (action === 'earth-worldbook-refresh') {
+      sendAction('REQUEST_EARTH_WORLDBOOK_STATUS'); announcement = '正在重新读取地球附属世界书…'; render();
+    } else if (action === 'earth-worldbook-install') {
+      sendAction('INSTALL_EARTH_WORLDBOOK'); announcement = '正在从内置种子创建地球附属世界书…'; render();
+    } else if (action === 'earth-worldbook-attach') {
+      sendAction('ATTACH_EARTH_WORLDBOOK'); announcement = '正在挂载到当前角色并复读确认…'; render();
+    } else if (action === 'earth-worldbook-repair') {
+      sendAction('REPAIR_EARTH_WORLDBOOK'); announcement = '正在补回缺失条目，不覆盖用户修改…'; render();
+    } else if (action === 'world-simulation-settings-save') {
+      worldSimulationFeatures = {
+        xuantianEnabled: root.querySelector<HTMLInputElement>('[data-world-simulation-feature="xuantian"]')?.checked === true,
+        earthEnabled: root.querySelector<HTMLInputElement>('[data-world-simulation-feature="earth"]')?.checked === true,
+      };
+      sendAction('SAVE_WORLD_SIMULATION_FEATURES', worldSimulationFeatures);
+      announcement = '正在保存世界推演开关…'; render();
     } else if (action === 'content-beautifier-save') {
       contentBeautifierEnabled = root.querySelector<HTMLInputElement>('[data-content-beautifier-enabled]')?.checked !== false;
       sendAction('SAVE_CONTENT_BEAUTIFIER_SETTINGS', { enabled: contentBeautifierEnabled });
       announcement = '正在保存正文美化开关…'; render();
-    } else if (action === 'dlc-install') {
-      sendAction('INSTALL_MISSING_DLCS'); announcement = '正在创建不存在的 DLC 世界书…'; render();
-    } else if (action === 'dlc-attach') {
-      sendAction('ATTACH_DLCS_TO_CURRENT_CHARACTER'); announcement = '正在把已有 DLC 挂载到当前角色…'; render();
-    } else if (action === 'dlc-repair') {
-      sendAction('REPAIR_DLC_MISSING_ENTRIES'); announcement = '正在补回缺失的世界书条目…'; render();
-    } else if (action === 'dlc-check') {
-      sendAction('CHECK_DLC_COMPATIBILITY'); announcement = '正在刷新 DLC 状态检查…'; render();
+    } else if (action === 'config-helper-save') {
+      configHelperEnabled = root.querySelector<HTMLInputElement>('[data-config-helper-enabled]')?.checked === true;
+      sendAction('SAVE_CONFIG_HELPER_SETTINGS', { enabled: configHelperEnabled });
+      announcement = '正在保存配置小助手悬浮球显示设置…'; render();
+    } else if (action === 'user-dlc-import' && userDlcWorldbookDraft) {
+      sendAction('IMPORT_USER_DLC', { id: selectedUserDlcId, name: userDlcName.trim(), worldbook: userDlcWorldbookDraft.value, worldbookFileName: userDlcWorldbookDraft.fileName, script: userDlcScriptDraft?.value, scriptFileName: userDlcScriptDraft?.fileName, mode: contentPackageMode });
+      actionNode.textContent = selectedUserDlcId ? '正在更新…' : '正在导入…'; (actionNode as HTMLButtonElement).disabled = true;
+    } else if (action === 'user-dlc-target') {
+      selectedUserDlcId = actionNode.dataset.key || null; const selected = userDlcs.find((item) => item.id === selectedUserDlcId); userDlcName = selected?.name ?? ''; userDlcWorldbookDraft = null; userDlcScriptDraft = null;
+      root.querySelectorAll<HTMLElement>('[data-action="user-dlc-target"]').forEach((option) => { const active = (option.dataset.key || null) === selectedUserDlcId; option.classList.toggle('selected', active); option.setAttribute('aria-pressed', String(active)); });
+      const nameInput = root.querySelector<HTMLInputElement>('[data-user-dlc-name]'); if (nameInput) nameInput.value = userDlcName;
+      root.querySelectorAll<HTMLInputElement>('[data-user-dlc-file]').forEach((input) => { input.value = ''; }); root.querySelectorAll<HTMLElement>('[data-user-dlc-file-status]').forEach((status) => { status.textContent = '未选择任何文件'; }); root.querySelectorAll<HTMLElement>('[data-user-dlc-file-summary]').forEach((summary) => { summary.remove(); });
+      const submit = root.querySelector<HTMLButtonElement>('[data-action="user-dlc-import"]'); if (submit) { submit.textContent = selectedUserDlcId ? '更新所选 DLC' : '导入并新建 DLC'; submit.disabled = true; }
+    } else if (action === 'user-dlc-mode') {
+      contentPackageMode = actionNode.dataset.key === 'safe-merge' ? 'safe-merge' : 'replace-matching'; root.querySelectorAll<HTMLElement>('[data-action="user-dlc-mode"]').forEach((option) => { const active = option.dataset.key === contentPackageMode; option.classList.toggle('selected', active); option.setAttribute('aria-pressed', String(active)); });
+    } else if (action === 'user-dlc-select-update') {
+      const selected = userDlcs.find((item) => item.id === actionNode.dataset.key); const targetButton = selected ? root.querySelector<HTMLElement>(`[data-action="user-dlc-target"][data-key="${selected.id}"]`) : null; targetButton?.click();
+    } else if (action === 'user-dlc-repair') {
+      sendAction('REPAIR_USER_DLC_MOUNT', { id: actionNode.dataset.key }); actionNode.textContent = '正在检测…'; (actionNode as HTMLButtonElement).disabled = true;
+    } else if (action === 'user-dlc-remove-script') {
+      sendAction('REMOVE_USER_DLC_SCRIPT', { id: actionNode.dataset.key }); actionNode.textContent = '正在移除…'; (actionNode as HTMLButtonElement).disabled = true;
+    } else if (action === 'user-dlc-remove') {
+      sendAction('REMOVE_USER_DLC', { id: actionNode.dataset.key }); actionNode.textContent = '正在移除…'; (actionNode as HTMLButtonElement).disabled = true;
     } else if (action === 'wanbao-settings-save') {
       const readNumber = (key: keyof WanbaoSettingsDraft, fallback: number): number => {
         const input = root.querySelector<HTMLInputElement>(`[data-wanbao-setting="${key}"]`);
@@ -1784,6 +2468,14 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
         storage.removeItem('daoyuan_wanbao_debug_logs_v1');
         announcement = '万宝商行诊断日志已清空';
       } catch { announcement = '诊断日志清空失败'; }
+      render();
+    } else if (action === 'earth-faction-toggle') {
+      const key = actionNode.dataset.key ?? '';
+      expandedEarthFaction = expandedEarthFaction === key ? null : key;
+      render();
+    } else if (action === 'earth-faction-category-toggle') {
+      const key = actionNode.dataset.key ?? '';
+      if (expandedEarthFactionCategories.has(key)) expandedEarthFactionCategories.delete(key); else expandedEarthFactionCategories.add(key);
       render();
     } else if (action === 'wanbao-api-save') {
       root.querySelectorAll<HTMLInputElement>('[data-wanbao-api-setting]').forEach(node => { const key = node.dataset.wanbaoApiSetting as 'apiBaseUrl' | 'apiKey' | 'apiModel'; if (key) wanbaoApiSettings[key] = node.value; });
@@ -1866,6 +2558,13 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
       announcement = '正在清空聊天记录…';
       render();
       sendAction('CLEAR_YUJIAN_HISTORY', { charName });
+    } else if (action === 'chat-contact-delete') {
+      if (!selectedContactName) return;
+      const charName = selectedContactName;
+      if (!uiView.confirm(`确认删除联系人「${charName}」？\n\n该联系人的玉简聊天记录会一并删除；除非之后收到或发送新的玉简消息，否则不会重新出现在联系人列表。`)) return;
+      announcement = `正在删除联系人「${charName}」…`;
+      sendAction('DELETE_YUJIAN_CONTACT', { charName });
+      render();
     } else if (action === 'contacts-toggle') {
       allContactsExpanded = !allContactsExpanded;
       render();
@@ -1903,6 +2602,51 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
       announcement = '正在获取模型列表…';
       render();
       sendAction('REQUEST_YUJIAN_MODELS', { apiBaseUrl: yujianSettings.apiBaseUrl, apiKey: yujianSettings.apiKey });
+    } else if (action === 'xuantian-models-fetch') {
+      root.querySelectorAll<HTMLInputElement>('[data-xuantian-api-setting]').forEach(node=>{const key=node.dataset.xuantianApiSetting;if(key==='enabled')xuantianApiSettings.enabled=node.checked;else if(key==='apiBaseUrl'||key==='apiKey'||key==='apiModel')xuantianApiSettings[key]=node.value;else if(key==='temperature'||key==='timeoutSeconds'||key==='replyInterval'||key==='maxWorldDays')xuantianApiSettings[key]=Number(node.value);});if(fetchingXuantianModels)return;fetchingXuantianModels=true;announcement='正在获取玄天界推演模型列表…';render();sendAction('REQUEST_XUANTIAN_MODELS',{apiBaseUrl:xuantianApiSettings.apiBaseUrl,apiKey:xuantianApiSettings.apiKey});
+    } else if (action === 'xuantian-api-save') {
+      root.querySelectorAll<HTMLInputElement>('[data-xuantian-api-setting]').forEach(node => {
+        const key=node.dataset.xuantianApiSetting;
+        if(key==='enabled') xuantianApiSettings.enabled=node.checked;
+        else if(key==='apiBaseUrl'||key==='apiKey'||key==='apiModel') xuantianApiSettings[key]=node.value;
+        else if(key==='temperature'||key==='timeoutSeconds'||key==='replyInterval'||key==='maxWorldDays') xuantianApiSettings[key]=Number(node.value);
+      });
+      sendAction('SAVE_XUANTIAN_SETTINGS',{...xuantianApiSettings});announcement='正在保存玄天界推演 API 设置…';render();
+    } else if (action === 'earth-models-fetch') {
+      root.querySelectorAll<HTMLInputElement | HTMLSelectElement>('[data-earth-api-setting]').forEach(node => {
+        const key = node.dataset.earthApiSetting;
+        if (key === 'enabled' && node instanceof HTMLInputElement) earthApiSettings.enabled = node.checked;
+        else if (key === 'apiBaseUrl' || key === 'apiKey' || key === 'apiModel') earthApiSettings[key] = node.value;
+        else if (key === 'temperature' || key === 'timeoutSeconds' || key === 'replyInterval' || key === 'maxWorldDays') earthApiSettings[key] = Number(node.value);
+        else if (key === 'timeRatio') earthApiSettings.timeRatio = node.value as EarthTimeRatio;
+      });
+      if (fetchingEarthModels) return;
+      fetchingEarthModels = true;
+      announcement = '正在获取地球推演模型列表…';
+      render();
+      sendAction('REQUEST_EARTH_MODELS', { apiBaseUrl: earthApiSettings.apiBaseUrl, apiKey: earthApiSettings.apiKey });
+    } else if (action === 'earth-simulation-run') {
+      if (earthSimulationRunning) return;
+      earthSimulationRunning = true;
+      announcement = '正在读取已挂载世界书与最近 5 条 AI 回复…';
+      render();
+      sendAction('GENERATE_EARTH_SIMULATION');
+    } else if (action === 'earth-api-save') {
+      root.querySelectorAll<HTMLInputElement | HTMLSelectElement>('[data-earth-api-setting]').forEach(node => {
+        const key = node.dataset.earthApiSetting;
+        if (key === 'enabled' && node instanceof HTMLInputElement) earthApiSettings.enabled = node.checked;
+        else if (key === 'apiBaseUrl' || key === 'apiKey' || key === 'apiModel') earthApiSettings[key] = node.value;
+        else if (key === 'temperature' || key === 'timeoutSeconds' || key === 'replyInterval' || key === 'maxWorldDays') earthApiSettings[key] = Number(node.value);
+        else if (key === 'timeRatio') earthApiSettings.timeRatio = node.value as EarthTimeRatio;
+      });
+      sendAction('SAVE_EARTH_SETTINGS', { ...earthApiSettings });
+      announcement = '正在保存地球推演设置…'; render();
+    } else if(action==='earth-simulation-clear'){
+      if(!uiView.confirm('确定清空当前对话的地球推演吗？\n\n只会删除本对话的地球账本、事件、势力变化、时间和正文注入；玄天界及其他对话不受影响。'))return;
+      announcement='正在清空当前对话的地球推演…';render();sendAction('CLEAR_EARTH_SIMULATION');
+    } else if(action==='xuantian-simulation-clear'){
+      if(!uiView.confirm('确定清空当前对话的玄天界推演吗？\n\n只会删除本对话的玄天界账本、事件线、势力变化、时间和正文注入；地球及其他对话不受影响。'))return;
+      announcement='正在清空当前对话的玄天界推演…';render();sendAction('CLEAR_XUANTIAN_SIMULATION');
     } else if (action === 'beauty-api-toggle-settings') {
       beautyApiSettingsOpen = !beautyApiSettingsOpen;
       render();
@@ -2019,13 +2763,6 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
       });
       sendAction('SAVE_PROMPT_INJECTION_SETTINGS', { ...promptInjectionSettings });
       announcement = '主线注入设置已保存'; render();
-    } else if (action === 'reroll-settings-save') {
-      rerollCompatibilityEnabled = root.querySelector<HTMLInputElement>('[data-reroll-compatibility]')?.checked ?? false;
-      sendAction('SAVE_REROLL_SETTINGS', { enabled: rerollCompatibilityEnabled });
-      announcement = rerollCompatibilityEnabled
-        ? '已开启仙网重 Roll 兼容；不同 Swipe 可能产生额外 API 请求。'
-        : '已关闭仙网重 Roll 兼容。';
-      render();
     } else if (action === 'trends-generate') {
       if (trendsGenerating) return;
       trendsGenerating = true;
@@ -2078,6 +2815,60 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
     else if (action === 'notice') { announcement = actionNode.dataset.key ?? ''; render(); }
     else if (action === 'diagnostic') { announcement = '诊断请求已提交给宿主；当前只检查能力，不读取或写回 stat_data。'; sendAction('REQUEST_DIAGNOSTIC'); render(); }
   };
+  let pointerLockedScrollTop: number | null = null;
+  const restorePointerScroll = (): void => {
+    if (pointerLockedScrollTop === null) return;
+    const content = root.querySelector<HTMLElement>('.content');
+    if (content) { content.style.overflowY = 'hidden'; content.scrollTop = pointerLockedScrollTop; }
+  };
+  const schedulePointerScrollRestore = (): void => {
+    restorePointerScroll();
+    uiView.requestAnimationFrame(() => { restorePointerScroll(); uiView.requestAnimationFrame(restorePointerScroll); });
+    uiView.setTimeout(restorePointerScroll, 0);
+  };
+  const unlockPointerScroll = (): HTMLElement | null => {
+    pointerLockedScrollTop = null;
+    const content = root.querySelector<HTMLElement>('.content');
+    if (content) content.style.overflowY = '';
+    return content;
+  };
+  const onPointerDown = (event: PointerEvent): void => {
+    const target = event.target as HTMLElement | null;
+    const interactive = target?.closest<HTMLElement>('button, input, textarea, label, a, [role="option"], [data-action]');
+    if (!interactive) { unlockPointerScroll(); return; }
+    const content = interactive.closest<HTMLElement>('.content');
+    if (!content) { unlockPointerScroll(); return; }
+    pointerLockedScrollTop = content.scrollTop;
+    const tagName = interactive.tagName.toLowerCase();
+    const inputType = tagName === 'input' ? interactive.getAttribute('type') ?? 'text' : '';
+    if (tagName === 'textarea' || (tagName === 'input' && ['text', 'search', 'url', 'email', 'tel', 'password', 'number'].includes(inputType))) {
+      // Take over native text-field focus so the host cannot reposition the phone.
+      event.preventDefault();
+      interactive.focus({ preventScroll: true });
+    }
+    schedulePointerScrollRestore();
+  };
+  const onPointerClick = (): void => { schedulePointerScrollRestore(); };
+  const onWheelIntent = (event: WheelEvent): void => {
+    if (pointerLockedScrollTop === null) return;
+    const content = unlockPointerScroll();
+    if (!content) return;
+    event.preventDefault();
+    content.scrollTop += event.deltaY;
+  };
+  const onManualScrollIntent = (): void => { unlockPointerScroll(); };
+  const onFocusOut = (): void => {
+    uiView.setTimeout(() => {
+      const activeElement = doc.activeElement as HTMLElement | null;
+      if (!activeElement?.closest('button, input, textarea, label, a, [role="option"], [data-action]')) unlockPointerScroll();
+    }, 0);
+  };
+  const onContentScroll = (event: Event): void => {
+    if (pointerLockedScrollTop === null) return;
+    const content = event.target as HTMLElement | null;
+    if (!content?.classList?.contains('content') || content.scrollTop === pointerLockedScrollTop) return;
+    content.scrollTop = pointerLockedScrollTop;
+  };
   const onKeydown = (event: KeyboardEvent): void => {
     if (event.key !== 'Escape') return;
     if (zoomMapFactionPortrait) { zoomMapFactionPortrait = false; render(); root.querySelector<HTMLButtonElement>('.map-faction-portrait-zoom')?.focus(); }
@@ -2085,7 +2876,15 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
     else if (zoomMapImage) { zoomMapImage = false; render(); }
   };
   const onInput = (event: Event): void => {
-    const target = event.target as HTMLInputElement | null;
+    const target = event.target as HTMLInputElement | HTMLSelectElement | null;
+    if (target?.matches('[data-earth-api-setting]')) {
+      const key = target.dataset.earthApiSetting;
+      if (key === 'enabled' && target instanceof HTMLInputElement) earthApiSettings.enabled = target.checked;
+      else if (key === 'apiBaseUrl' || key === 'apiKey' || key === 'apiModel') earthApiSettings[key] = target.value;
+      else if (key === 'temperature' || key === 'timeoutSeconds' || key === 'replyInterval' || key === 'maxWorldDays') earthApiSettings[key] = Number(target.value);
+      else if (key === 'timeRatio') { earthApiSettings.timeRatio = target.value as EarthTimeRatio; const note = root.querySelector<HTMLElement>('.earth-time-ratio-note'); if (note) note.textContent = earthTimeRatioNote(earthApiSettings.timeRatio); }
+      return;
+    }
     if (target?.matches('[data-beauty-setting]')) {
       const key = target.dataset.beautySetting as 'apiBaseUrl' | 'apiKey' | 'apiModel';
       if (key) beautyApiSettings[key] = target.value;
@@ -2108,6 +2907,17 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
   };
   const onChange = (event: Event): void => {
     const target = event.target as HTMLInputElement | HTMLSelectElement | null;
+    if(target?.matches('[data-feature-module]')){
+      const key=target.dataset.featureModule as FeatureModuleKey;featureModuleFlags={...featureModuleFlags,[key]:(target as HTMLInputElement).checked};
+      sendAction('SAVE_FEATURE_MODULE_FLAGS',{key,enabled:featureModuleFlags[key]});announcement=`${key==='world'?'世界推演':key==='yujian'?'玉简传讯':key==='beauty'?'绝色榜':key==='xianwang'?'仙网内容':'万宝商行'}已${featureModuleFlags[key]?'开启':'关闭'}。`;render();return;
+    }
+    if (target?.matches('[data-earth-model-select]')) {
+      earthApiSettings.apiModel = target.value;
+      const modelInput = root.querySelector<HTMLInputElement>('[data-earth-api-setting="apiModel"]');
+      if (modelInput) modelInput.value = target.value;
+      return;
+    }
+    if(target?.matches('[data-xuantian-model-select]')){xuantianApiSettings.apiModel=target.value;const modelInput=root.querySelector<HTMLInputElement>('[data-xuantian-api-setting="apiModel"]');if(modelInput)modelInput.value=target.value;return;}
     if (target?.matches('[data-beauty-portrait-file]')) {
       const file = (target as HTMLInputElement).files?.[0];
       const name = target.dataset.beautyPortraitFile;
@@ -2127,6 +2937,43 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
       };
       reader.readAsDataURL(file);
       return;
+    }
+    if (target?.matches('[data-user-dlc-name]')) {
+      userDlcName = (target as HTMLInputElement).value;
+      const submit = root.querySelector<HTMLButtonElement>('[data-action="user-dlc-import"]'); if (submit) submit.disabled = !userDlcName.trim() || !userDlcWorldbookDraft;
+      return;
+    }
+    if (target?.matches('[data-user-dlc-file]')) {
+      const file = (target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      const fileKind = target.dataset.userDlcFile === 'script' ? 'script' : 'worldbook';
+      const updateFileDom = (selected: boolean, summaryText?: string, errorText?: string): void => {
+        const status = root.querySelector<HTMLElement>(`[data-user-dlc-file-status="${fileKind}"]`); if (status) status.textContent = errorText ?? (selected ? '已选择 1 个文件' : '未选择任何文件');
+        root.querySelector<HTMLElement>(`[data-user-dlc-file-summary="${fileKind}"]`)?.remove();
+        if (summaryText) { const summary = element(doc, 'p', fileKind === 'worldbook' ? 'notice' : 'notice muted', summaryText); summary.dataset.userDlcFileSummary = fileKind; target.closest('.content-package-file')?.after(summary); }
+        const submit = root.querySelector<HTMLButtonElement>('[data-action="user-dlc-import"]'); if (submit) submit.disabled = !userDlcName.trim() || !userDlcWorldbookDraft;
+      };
+      if (file.size > 5_000_000) { if (fileKind === 'worldbook') userDlcWorldbookDraft = null; else userDlcScriptDraft = null; updateFileDom(false, undefined, '文件超过 5 MB'); return; }
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const value = JSON.parse(String(reader.result ?? '')) as Record<string, unknown>;
+          const originalData = value.originalData && typeof value.originalData === 'object' ? value.originalData as Record<string, unknown> : null;
+          const entries = value.entries && typeof value.entries === 'object' && !Array.isArray(value.entries) ? value.entries as Record<string, unknown> : originalData?.entries && typeof originalData.entries === 'object' ? originalData.entries as Record<string, unknown> : null;
+          const kind = value.type === 'script' ? 'script' : entries ? 'worldbook' : null;
+          if (!kind) throw new Error('未识别到世界书 entries 或单脚本结构');
+          if (kind !== fileKind) throw new Error(fileKind === 'worldbook' ? '此处必须选择世界书 JSON' : '此处必须选择单脚本 JSON');
+          const name = String(originalData?.name ?? value.name ?? file.name.replace(/\.json$/i, '')).trim();
+          if (kind === 'worldbook') { const count = entries ? Object.keys(entries).length : 0; userDlcWorldbookDraft = { fileName: file.name, value, name, count }; updateFileDom(true, `世界书：${name} · ${count} 条`); }
+          else { userDlcScriptDraft = { fileName: file.name, value, name }; updateFileDom(true, `脚本：${name}`); }
+        } catch (error) { if (fileKind === 'worldbook') userDlcWorldbookDraft = null; else userDlcScriptDraft = null; updateFileDom(false, undefined, `预检失败：${error instanceof Error ? error.message : String(error)}`); }
+      };
+      reader.onerror = () => { if (fileKind === 'worldbook') userDlcWorldbookDraft = null; else userDlcScriptDraft = null; updateFileDom(false, undefined, '无法读取文件'); };
+      reader.readAsText(file); return;
+    }
+    if (target?.matches('[data-user-script-enabled]')) {
+      sendAction('SET_USER_SCRIPT_ENABLED', { id: target.dataset.userScriptEnabled, enabled: (target as HTMLInputElement).checked });
+      announcement = (target as HTMLInputElement).checked ? '正在启用脚本扩展…' : '正在关闭脚本扩展…'; render(); return;
     }
     if (target?.matches('[data-model-select]') && target.value) {
       yujianSettings.apiModel = target.value;
@@ -2176,16 +3023,31 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
       if (Array.isArray(message.payload.forumPosts)) forumPosts = message.payload.forumPosts as ForumPost[];
       if (Array.isArray(message.payload.newsPapers)) newsPapers = message.payload.newsPapers as NewsPaper[];
       if (message.payload.xianwangCounters && typeof message.payload.xianwangCounters === 'object') xianwangCounters = { ...xianwangCounters, ...(message.payload.xianwangCounters as Partial<typeof xianwangCounters>) };
+      if (typeof message.payload.beautyCounter === 'number') beautyCounter = Math.max(0, Math.floor(message.payload.beautyCounter));
       if (message.payload.yujianSettings && typeof message.payload.yujianSettings === 'object') yujianSettings = { ...yujianSettings, ...(message.payload.yujianSettings as Partial<YujianSettingsDraft>) };
       if (message.payload.beautyApiSettings && typeof message.payload.beautyApiSettings === 'object') beautyApiSettings = { ...beautyApiSettings, ...(message.payload.beautyApiSettings as Partial<BeautyApiSettingsDraft>) };
       if (message.payload.xianwangApiSettings && typeof message.payload.xianwangApiSettings === 'object') xianwangApiSettings = { ...xianwangApiSettings, ...(message.payload.xianwangApiSettings as Partial<XianwangSettingsDraft>) };
       if (message.payload.wanbaoApiSettings && typeof message.payload.wanbaoApiSettings === 'object') wanbaoApiSettings = { ...wanbaoApiSettings, ...(message.payload.wanbaoApiSettings as Partial<WanbaoApiSettingsDraft>) };
+      if (message.payload.earthApiSettings && typeof message.payload.earthApiSettings === 'object') earthApiSettings = { ...earthApiSettings, ...(message.payload.earthApiSettings as Partial<EarthApiSettingsDraft>) };
+      earthSimulationState = message.payload.earthSimulationState && typeof message.payload.earthSimulationState === 'object' ? message.payload.earthSimulationState as EarthSimulationState : null;
+      if (message.payload.xuantianApiSettings && typeof message.payload.xuantianApiSettings === 'object') xuantianApiSettings = { ...xuantianApiSettings, ...(message.payload.xuantianApiSettings as Partial<XuantianApiSettingsDraft>) };
+      xuantianSimulationState = message.payload.xuantianSimulationState && typeof message.payload.xuantianSimulationState === 'object' ? message.payload.xuantianSimulationState as XuantianSimulationState : null;
+      if(message.payload.featureModuleFlags&&typeof message.payload.featureModuleFlags==='object')featureModuleFlags={...featureModuleFlags,...message.payload.featureModuleFlags as Partial<FeatureModuleFlags>};
+      if(message.payload.worldSimulationFeatures&&typeof message.payload.worldSimulationFeatures==='object')worldSimulationFeatures={...worldSimulationFeatures,...message.payload.worldSimulationFeatures as Partial<typeof worldSimulationFeatures>};
+      const activeModule = featureModuleForApp[active];
+      const activeRealmDisabled = (active === 'xuantian' && !worldSimulationFeatures.xuantianEnabled)
+        || (active === 'earth' && !worldSimulationFeatures.earthEnabled);
+      if ((activeModule && !featureModuleFlags[activeModule]) || activeRealmDisabled) {
+        active = 'home';
+        saveUiPreferences({ layoutMode: 'phone', lastApp: active });
+        sendAction('SET_ACTIVE_APP', { app: active });
+      }
       if (message.payload.promptInjectionSettings && typeof message.payload.promptInjectionSettings === 'object') promptInjectionSettings = { ...promptInjectionSettings, ...(message.payload.promptInjectionSettings as Partial<PromptInjectionSettingsDraft>) };
-      if (message.payload.dlcSettings && typeof message.payload.dlcSettings === 'object') dlcSettings = { ...dlcSettings, ...(message.payload.dlcSettings as Partial<DlcSettingsDraft>) };
-      if (Array.isArray(message.payload.dlcStatus)) dlcStatus = message.payload.dlcStatus as DlcStatusView[];
-      if (message.payload.dlcCapability && typeof message.payload.dlcCapability === 'object') dlcCapability = message.payload.dlcCapability as DlcCapabilityView;
-      rerollCompatibilityEnabled = message.payload.rerollCompatibilityEnabled === true;
+      if (Array.isArray(message.payload.userScripts)) userScripts = message.payload.userScripts as UserScriptView[];
+      if (message.payload.earthWorldbookStatus && typeof message.payload.earthWorldbookStatus === 'object') earthWorldbookStatus = message.payload.earthWorldbookStatus as EarthWorldbookStatusView;
+      if (typeof message.payload.earthWorldbookMountedEntryCount === 'number') earthWorldbookMountedEntryCount = message.payload.earthWorldbookMountedEntryCount;
       if (message.payload.petSize === 'small' || message.payload.petSize === 'medium' || message.payload.petSize === 'large') petSize = message.payload.petSize;
+      if (message.payload.petKind === 'whale' || message.payload.petKind === 'ziwei') petKind = message.payload.petKind;
       loreSelected = readLoreSelected();
       if (Array.isArray(message.payload.yujianContacts)) {
         worldContacts = (message.payload.yujianContacts as WorldYujianContact[]).filter(contact => typeof contact?.name === 'string').map((contact, index) => ({
@@ -2248,14 +3110,26 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
         ? Object.values(message.payload.capabilities).includes('mvu-ready')
         : false;
       contentBeautifierEnabled = message.payload.contentBeautifierEnabled !== false;
+      configHelperEnabled = message.payload.configHelperEnabled === true;
+      render();
+    }
+    if(message.action==='FEATURE_MODULE_FLAGS_STATUS'){
+      if(message.payload.flags&&typeof message.payload.flags==='object')featureModuleFlags={...featureModuleFlags,...message.payload.flags as Partial<FeatureModuleFlags>};
+      if(message.payload.ok===false)announcement=typeof message.payload.error==='string'?message.payload.error:'该功能已关闭。';
+      render();
+    }
+    if(message.action==='WORLD_SIMULATION_FEATURES_STATUS'){
+      if(message.payload.features&&typeof message.payload.features==='object')worldSimulationFeatures={...worldSimulationFeatures,...message.payload.features as Partial<typeof worldSimulationFeatures>};
+      announcement=message.payload.ok===true?'世界推演开关已由宿主保存。':`保存推演开关失败：${typeof message.payload.error==='string'?message.payload.error:'未知错误'}`;
+      render();
+    }
+    if(message.action==='WORLD_SIMULATION_CLEAR_STATUS'){
+      const world=message.payload.world==='earth'?'地球':'玄天界';
+      if(message.payload.ok===true){if(message.payload.world==='earth')earthSimulationState=null;else xuantianSimulationState=null;announcement=`当前对话的${world}推演已清空，对应正文注入已撤销。`;}
+      else announcement=`${world}推演清空失败：${typeof message.payload.error==='string'?message.payload.error:'未知错误'}`;
       render();
     }
     if (message.action === 'YUJIAN_LORE_DATA') { loreEntries = Array.isArray(message.payload.entries) ? message.payload.entries as YujianLoreEntry[] : []; render(); }
-    if (message.action === 'REROLL_SETTINGS_STATUS') {
-      rerollCompatibilityEnabled = message.payload.enabled === true;
-      announcement = rerollCompatibilityEnabled ? '仙网重 Roll 兼容已开启。' : '仙网重 Roll 兼容已关闭。';
-      render();
-    }
     if (message.action === 'CONTENT_BEAUTIFIER_SETTINGS_STATUS') {
       contentBeautifierEnabled = message.payload.enabled !== false;
       announcement = message.payload.ok === true
@@ -2263,10 +3137,32 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
         : `正文美化设置失败：${typeof message.payload.error === 'string' ? message.payload.error : '未知错误'}`;
       render();
     }
-    if (message.action === 'DLC_STATUS_DATA' || message.action === 'DLC_COMPATIBILITY_DATA' || message.action === 'DLC_INSTALL_STATUS' || message.action === 'DLC_ATTACH_STATUS' || message.action === 'DLC_REPAIR_STATUS' || message.action === 'DLC_SETTINGS_STATUS') {
-      if (Array.isArray(message.payload.status)) dlcStatus = message.payload.status as DlcStatusView[];
-      if (message.payload.settings && typeof message.payload.settings === 'object') dlcSettings = { ...dlcSettings, ...(message.payload.settings as Partial<DlcSettingsDraft>) };
-      announcement = message.payload.ok === true ? 'DLC 操作完成，状态已重新读取。' : `DLC 操作失败：${typeof message.payload.error === 'string' ? message.payload.error : '未知错误'}`;
+    if (message.action === 'CONFIG_HELPER_SETTINGS_STATUS') {
+      configHelperEnabled = message.payload.enabled === true;
+      announcement = message.payload.ok === true
+        ? (configHelperEnabled ? '配置小助手悬浮球已显示。' : '配置小助手悬浮球已隐藏。')
+        : `配置小助手设置失败：${typeof message.payload.error === 'string' ? message.payload.error : '未知错误'}`;
+      render();
+    }
+    if (message.action === 'USER_SCRIPT_STATUS') {
+      announcement = message.payload.ok === true
+        ? `${message.payload.enabled === true ? '脚本扩展已启用。' : '脚本扩展已关闭。'}${message.payload.reloadRequired === true ? '刷新酒馆后完全生效。' : ''}`
+        : `脚本扩展设置失败：${typeof message.payload.error === 'string' ? message.payload.error : '未知错误'}`;
+      render();
+    }
+    if (message.action === 'USER_DLC_STATUS_DATA' || message.action === 'USER_DLC_IMPORT_STATUS' || message.action === 'USER_DLC_REPAIR_STATUS' || message.action === 'USER_DLC_REMOVE_STATUS' || message.action === 'USER_DLC_SCRIPT_REMOVE_STATUS') {
+      if (Array.isArray(message.payload.records)) userDlcs = message.payload.records as UserDlcStatusView[];
+      if (message.payload.ok === true) {
+        const reload = message.payload.reloadRequired === true ? ' 刷新酒馆后脚本变更完全生效。' : '';
+        announcement = message.action === 'USER_DLC_IMPORT_STATUS' ? `DLC 已导入并登记。${reload}` : message.action === 'USER_DLC_REPAIR_STATUS' ? '挂载已修复并复读确认。' : message.action === 'USER_DLC_REMOVE_STATUS' ? `DLC 登记已移除，附属挂载已解除；世界书文件仍保留在酒馆。${reload}` : message.action === 'USER_DLC_SCRIPT_REMOVE_STATUS' ? `脚本登记已移除。${reload}` : '';
+        if (message.action === 'USER_DLC_IMPORT_STATUS') { selectedUserDlcId = null; userDlcName = ''; userDlcWorldbookDraft = null; userDlcScriptDraft = null; }
+      } else announcement = `DLC 操作失败：${typeof message.payload.error === 'string' ? message.payload.error : '未知错误'}`;
+      render();
+    }
+    if (message.action === 'EARTH_WORLDBOOK_STATUS_DATA' || message.action === 'EARTH_WORLDBOOK_INSTALL_STATUS' || message.action === 'EARTH_WORLDBOOK_ATTACH_STATUS' || message.action === 'EARTH_WORLDBOOK_REPAIR_STATUS') {
+      if (message.payload.status && typeof message.payload.status === 'object') earthWorldbookStatus = message.payload.status as EarthWorldbookStatusView;
+      if (typeof message.payload.mountedEntryCount === 'number') earthWorldbookMountedEntryCount = message.payload.mountedEntryCount;
+      announcement = message.payload.ok === true ? '地球附属世界书状态已更新。' : `地球世界书操作失败：${typeof message.payload.error === 'string' ? message.payload.error : '未知错误'}`;
       render();
     }
     if (message.action === 'WANBAO_GENERATION_STATUS' || message.action === 'WANBAO_ESTIMATE_STATUS' || message.action === 'WANBAO_TRADE_STATUS') {
@@ -2288,6 +3184,47 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
       announcement = message.payload.ok === true
         ? (modelOptions.length ? `已获取 ${modelOptions.length} 个模型，请在模型输入框选择。` : '模型列表为空。')
         : `获取模型失败：${typeof message.payload.error === 'string' ? message.payload.error : '未知错误'}`;
+      render();
+    }
+    if (message.action === 'EARTH_MODELS_DATA') {
+      fetchingEarthModels = false;
+      earthModelOptions = Array.isArray(message.payload.models) ? message.payload.models.filter((model): model is string => typeof model === 'string') : [];
+      announcement = message.payload.ok === true
+        ? (earthModelOptions.length ? `已获取 ${earthModelOptions.length} 个地球推演模型。` : '地球推演模型列表为空。')
+        : `获取地球推演模型失败：${typeof message.payload.error === 'string' ? message.payload.error : '未知错误'}`;
+      render();
+    }
+    if(message.action==='XUANTIAN_MODELS_DATA'){fetchingXuantianModels=false;xuantianModelOptions=Array.isArray(message.payload.models)?message.payload.models.filter((model):model is string=>typeof model==='string'):[];announcement=message.payload.ok===true?(xuantianModelOptions.length?`已获取 ${xuantianModelOptions.length} 个玄天界推演模型。`:'玄天界推演模型列表为空。'):`获取玄天界推演模型失败：${typeof message.payload.error==='string'?message.payload.error:'未知错误'}`;render();}
+    if(message.action==='XUANTIAN_SETTINGS_STATUS'){if(message.payload.settings&&typeof message.payload.settings==='object')xuantianApiSettings={...xuantianApiSettings,...message.payload.settings as Partial<XuantianApiSettingsDraft>};announcement=message.payload.ok===true?'玄天界推演 API 设置已保存。':`保存失败：${typeof message.payload.error==='string'?message.payload.error:'未知错误'}`;render();}
+    if(message.action==='XUANTIAN_SIMULATION_STATUS'){if(message.payload.retrying===true){xuantianSimulationRunning=true;announcement=typeof message.payload.error==='string'?message.payload.error:'首次输出结构不可读，正在自动纠正…';render();}else{xuantianSimulationRunning=false;if(message.payload.state&&typeof message.payload.state==='object')xuantianSimulationState=message.payload.state as XuantianSimulationState;const skipped=Array.isArray(message.payload.skipped)?message.payload.skipped.filter((item):item is string=>typeof item==='string'):[];announcement=message.payload.ok===true?`玄天界推演已提交：${typeof message.payload.actions==='number'?message.payload.actions:0} 项状态变更${skipped.length?`；跳过 ${skipped.length} 项：${skipped.slice(0,2).join('；')}`:''}。`:`玄天界推演失败：${typeof message.payload.error==='string'?message.payload.error:'未知错误'}`;render();}}
+    if(message.action==='XUANTIAN_SIMULATION_RESET_STATUS'){if(message.payload.state&&typeof message.payload.state==='object')xuantianSimulationState=message.payload.state as XuantianSimulationState;announcement=message.payload.ok===true?'玄天界推演账本已重置。':`重置失败：${typeof message.payload.error==='string'?message.payload.error:'未知错误'}`;render();}
+    if (message.action === 'EARTH_SETTINGS_STATUS') {
+      if (message.payload.settings && typeof message.payload.settings === 'object') earthApiSettings = { ...earthApiSettings, ...(message.payload.settings as Partial<EarthApiSettingsDraft>) };
+      announcement = message.payload.ok === true ? '地球推演 API 设置已保存。' : `保存失败：${typeof message.payload.error === 'string' ? message.payload.error : '未知错误'}`;
+      render();
+    }
+    if (message.action === 'EARTH_SIMULATION_RESET_STATUS') {
+      if (message.payload.state && typeof message.payload.state === 'object') earthSimulationState = message.payload.state as EarthSimulationState;
+      announcement = message.payload.ok === true ? '地球推演数据已清除，下次将从初始状态重新推演。' : `清除失败：${typeof message.payload.error === 'string' ? message.payload.error : '未知错误'}`;
+      render();
+    }
+    if (message.action === 'EARTH_SIMULATION_STATUS') {
+      if (message.payload.retrying === true) {
+        earthSimulationRunning = true;
+        announcement = typeof message.payload.error === 'string' ? message.payload.error : 'AI 第一次返回的内容格式不正确，正在自动重试…';
+        render();
+        return;
+      }
+      earthSimulationRunning = false;
+      if (message.payload.state && typeof message.payload.state === 'object') earthSimulationState = message.payload.state as EarthSimulationState;
+      if (message.payload.ok === true) {
+        const worldbookEntries = Number(message.payload.worldbookEntries) || 0;
+        const assistantFloors = Number(message.payload.assistantFloors) || 0;
+        const changes = Number(message.payload.actions) || 0;
+        announcement = changes > 0
+          ? `地球推演完成：参考了 ${worldbookEntries} 条世界书设定和最近 ${assistantFloors} 条 AI 回复，世界状态已更新 ${changes} 项。`
+          : `地球推演完成：参考了 ${worldbookEntries} 条世界书设定和最近 ${assistantFloors} 条 AI 回复，本轮没有产生需要保存的新变化。`;
+      } else announcement = `手动推演失败：${typeof message.payload.error === 'string' ? message.payload.error : '未知错误'}`;
       render();
     }
     if (message.action === 'BEAUTY_MODELS_DATA') {
@@ -2399,15 +3336,35 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
         : `删除失败：${typeof message.payload.error === 'string' ? message.payload.error : '未知错误'}`;
       render();
     }
+    if (message.action === 'YUJIAN_CONTACT_DELETE_STATUS') {
+      clearChatArmedFor = null;
+      if (message.payload.ok === true) {
+        const charName = typeof message.payload.charName === 'string' ? message.payload.charName : '该联系人';
+        selectedContactName = null;
+        announcement = `已删除联系人「${charName}」及其 ${Number(message.payload.removed) || 0} 条聊天记录。`;
+      } else {
+        announcement = `删除联系人失败：${typeof message.payload.error === 'string' ? message.payload.error : '未知错误'}`;
+      }
+      render();
+    }
   };
+  root.addEventListener('pointerdown', onPointerDown, true);
+  root.addEventListener('wheel', onWheelIntent, { capture: true, passive: false });
+  root.addEventListener('touchstart', onManualScrollIntent, true);
+  root.addEventListener('focusout', onFocusOut, true);
+  root.addEventListener('scroll', onContentScroll, true);
   root.addEventListener('click', onClick);
+  root.addEventListener('click', onPointerClick);
   root.addEventListener('input', onInput);
   root.addEventListener('change', onChange);
   view.addEventListener('message', onMessage);
   view.addEventListener('keydown', onKeydown);
   const unsubscribePortraits = onPortraitsUpdated(() => render());
+  const realTimeTimer = uiView.setInterval(() => {
+    const clock = root.querySelector<HTMLTimeElement>('.spirit-real-time');
+    if (clock) clock.textContent = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false });
+  }, 30000);
   render();
   sendAction('APP_READY');
-  sendAction('REQUEST_CONTEXT');
-  return { destroy: () => { closeParentMapFactionPortrait?.(); unsubscribePortraits(); root.remove(); root.removeEventListener('click', onClick); root.removeEventListener('input', onInput); root.removeEventListener('change', onChange); view.removeEventListener('message', onMessage); view.removeEventListener('keydown', onKeydown); } };
+  return { destroy: () => { closeParentMapFactionPortrait?.(); unsubscribePortraits(); uiView.clearInterval(realTimeTimer); root.removeEventListener('pointerdown', onPointerDown, true); root.removeEventListener('wheel', onWheelIntent, true); root.removeEventListener('touchstart', onManualScrollIntent, true); root.removeEventListener('focusout', onFocusOut, true); root.removeEventListener('scroll', onContentScroll, true); root.removeEventListener('click', onPointerClick); root.remove(); root.removeEventListener('click', onClick); root.removeEventListener('input', onInput); root.removeEventListener('change', onChange); view.removeEventListener('message', onMessage); view.removeEventListener('keydown', onKeydown); } };
 }

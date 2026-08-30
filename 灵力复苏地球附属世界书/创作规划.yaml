@@ -1,0 +1,235 @@
+project:
+  name: 灵力复苏地球附属世界书
+  worldbookName: 灵力复苏地球附属世界书
+  form: worldbook
+  mvu: false
+  ejs: true
+  script_router: implemented_v1_2_candidate
+  simulation_api: implemented_independent_v1_2_candidate
+
+handoff:
+  canonical_progress: ../NEXT.md
+  implementation_guide: 开发交接.md
+  acceptance_ledger: 验收记录.md
+  current_version: 1.2.0
+  current_stage: 真实酒馆测试候选，未正式发布
+  next_gate: 关闭ST-Prompt-Template兼容模式后完成一次地球正文生成、推演与刷新持久化验收
+  release_authorized: false
+
+world:
+  overview: 地球与玄天界是相互独立的平行宇宙；现代地球发生灵力复苏，以科学教育、工业体系和多元超凡路线应对玄天界接触与噬界虫群入侵。
+  opening_baseline:
+    date: 以每次新游戏开场时的现实公历日期为准，不硬编码具体年份
+    phase: 灵力复苏刚刚开始，长期逐年增强
+    education: 第一所灵力学校在复苏发生后立即进入筹建期
+    swarm: 仅有零星、未被完整确认的异常迹象
+    crossworld: 两界尚未建立稳定联系，发现进度受玩家与各方行动影响
+  crossworld_contract:
+    time_ratio: 默认地球与玄天界时间流速1比1；允许玩家在小手机选择受控预设比例
+    early_sequence: 意外人员穿越→相交秘境激活并建立信息联系→人员携物通行→多种后期方式
+    intersection_realm: 天然存在且不能被两界永久关闭，后期可发展为跨界大城与贸易中心
+    earth_suppression: 玄天界来客进入地球会受到地球天道压制
+    swarm_route: 噬界虫群使用独立于相交秘境的通道
+  player_boundary:
+    - 不预设<user>出身、阵营、能力或使命
+    - <user>可以是穿越者、玄天界本地人或其他合理身份
+    - 世界提供开放局势，不设置必须依次完成的主线剧情
+  red_lines:
+    - 不覆盖原版世界书条目
+    - 不编写具体触发条件
+    - 不把地球设为玄天界附属位面
+    - 不让地球只能被动接受玄天界处置
+    - 地球关键NPC总体性别比例约为70%女性、30%男性，不机械限制单个场景
+
+entries:
+  - name: 双界基准监控
+    type: 世界观监控
+  - name: 地球篇总纲
+    type: 世界观
+  - name: 地球临时NPC生成规则
+    type: 人物生成规则
+  - name: 灵力复苏开局与时间基准
+    type: 世界观
+  - name: 双界接触阶段
+    type: 世界观
+  - name: 相交秘境与跨界规则
+    type: 世界观
+  - name: 地球天道跨界压制
+    type: 世界观
+  - name: 双界虫灾与合作契机
+    type: 世界观
+  - name: 开放世界与玩家边界
+    type: 世界观
+  - name: 地球统一阶位与DC换算
+    type: 世界观
+  - name: 修炼与外貌年龄规则
+    type: 世界观
+  - name: 地球四类修炼体系
+    type: 世界观
+  - name: 现代武器与超凡目标判定
+    type: 世界观
+  - name: 地球灵力教育体系
+    type: 世界观
+  - name: 地球国家与区域力量
+    type: 世界观
+  - name: 地球财团与跨国组织
+    type: 世界观
+  - name: 地球民间与地下组织
+    type: 世界观
+  - name: 玄天界势力对地球态度
+    type: 世界观
+  - name: 女性穿越者与地球关系
+    type: 世界观
+  - name: 噬界虫群总纲
+    type: 世界观
+  - name: 噬界虫群单位与阶位
+    type: 世界观
+  - name: 地球开放局势
+    type: 世界观
+
+split_entries:
+  国家势力: [中国超凡体系, 美国超凡体系, 俄罗斯超凡体系, 欧盟超凡体系]
+  灵力学校: [中国综合修真大学体系, 美国灵能学院体系, 俄罗斯共鸣学院体系, 欧盟以太大学联盟]
+  财团: [九州灵工联合体, 普罗米修斯生命集团, 赫尔墨斯以太工业, 极冠重工, 天穹轨道集团]
+  国际组织: [全球异常响应理事会, 世界灵能研究共同体, 跨界生命权利委员会]
+  民间与地下组织: [新人类互助网络, 地球守望阵线, 开门者联盟, 华夏复苏道统议会, 自然之约, 零号港, 白手套公司, 纯净人类阵线, 血肉升格会, 静默区]
+  玄天界势力态度: [天机阁地球策略, 万宝楼地球策略, 黑金阁地球策略, 大周仙朝地球策略, 蜀山剑门地球策略, 昆仑道门地球策略, 万法宗地球策略, 合欢宗地球策略, 大雷音寺地球策略, 广寒宫地球策略, 太阳神宫地球策略, 血神宫地球策略, 万魂殿地球策略, 尸魔宗地球策略, 妖族地球策略]
+  女性人物接口: [宫银叶地球接口, 红莲地球接口, 黑姬结灯地球接口, 九歌地球接口, 显宝地球接口, 君姝地球接口, 云初未来地球接口, 海伊地球接口]
+  货币与结算: [地球货币体系, 标准灵能计价体系, 跨界贸易与灵石汇率, 地下超凡交易体系]
+  地球关键NPC:
+    count: 72
+    gender: {女性: 50, 男性: 22}
+    composition:
+      四大力量: 12
+      其他区域力量: 6
+      学校管理与教师: 8
+      学生会与突出学生: 16
+      五大财团: 10
+      国际组织: 6
+      民间组织: 5
+      地下组织: 5
+      相交秘境公共机构: 4
+    source: 地球NPC数据.mjs
+    detail_source: 地球NPC详情.mjs
+    review_table: 地球关键NPC总表.md
+    profile_fields: [姓名, 性别, 实际年龄, 外表年龄, 归属, 职位, 体系与能力, 外貌, 性格, 事迹, 公开目标, 私人矛盾, 玩家接口, 运行边界]
+  城市与特殊节点:
+    count: 30
+    composition:
+      中国: 4
+      美国: 4
+      俄罗斯: 4
+      欧盟: 4
+      其他区域力量: 6
+      跨国与地下网络: 4
+      相交秘境功能区: 4
+    source: 地球城市数据.mjs
+    review_table: 地球城市与特殊节点总表.md
+    stage_rule: 开局状态是事实，未来可能必须经脚本或剧情确认后才能成为事实
+
+ejs:
+  dependency: ST-Prompt-Template，使用原版世界书既有的异步 getwi 动态装载形式
+  runtime_state: 已在本机真实SillyTavern验证10条EJS装饰器、灰色关闭状态与一次正文读取；关闭兼容模式后的新一轮生成仍待验收
+  variable_scope: 使用ST-Prompt-Template的local变量，不使用MVU stat_data；后续若接入MVU再统一迁移
+  token_gate:
+    - 所有专项路由必须通过地球上下文总闸门
+      - 单轮最多装载4个地球组织、3个玄天界势力策略、3个人物接口
+      - 地球关键NPC单轮最多装载4名；临时NPC规则只在固定NPC出场或需要生成场景人物时装载
+      - 城市与特殊节点单轮最多装载3个
+    - 动态getwi内容不依赖酒馆预算自动裁剪
+  dual_control_contract:
+    authority: 本地脚本是已确认世界状态的唯一事实来源，独立推演API只生成候选演化，EJS是提示词装载的最终门
+    rule: 具体条目仅在脚本许可与EJS上下文条件同时通过时装载
+    script_responsibilities:
+      - 维护开场现实日期、世界内日期、当前宇宙、地区、复苏阶段、虫群威胁和跨界开放程度
+      - 按玩家当前预设比例维护双界时间（默认1比1），并让复苏强度按地球世界内年份极缓慢增强
+      - 维护本轮允许装载的国家、学校、组织、玄天界势力和人物清单
+      - 去重、限量、处理状态迁移并记录变化来源
+      - 在聊天切换、世界切换或场景结束时清理过期许可
+      - 组装去隐私化的推演快照调用独立API，并校验、裁决、提交或拒绝API返回的状态补丁
+    ejs_responsibilities:
+      - 检查地球上下文总闸门
+      - 读取脚本允许清单，不自行创造持久世界状态
+      - 通过getwi装载具体条目并执行单轮token上限
+      - 脚本未就绪时只允许最小安全回退，不批量装载具体势力和人物
+    failure_policy:
+      - 推演API失效: 保留最后一次已确认状态，世界时钟可按确定性规则继续，但不生成新的重大事件
+      - 推演API返回非法补丁: 整批拒绝并记录诊断，不让模型文本直接污染状态库
+      - 脚本失效: EJS仅凭明确地球短语装载基础总纲，不装载组织、宗门策略和人物接口
+      - EJS失效: 脚本不得把全部具体条目直接激活为常驻内容
+      - 世界书名不匹配或getwi缺失: 输出明确诊断，不静默切换到其他世界书
+  independent_monitor:
+    name: 双界基准监控
+    behavior: 常驻且独立于脚本、EJS路由，不参与具体条目选择
+    purpose: 持续校验两界拓扑、当前世界、认知来源、跨界路径、力量换算和势力独立性
+    token_policy: 只保留不会随剧情变化的底层不变量，不装载势力详情和人物档案
+  routing_layers:
+    - EJS预处理: 读取可选路由变量并提供安全默认值
+    - EJS地球基础路由: 装载总纲、玩家边界、DC、武器与开放局势
+    - EJS国家学校路由: 按地区、学校或聊天内容装载国家与教育条目
+    - EJS地球组织路由: 按组织名和已接触组织装载财团、国际、民间与地下组织
+    - EJS玄天界势力路由: 按宗门名和已接触势力装载其地球策略
+    - EJS女性人物路由: 按当前人物、已接触人物或聊天内容装载个人地球接口
+    - EJS地球NPC路由: 按脚本允许NPC清单装载固定人物，并在需要时附加临时NPC生成规则
+    - EJS城市节点路由: 按脚本允许城市清单装载当前城市及相邻关键节点
+    - EJS虫群路由: 按虫群威胁、虫族关键词和当前局势装载虫群条目
+    - EJS货币路由: 按交易、价格、灵石、标灵与跨界结算上下文装载货币条目
+  optional_variables:
+    - daoyuan_earth.current_world
+    - daoyuan_earth.region
+    - daoyuan_earth.phase
+    - daoyuan_earth.opening_date
+    - daoyuan_earth.world_date
+    - daoyuan_earth.revival_year
+    - daoyuan_earth.contact_stage
+    - daoyuan_earth.secret_realm_stage
+    - daoyuan_earth.swarm_earth_stage
+    - daoyuan_earth.swarm_xuantian_stage
+    - daoyuan_earth.factions
+    - daoyuan_earth.characters
+    - daoyuan_earth.swarm_threat
+    - daoyuan_earth.worldbook_name
+    - daoyuan_earth.router_ready
+    - daoyuan_earth.allowed_countries
+    - daoyuan_earth.allowed_schools
+    - daoyuan_earth.allowed_organizations
+    - daoyuan_earth.allowed_sects
+    - daoyuan_earth.allowed_characters
+    - daoyuan_earth.allowed_npcs
+    - daoyuan_earth.allowed_cities
+    - daoyuan_earth.allowed_modules
+
+simulation:
+  model: 独立LLM API进行低频世界推演，主对话模型不兼任全局演化裁判
+  reference_mode: 完整采用世界引擎式轮次账本、阶段事件、检查点、重抽识别、聊天隔离和诊断模式，再适配双界设定
+  cadence:
+    - 每次有效正向回复只累计推进资格，不必每轮调用API
+    - 达到配置间隔、世界内时间显著流逝、重大行动落定或阶段检查点时才调用
+    - 重抽、重生成、回滚、仅查看状态和未完成回复不得触发重复推演
+  input_snapshot:
+    - 当前世界内日期与复苏年份
+    - 地区、势力、学校、秘境、双界接触和两界虫灾状态
+    - 最近已确认的关键事实、玩家造成的可观察影响和未决事件
+    - 允许变化范围、禁止事项、每次最大变化量和随机种子
+  output_contract:
+    format: 严格JSON状态补丁，不接受散文作为权威结果
+    fields: [summary, elapsed_time, event_updates, faction_updates, regional_updates, contact_updates, swarm_updates, school_updates, evidence, next_check]
+    rule: API只能提出候选补丁；本地脚本完成模式校验、因果校验、幅度限制和原子提交
+  privacy: 默认不发送完整聊天记录、API密钥、用户隐私或无关角色内容，只发送推演所需摘要
+  persistence: 每聊天独立保存已确认状态、推演序号、检查点、请求指纹和回滚记录
+
+delivery:
+  artifact: 灵力复苏地球附属世界书.json
+  build_report: 世界书构建报告.md
+  implementation_handoff: 小手机整合脚本构建流程.md
+  runtime_state:
+    ordinary_entries: 默认禁用、关键词留空，由getwi按当前地球场景精确读取
+    ejs_routes: 保持世界书灰色禁用状态，但同时使用@@always_enabled，兼容ST-Prompt-Template新旧启用语义
+    invariant: 正文路由不得依赖玩家是否开启“兼容模式”，也不得一次性注入全部187条资料
+  deferred:
+    - 具体触发条件、关键词与递归配置
+    - 具名女性角色档案
+    - 具体学校、财团和组织成员
+    - 地理区域与灵灾地点
+    - 动态事件池与世界状态变量的持久化方案
+    - Tavern Helper脚本路由器、事件监听、变量写入与清理实现

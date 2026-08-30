@@ -4,6 +4,8 @@ import {
   buildPromptInjectionContent,
   DAOYUAN_PROMPT_INJECTION_ID,
 } from '../src/services/promptInjectionRuntime.ts';
+import { createDefaultEarthSimulationState } from '../src/earthSimulation/defaults.ts';
+import { createDefaultXuantianSimulationState } from '../src/xuantianSimulation/defaults.ts';
 
 const source = {
   yujianMessages: [],
@@ -27,6 +29,21 @@ assert.doesNotMatch(forumOnly, /风闻标题|日报标题/);
 const newsOnly = buildPromptInjectionContent({ ...allOff, news:true }, source);
 assert.match(newsOnly, /日报标题/);
 assert.doesNotMatch(newsOnly, /风闻标题|论坛标题/);
+
+const earth = createDefaultEarthSimulationState('chat-earth', '2026-08-26');
+earth.factions.faction_01.status = '筹备';
+earth.factions.faction_01.activity = '中国开始建立跨部门灵力观测机制。';
+const earthOnly = buildPromptInjectionContent(allOff, { ...source, earthSimulation: earth });
+assert.match(earthOnly, /地球独立推演账本|中国开始建立跨部门灵力观测机制/);
+assert.match(earthOnly, /角色只能通过亲历、权限、通信或调查得知/);
+
+const xuantian = createDefaultXuantianSimulationState('chat-xuantian');
+xuantian.calendarLabel = '元会历3726年12月23日';
+xuantian.factions['f_蜀山剑门'].activity = '蜀山剑门开始清查失踪的巡山弟子。';
+xuantian.factions['f_蜀山剑门'].updatedAtDay = 1;
+const xuantianOnly = buildPromptInjectionContent(allOff, { ...source, xuantianSimulation:xuantian });
+assert.match(xuantianOnly, /玄天界独立推演账本|蜀山剑门开始清查失踪的巡山弟子/);
+assert.match(xuantianOnly, /主角不是世界中心|禁止凭空全知/);
 
 const calls = [];
 const cleanup = applyPromptInjection({

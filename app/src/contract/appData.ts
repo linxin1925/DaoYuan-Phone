@@ -64,9 +64,9 @@ export const TrendsDataSchema = z.object({
   posts: z.array(TrendPostSchema).max(500).default([]),
   autoCounter: z.number().int().nonnegative().default(0),
   processedMessageIds: z.array(z.string().max(80)).max(200).default([]),
-  processedSwipeKeys: z.array(z.string().max(120)).max(400).default([]),
+  processedMessageFingerprints: z.array(z.string().max(80)).max(200).default([]),
   triggeredMessageIds: z.array(z.string().max(80)).max(200).default([]),
-  triggeredSwipeKeys: z.array(z.string().max(180)).max(200).default([]),
+  triggeredMessageFingerprints: z.array(z.string().max(80)).max(200).default([]),
 });
 
 export type TrendPost = z.infer<typeof TrendPostSchema>;
@@ -79,7 +79,7 @@ export const ForumPostSchema = z.object({
   liked: z.boolean().optional(),
   comments: z.array(ForumCommentSchema).max(20).default([]), generatedBy: z.enum(['ai', 'manual']).default('ai'), createdAt: z.string().datetime(), sourceMessageId: z.string().max(80).optional(), sourceFingerprint: z.string().max(80).optional(),
 });
-export const ForumDataSchema = z.object({ posts: z.array(ForumPostSchema).max(500).default([]), autoCounter: z.number().int().nonnegative().default(0), processedMessageIds: z.array(z.string().max(80)).max(200).default([]), processedSwipeKeys: z.array(z.string().max(120)).max(400).default([]), triggeredMessageIds: z.array(z.string().max(80)).max(200).default([]), triggeredSwipeKeys: z.array(z.string().max(180)).max(200).default([]) });
+export const ForumDataSchema = z.object({ posts: z.array(ForumPostSchema).max(500).default([]), autoCounter: z.number().int().nonnegative().default(0), processedMessageIds: z.array(z.string().max(80)).max(200).default([]), processedMessageFingerprints: z.array(z.string().max(80)).max(200).default([]), triggeredMessageIds: z.array(z.string().max(80)).max(200).default([]), triggeredMessageFingerprints: z.array(z.string().max(80)).max(200).default([]) });
 export type ForumPost = z.infer<typeof ForumPostSchema>;
 export type ForumData = z.infer<typeof ForumDataSchema>;
 
@@ -90,7 +90,7 @@ export const NewsPaperSchema = z.object({
   liked: z.boolean().optional(),
   articles: z.array(NewsArticleSchema).min(2).max(8), letters: z.array(ReaderLetterSchema).max(12).default([]), generatedBy: z.literal('ai').default('ai'), createdAt: z.string().datetime(), sourceMessageId: z.string().max(80).optional(), sourceFingerprint: z.string().max(80).optional(),
 });
-export const NewsDataSchema = z.object({ papers: z.array(NewsPaperSchema).max(200).default([]), autoCounter: z.number().int().nonnegative().default(0), processedMessageIds: z.array(z.string().max(80)).max(200).default([]), processedSwipeKeys: z.array(z.string().max(120)).max(400).default([]), triggeredMessageIds: z.array(z.string().max(80)).max(200).default([]), triggeredSwipeKeys: z.array(z.string().max(180)).max(200).default([]) });
+export const NewsDataSchema = z.object({ papers: z.array(NewsPaperSchema).max(200).default([]), autoCounter: z.number().int().nonnegative().default(0), processedMessageIds: z.array(z.string().max(80)).max(200).default([]), processedMessageFingerprints: z.array(z.string().max(80)).max(200).default([]), triggeredMessageIds: z.array(z.string().max(80)).max(200).default([]), triggeredMessageFingerprints: z.array(z.string().max(80)).max(200).default([]) });
 export type NewsPaper = z.infer<typeof NewsPaperSchema>;
 export type NewsData = z.infer<typeof NewsDataSchema>;
 
@@ -182,17 +182,17 @@ export function parseBeautyRankData(value: unknown): BeautyRankData {
 
 export function parseTrendsData(value: unknown): TrendsData {
   const result = TrendsDataSchema.safeParse(value);
-  return result.success ? result.data : { posts: [], autoCounter: 0, processedMessageIds: [], processedSwipeKeys: [], triggeredMessageIds: [], triggeredSwipeKeys: [] };
+  return result.success ? result.data : { posts: [], autoCounter: 0, processedMessageIds: [], processedMessageFingerprints: [], triggeredMessageIds: [], triggeredMessageFingerprints: [] };
 }
 
 export function parseForumData(value: unknown): ForumData {
   const result = ForumDataSchema.safeParse(value);
-  return result.success ? result.data : { posts: [], autoCounter: 0, processedMessageIds: [], processedSwipeKeys: [], triggeredMessageIds: [], triggeredSwipeKeys: [] };
+  return result.success ? result.data : { posts: [], autoCounter: 0, processedMessageIds: [], processedMessageFingerprints: [], triggeredMessageIds: [], triggeredMessageFingerprints: [] };
 }
 
 export function parseNewsData(value: unknown): NewsData {
   const result = NewsDataSchema.safeParse(value);
-  return result.success ? result.data : { papers: [], autoCounter: 0, processedMessageIds: [], processedSwipeKeys: [], triggeredMessageIds: [], triggeredSwipeKeys: [] };
+  return result.success ? result.data : { papers: [], autoCounter: 0, processedMessageIds: [], processedMessageFingerprints: [], triggeredMessageIds: [], triggeredMessageFingerprints: [] };
 }
 
 export function projectAppData(values: Partial<Record<ChatVariableKey, unknown>>): AppData {

@@ -1,0 +1,15 @@
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+const ui = await readFile(new URL('../src/ui/renderUi.ts', import.meta.url), 'utf8');
+const styles = await readFile(new URL('../src/styles.css', import.meta.url), 'utf8');
+for (const marker of ['earthSimulationState?.earthDate','earthSimulationState?.revivalStage','earthSimulationState?.contactStage','earthSimulationState?.regions[key]','Object.values(earthSimulationState.factions)','earthSimulationState?.events','earth-faction-toggle']) assert.ok(ui.includes(marker), `missing dynamic Earth UI marker: ${marker}`);
+for (const marker of ['earth-faction-category-toggle','expandedEarthFactionCategories','earth-faction-group','earth-event-timeline-panel','尚无已提交事件']) assert.ok(ui.includes(marker), `missing grouped/readable Earth UI marker: ${marker}`);
+for (const marker of ['orderedFactions','earth-faction-change-tag','有变化','具体行动尚未记录']) assert.ok(ui.includes(marker), `missing visible faction-change marker: ${marker}`);
+for (const marker of ['earth-simulation-clear','uiView.confirm','form.append(ratioField, twoCol']) assert.ok(ui.includes(marker), `missing Earth reset/layout marker: ${marker}`);
+for (const marker of ['EARTH_TIME_RATIO_OPTIONS','地球 1 天＝玄天界 5 天','地球 10 天＝玄天界 1 天','earth-time-ratio-note','earthSimulationState?.xuantianDate']) assert.ok(ui.includes(marker), `missing intuitive Earth time-ratio marker: ${marker}`);
+for (const forbidden of ['const fallbackEvents', "'当前焦点'", "'灵力复苏刚刚开始'"]) assert.ok(!ui.includes(forbidden), `preview-only Earth UI remains: ${forbidden}`);
+for (const forbidden of ['受限动作', '候选补丁', 'reducer 成功提交']) assert.ok(!ui.includes(forbidden), `developer-facing Earth copy remains: ${forbidden}`);
+assert.ok(ui.includes('世界状态已更新 ${changes} 项'), 'missing player-readable simulation result copy');
+assert.ok(!ui.includes('只有正文确认时间流逝才会改变日期'), 'stale narrative-gated time copy remains');
+for (const marker of ['.xuantian-event-card h3{margin:14px 0;color:var(--c-text);font-size:20px', '.xuantian-event-meta dt,.xuantian-event-meta dd{margin:0;font-size:13px', '.xuantian-event-card>p{margin:14px 0 0;color:var(--c-text-muted);font-size:13px']) assert.ok(styles.includes(marker), `event card readability style missing: ${marker}`);
+console.log('Earth UI state bindings: OK (overview, regions, factions, events)');

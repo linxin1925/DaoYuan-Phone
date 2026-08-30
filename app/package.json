@@ -1,6 +1,6 @@
 {
   "name": "daoyuan-feature-frontend",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -15,14 +15,20 @@
     "test:wanbao-transactions": "node --experimental-strip-types scripts/validate-wanbao-transactions.mjs",
     "test:wanbao-pricing": "node scripts/validate-wanbao-pricing.mjs",
     "test:prompt-injection": "node --experimental-strip-types scripts/validate-prompt-injection.mjs",
-    "freeze:dlc-baseline": "node scripts/freeze-dlc-baseline.mjs",
-    "build:dlc-seeds": "node scripts/build-dlc-seeds.mjs",
-    "test:dlc-seeds": "node scripts/validate-dlc-seeds.mjs",
-    "test:dlc-manager": "node --experimental-strip-types scripts/validate-dlc-manager.mjs",
+    "test:content-package": "node --experimental-strip-types scripts/validate-content-package.mjs",
+    "test:user-scripts": "node --experimental-strip-types scripts/validate-user-script-runtime.mjs",
+    "build:earth-worldbook": "node scripts/build-earth-worldbook-seed.mjs",
+    "test:earth-worldbook": "node --experimental-strip-types scripts/validate-earth-worldbook.mjs",
+    "test:earth-worldbook-manager": "node --experimental-strip-types scripts/validate-earth-worldbook-manager.mjs",
+    "test:earth-simulation": "node --experimental-strip-types scripts/validate-earth-simulation.mjs",
+    "test:xuantian-simulation": "node --experimental-strip-types scripts/validate-xuantian-simulation.mjs",
+    "test:earth-runtime": "node --experimental-strip-types scripts/validate-earth-runtime.mjs",
+    "test:earth-ui": "node scripts/validate-earth-ui-state.mjs",
     "package:candidate": "node scripts/package-candidate.mjs",
     "package:v11-test": "node scripts/package-candidate.mjs --v11-test",
+    "package:v12-test": "node scripts/package-candidate.mjs --v12-test",
     "package:formal": "node scripts/package-candidate.mjs --formal",
-    "check": "pnpm typecheck && pnpm test:fixtures && pnpm test:spirit-stones && pnpm test:wanbao-transactions && pnpm test:wanbao-pricing && pnpm test:prompt-injection && pnpm test:dlc-seeds && pnpm test:dlc-manager && pnpm test:trends-ui && pnpm test:forum-news-ui && pnpm test:v08 && pnpm build && pnpm package:candidate"
+    "check": "pnpm typecheck && pnpm test:fixtures && pnpm test:spirit-stones && pnpm test:wanbao-transactions && pnpm test:wanbao-pricing && pnpm test:prompt-injection && pnpm test:content-package && pnpm test:user-scripts && pnpm test:earth-worldbook && pnpm test:earth-worldbook-manager && pnpm test:earth-simulation && pnpm test:xuantian-simulation && pnpm test:trends-ui && pnpm test:forum-news-ui && pnpm test:v08 && pnpm build && pnpm package:v12-test"
   },
   "dependencies": {
     "vue": "^3.5.34",

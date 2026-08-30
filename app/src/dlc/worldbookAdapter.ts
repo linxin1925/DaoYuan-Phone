@@ -1,4 +1,3 @@
-import type { DlcId, DlcSeed } from './types.ts';
 import type { WorldbookEntryLike } from './diagnostics.ts';
 
 export interface WorldbookAdapter {
@@ -6,7 +5,10 @@ export interface WorldbookAdapter {
   create?(name: string, entries: WorldbookEntryLike[]): Promise<void>;
   appendMissing?(name: string, entries: WorldbookEntryLike[]): Promise<void>;
   updateEnabled?(name: string, desired: ReadonlyMap<string, boolean>): Promise<boolean>;
+  updateContent?(name: string, desired: ReadonlyMap<string, string>): Promise<boolean>;
+  mergeEntries?(name: string, incoming: WorldbookEntryLike[], retiredNames?: readonly string[]): Promise<{ added: number; updated: number; removed: number }>;
   attach?(names: string[]): Promise<void>;
+  detach?(names: string[]): Promise<void>;
 }
 export interface TavernWorldbookRuntime {
   getWorldbookNames?: () => string[]; getWorldbook?: (name: string) => Promise<WorldbookEntryLike[]>;
@@ -48,8 +50,6 @@ export function toRuntimeEntry(source: Record<string, unknown>): WorldbookEntryL
     ...(Object.keys(record(source.extra)).length ? { extra: record(source.extra) } : {}),
   };
 }
-export function seedEntries(seed: DlcSeed): WorldbookEntryLike[] { return seed.entries.map((entry) => toRuntimeEntry(entry.sourceEntry)); }
-export function candidateNames(_id: DlcId, recommendedName: string, aliases: string[]): string[] { return [recommendedName, ...aliases].filter((name, index, all) => all.indexOf(name) === index); }
 
 export function createTavernWorldbookAdapter(runtime: TavernWorldbookRuntime): WorldbookAdapter {
   const probe = probeWorldbookRuntime(runtime); if (!probe.canList || !probe.canRead) throw new Error(probe.notes.join('；'));
@@ -61,7 +61,28 @@ export function createTavernWorldbookAdapter(runtime: TavernWorldbookRuntime): W
     async listNames() { return [...runtime.getWorldbookNames!()]; }, async read(name) { return runtime.getWorldbook!(name); },
     ...(probe.canCreate ? { async create(name: string, entries: WorldbookEntryLike[]) { const created = await runtime.createWorldbook!(name, entries); if (!created) throw new Error(`世界书「${name}」已存在，已停止覆盖`); refreshOpenEditor(name); } } : {}),
     ...(probe.canAppend ? { async appendMissing(name: string, entries: WorldbookEntryLike[]) { await runtime.createWorldbookEntries!(name, entries, { render: 'debounced' }); refreshOpenEditor(name); } } : {}),
-    ...(probe.canUpdate ? { async updateEnabled(name: string, desired: ReadonlyMap<string, boolean>) {
+    ...(probe.canUpdate ? { async mergeEntries(name: string, incoming: WorldbookEntryLike[], retiredNames: readonly string[] = []) {
+      if (incoming.length === 0) throw new Error(`拒绝更新世界书「${name}」：导入条目为空`);
+      let added = 0; let updated = 0; let removed = 0;
+      await runtime.updateWorldbookWith!(name, (entries) => {
+        const byName = new Map(incoming.map((entry) => [String(entry.name ?? '').trim(), entry]));
+        const retired = new Set(retiredNames.map((entryName) => entryName.trim()));
+        const kept = entries.filter((entry) => {
+          const shouldRemove = retired.has(String(entry.name ?? '').trim());
+          if (shouldRemove) removed += 1;
+          return !shouldRemove;
+        });
+        const merged = kept.map((entry) => {
+          const replacement = byName.get(String(entry.name ?? '').trim());
+          if (!replacement) return entry;
+          byName.delete(String(entry.name ?? '').trim()); updated += 1;
+          return { ...entry, ...replacement, uid: entry.uid ?? replacement.uid };
+        });
+        added = byName.size;
+        return [...merged, ...byName.values()];
+      }, { render: 'immediate' });
+      refreshOpenEditor(name); return { added, updated, removed };
+    }, async updateEnabled(name: string, desired: ReadonlyMap<string, boolean>) {
       if (desired.size === 0) throw new Error(`拒绝更新世界书「${name}」：期望条目为空`);
       let changed = false;
       await runtime.updateWorldbookWith!(name, (entries) => {
@@ -75,8 +96,21 @@ export function createTavernWorldbookAdapter(runtime: TavernWorldbookRuntime): W
         });
       }, { render: 'immediate' });
       return changed;
+    }, async updateContent(name: string, desired: ReadonlyMap<string, string>) {
+      if (desired.size === 0) throw new Error(`拒绝更新世界书「${name}」：期望正文为空`);
+      let changed = false;
+      await runtime.updateWorldbookWith!(name, (entries) => entries.map((entry) => {
+        const content = desired.get(String(entry.name ?? '').trim());
+        if (content === undefined || entry.content === content) return entry;
+        changed = true;
+        return { ...entry, content };
+      }), { render: 'immediate' });
+      return changed;
     } } : {}),
     async getMountedNames() { const books = runtime.getCharWorldbookNames?.('current'); return books ? [books.primary, ...books.additional].filter((name): name is string => Boolean(name)) : []; },
-    ...(probe.canAttach ? { async attach(names: string[]) { const current = runtime.getCharWorldbookNames!('current'); const additional = [...new Set([...current.additional, ...names.filter((name) => name !== current.primary)])]; await runtime.rebindCharWorldbooks!('current', { primary: current.primary, additional }); const verified = runtime.getCharWorldbookNames!('current'); const missing = additional.filter((name) => !verified.additional.includes(name)); if (verified.primary !== current.primary || missing.length) throw new Error(`附属世界书复读失败：${missing.join('、') || '主世界书发生变化'}`); } } : {}),
+    ...(probe.canAttach ? {
+      async attach(names: string[]) { const current = runtime.getCharWorldbookNames!('current'); const additional = [...new Set([...current.additional, ...names.filter((name) => name !== current.primary)])]; await runtime.rebindCharWorldbooks!('current', { primary: current.primary, additional }); const verified = runtime.getCharWorldbookNames!('current'); const missing = additional.filter((name) => !verified.additional.includes(name)); if (verified.primary !== current.primary || missing.length) throw new Error(`附属世界书复读失败：${missing.join('、') || '主世界书发生变化'}`); },
+      async detach(names: string[]) { const current = runtime.getCharWorldbookNames!('current'); const removing = new Set(names); if (current.primary && removing.has(current.primary)) throw new Error(`不能自动移除主世界书「${current.primary}」的挂载`); const additional = current.additional.filter((name) => !removing.has(name)); await runtime.rebindCharWorldbooks!('current', { primary: current.primary, additional }); const verified = runtime.getCharWorldbookNames!('current'); const remaining = verified.additional.filter((name) => removing.has(name)); if (verified.primary !== current.primary || remaining.length) throw new Error(`附属世界书卸载复读失败：${remaining.join('、') || '主世界书发生变化'}`); },
+    } : {}),
   };
 }

@@ -166,6 +166,38 @@ export async function fetchYujianModels(apiBaseUrl: string, apiKey: string): Pro
 export type StandaloneYujianMessage = StoredYujianMessage;
 export type StandaloneKnownContact = StoredYujianContact;
 
+const HIDDEN_CONTACTS_KEY = 'daoyuan_yujian_hidden_contacts_v1';
+
+function readHiddenContactStore(hostWindow: Window): Record<string, string[]> {
+  try {
+    const raw = asRecord(JSON.parse(hostWindow.localStorage.getItem(HIDDEN_CONTACTS_KEY) || '{}'));
+    return Object.fromEntries(Object.entries(raw).flatMap(([chatId, names]) => Array.isArray(names)
+      ? [[chatId, [...new Set(names.filter((name): name is string => typeof name === 'string').map(name => name.trim()).filter(Boolean))].slice(-80)]]
+      : []));
+  } catch { return {}; }
+}
+
+function writeHiddenContactStore(hostWindow: Window, store: Record<string, string[]>): void {
+  const entries = Object.entries(store).filter(([, names]) => names.length).slice(-24);
+  hostWindow.localStorage.setItem(HIDDEN_CONTACTS_KEY, JSON.stringify(Object.fromEntries(entries)));
+}
+
+export function loadHiddenYujianContacts(hostWindow: Window, chatId: string): Set<string> {
+  return new Set(readHiddenContactStore(hostWindow)[chatId] ?? []);
+}
+
+function setYujianContactHidden(hostWindow: Window, chatId: string, charName: string, hidden: boolean): void {
+  const name = charName.trim();
+  if (!name) return;
+  const store = readHiddenContactStore(hostWindow);
+  const names = new Set(store[chatId] ?? []);
+  if (hidden) names.add(name); else names.delete(name);
+  // Reinsert the touched chat last so the bounded store evicts genuinely old chats.
+  delete store[chatId];
+  if (names.size) store[chatId] = [...names].slice(-80);
+  writeHiddenContactStore(hostWindow, store);
+}
+
 export async function loadStandaloneYujianHistories(hostWindow: Window, chatId: string): Promise<Record<string, StandaloneYujianMessage[]>> {
   return readYujianHistories(hostWindow, chatId);
 }
@@ -205,6 +237,8 @@ export async function appendStandaloneYujianRecord(hostWindow: Window, chatId: s
   history.push({ from, text: content, time, ...source });
   if (history.length > 100) history.splice(0, history.length - 100);
   await writeYujianHistories(hostWindow, chatId, chat);
+  // A real new transmission makes an explicitly deleted contact relevant again.
+  setYujianContactHidden(hostWindow, chatId, charName, false);
 }
 
 export async function removeAutoYujianRecordsForFloor(hostWindow: Window, chatId: string, sourceMessageId: string): Promise<number> {
@@ -280,6 +314,25 @@ export async function clearStandaloneYujianHistory(hostWindow: Window, chatId: s
   return removed;
 }
 
+export async function deleteStandaloneYujianContact(hostWindow: Window, chatId: string, charName: string): Promise<number> {
+  const name = charName.trim();
+  if (!name) return 0;
+  const [chat, contacts] = await Promise.all([
+    loadStandaloneYujianHistories(hostWindow, chatId),
+    loadStandaloneKnownContacts(hostWindow, chatId),
+  ]);
+  const removed = Array.isArray(chat[name]) ? chat[name].length : 0;
+  // Write the tombstone first so a projected MVU/world NPC cannot flash back
+  // into the address book while the two standalone stores are being cleaned.
+  setYujianContactHidden(hostWindow, chatId, name, true);
+  delete chat[name];
+  await Promise.all([
+    writeYujianHistories(hostWindow, chatId, chat),
+    writeYujianContacts(hostWindow, chatId, contacts.filter(contact => contact.name !== name)),
+  ]);
+  return removed;
+}
+
 export interface StatusYujianHistoryImportResult {
   contacts: number;
   imported: number;
@@ -293,6 +346,7 @@ export async function importStatusYujianHistories(
   contacts: Array<{ name: string; history: StandaloneYujianMessage[] }>,
 ): Promise<StatusYujianHistoryImportResult> {
   const chat = await loadStandaloneYujianHistories(hostWindow, chatId);
+  const hiddenContacts = loadHiddenYujianContacts(hostWindow, chatId);
   let imported = 0;
   let skipped = 0;
   let touchedContacts = 0;
@@ -301,7 +355,7 @@ export async function importStatusYujianHistories(
 
   for (const contact of contacts) {
     const name = contact.name.trim();
-    if (!name || !Array.isArray(contact.history) || !contact.history.length) continue;
+    if (!name || hiddenContacts.has(name) || !Array.isArray(contact.history) || !contact.history.length) continue;
     const history = Array.isArray(chat[name]) ? chat[name] : [];
     const seen = new Set(history.map(fingerprint));
     let contactImported = 0;
