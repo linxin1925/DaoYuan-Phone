@@ -99,4 +99,9 @@ export class ChatVariableRepository {
     this.values.set(key, next);
     return this.project();
   }
+
+  async clearAll(): Promise<AppData> {
+    for (const key of CHAT_VARIABLE_KEYS) await this.write(key, { ...emptyChatVariableData[key] });
+    return this.project();
+  }
 }

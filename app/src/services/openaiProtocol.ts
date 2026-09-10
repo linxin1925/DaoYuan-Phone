@@ -54,13 +54,21 @@ export async function fetchAuto(url: string, init: RequestInit & { body?: string
   return fetch(url.toLowerCase().endsWith('/chat/completions') ? url.replace(/\/+$/, '') : chatCompletionsEndpoint(url), { ...init, headers, body: init.body });
   };
   const fallback = async (): Promise<Response> => {
+    if (init.signal?.aborted) throw new DOMException('请求已取消', 'AbortError');
     const tavern = typeof window !== 'undefined' ? (window as unknown as { SillyTavern?: { getContext?: () => { getRequestHeaders?: () => Record<string, string> } } }).SillyTavern : undefined;
     const requestHeaders = tavern?.getContext?.()?.getRequestHeaders?.();
     if (!requestHeaders) throw new Error('直连请求失败，且当前酒馆不支持代理');
     const base = url.trim().replace(/\/+$/, '').replace(/\/(?:chat\/completions|responses|messages)$/i, '');
-    return fetch('/api/backends/chat-completions/generate', { method: 'POST', headers: { ...requestHeaders, 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_completion_source: 'openai', reverse_proxy: base, proxy_password: headers.get('Authorization')?.replace(/^Bearer\s+/i, '') || '', ...source, stream: false }) });
+    return fetch('/api/backends/chat-completions/generate', { method: 'POST', headers: { ...requestHeaders, 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_completion_source: 'openai', reverse_proxy: base, proxy_password: headers.get('Authorization')?.replace(/^Bearer\s+/i, '') || '', ...source, stream: false }), signal: init.signal });
   };
-  try { const response = await direct(); return response.ok ? response : fallback(); } catch { return fallback(); }
+  try {
+    const response = await direct();
+    if (init.signal?.aborted) throw new DOMException('请求已取消', 'AbortError');
+    return response.ok ? response : fallback();
+  } catch (error) {
+    if (init.signal?.aborted || (error instanceof DOMException && error.name === 'AbortError')) throw error;
+    return fallback();
+  }
 }
 
 export function extractOpenAIText(value: unknown): string {

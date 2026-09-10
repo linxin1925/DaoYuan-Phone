@@ -3,6 +3,9 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { earthMaleNpcNames, earthNpcApparentAge, earthNpcRows } from './地球NPC数据.mjs';
 import { earthNpcDetailRows } from './地球NPC详情.mjs';
+import { assertEarthNpcHumanization, earthNpcHumanization } from './地球NPC活人化.mjs';
+import { assertEarthNpcDetails, getEarthNpcDetail } from './地球NPC详细设计.mjs';
+import { getEarthNpcPersonality } from './地球NPC人格设计.mjs';
 import { earthCityRows } from './地球城市数据.mjs';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
@@ -106,6 +109,29 @@ const entries = [
   - 第一所灵力学校在复苏被确认后立即开始筹划，但开局时尚未形成成熟校舍、课程和招生制度
   - 虫群仅留下零星迹象；地球尚不能据此完整确认虫群文明
   - 地球与玄天界尚未建立正式联系，何时发现彼此取决于玩家和世界势力的实际行动`,
+  },
+  {
+    comment: '地球世界推演运行规则',
+    content: `世界自治:
+  - 地球以国家、地方政府、科研机构、学校、医院、企业、军警、媒体、公众与民间组织为行动主体
+  - 正文未提及地球不等于地球停止；玩家是行动者之一，不是所有政策、灾害与突破的默认原因
+  - 国家领导人知情不等于所有部门同步知情，政策宣布不等于基层立即完成执行
+事件因果:
+  - 每项事件记录稳定ID、起因、参与者目标、推动力、阻碍、资源条件、升级与停止条件、影响范围和信息可见范围
+  - 事件进度不是按时间自动增加的百分比；没有推动力时应停滞、转向、失败或结束
+  - 同一事件沿用原ID推进，名称或报道角度变化不能重复创建
+长期推演:
+  - 七日内按日或整段结算，八日至九十日按旬月，三个月至三年按季度或年度，三年以上按制度与时代关键节点压缩
+  - 长期跳时必须结算人口与超凡规模、法律机构、科研产业、教育代际、城市设施、舆论记忆和国际格局
+  - 一次API批量裁决关键节点，不逐日反复调用；事件可跨越多个阶段，但摘要必须保留中间转折与最终后果
+多样性:
+  - 事件池覆盖科研、医疗、教育、法律、产业、城市治理、舆论、外交、军事安全、企业劳工、宗教伦理、地下市场、秘境与日常生活
+  - 不得把每次新聊天固定复刻为政府发现异常、建立学校、虫群入侵三条线
+  - 同一批事件应来自不同国家、组织或社会机制，最近已用母题与参与者组合降低权重
+状态提交:
+  - 推演API只返回候选变化，本地脚本校验时间、制度、资源、信息、阶段和玩家边界后原子提交
+  - 失败、重抽、删楼、回滚与重复指纹不得重复推进
+  - 上帝账本与角色可知投影分离；秘密科研、情报与远方事实不会自动成为正文角色知识`,
   },
   {
     comment: '双界接触阶段',
@@ -757,15 +783,145 @@ const characterEntries = [
 ]);
 
 const earthNpcDetailMap = new Map(earthNpcDetailRows.map(([name, age, appearance, deeds]) => [name, { age, appearance, deeds }]));
+assertEarthNpcHumanization(earthNpcRows.map(([name]) => name));
+assertEarthNpcDetails(earthNpcRows.map(([name]) => name));
+
+function earthNpcProseFallback({ name, position, system, publicGoal, privateConflict, preferences, index }) {
+  const styles = [
+    {
+      decision: `处理事务时先把${position}能调动的资源摆上桌，再逐项排除未经核实的判断；${preferences.split('、')[0]}是其从混乱中找回节奏的习惯。`,
+      bottom: `可以为“${publicGoal}”承担争议，但不会假装“${privateConflict}”不存在；若两者冲突，会要求当事人看见代价后再选择。`,
+      voice: `说话习惯先给结论，再补证据和时限；不耐烦时不会拔高声量，只会把问题问得更窄。`,
+      dialogue: [`${position}要的是能落笔的事实。剩下的，先别急着起名字。`, `“${privateConflict}”还没说清由谁承担，我不会点头。`, `先照能撤回的部分走。涉及${publicGoal}的后半段，等我看完现场。`],
+    },
+    {
+      decision: `更相信现场反馈而不是漂亮汇报，通常先看最容易受伤或被忽略的人，再决定${position}该把力量放在哪里。`,
+      bottom: `愿意为${publicGoal}让步，却不肯拿不知情者填补“${privateConflict}”留下的缺口；紧急状态也必须保留拒绝的余地。`,
+      voice: `语气平和，问题一个接一个，很少替人下结论；真正生气时反而会省掉客套。`,
+      dialogue: [`慢一点。${position}不能只听最响的那个人。`, `别拿${publicGoal}替大家答应。把名单给我，我们一个个问。`, `你守住自己的选择；“${privateConflict}”留下的手续，我来处理。`],
+    },
+    {
+      decision: `先找漏洞，再找能补漏洞的人；${position}带来的职业习惯让其宁可多做一次检查，也不接受靠运气维持的安全。`,
+      bottom: `能接受方案失败，不能接受明知“${privateConflict}”仍把风险藏进小字；承诺过的退路必须真的能用。`,
+      voice: `短句多，关心常被说成挑错；关系越近，提醒越具体，也越少给空泛安慰。`,
+      dialogue: [`${position}这边又少一项。回去补，不然我现在替你划掉。`, `“${privateConflict}”已经够麻烦了，别再拿逞强给它添人命。`, `${publicGoal}不是单人活。你守这一段，撑不住就开口。`],
+    },
+    {
+      decision: `习惯自己先做一遍，把能承受的失败范围圈出来后才邀请别人加入；涉及${system}时尤其不喜欢含糊授权。`,
+      bottom: `可以被质疑能力，却不接受别人借“${publicGoal}”替其决定要不要冒险；帮助必须保留退出条件。`,
+      voice: `措辞自持，拒绝时会把礼貌压得很薄；接受协助也不道谢太久，通常立刻分配一件并肩完成的事。`,
+      dialogue: [`我能处理${position}分内的部分。你若留下，就看住那个节点。`, `别借${publicGoal}替我答应。条件我听见了，答案由我给。`, `“${privateConflict}”我们各扛一半。下一步，也各自负责一半。`],
+    },
+    {
+      decision: `会给每个人留出说完和反悔的时间，再从${position}的职责中选一条伤害最小的路径；迟疑不是退让，而是避免替别人活。`,
+      bottom: `不以照顾之名抹掉当事人的意愿，也不让“${privateConflict}”成为无限拖延的借口；沉默和拒绝都应被记录。`,
+      voice: `声音不高，句间常有停顿；安慰很少越界追问，警告则会明确说出距离、时限和后果。`,
+      dialogue: [`不用现在回答。${position}会把门留着，但不会替你选。`, `到这里就够了。拿${publicGoal}替人做主，照顾就会变成控制。`, `先休息。“${privateConflict}”的原始记录，醒来后你仍想看，我再交给你。`],
+    },
+    {
+      decision: `常从最小可行办法开工，边做边修正；${preferences.split('、')[0]}能让其在压力里维持手感，但正式行动前仍会确认停止条件。`,
+      bottom: `允许自己因“${privateConflict}”犯错，不允许错误被热闹和好意掩过去；牵涉旁人时，先停手再解释。`,
+      voice: `语速快，念头常跑在句子前面；越紧张越爱开玩笑，真正被刺痛后反而会安静下来。`,
+      dialogue: [`先拿${position}能兜住的最小方案试。成了再吹，炸了也好收拾。`, `等等，先撤人。“${privateConflict}”可不是笑两声就能过去的。`, `${publicGoal}归我们一起做：你看结果，我盯过程，谁先发现不对谁就喊。`],
+    },
+    {
+      decision: `先确认边界、记录和可撤回条件，再判断${position}是否值得下注；比起热情表态，更看重小范围合作能否兑现。`,
+      bottom: `不排斥交换，也不掩饰${publicGoal}带来的利益计算；但若有人故意利用“${privateConflict}”制造信息差，合作会当场终止。`,
+      voice: `礼节周全，数字和条件说得很清楚；施压也很少提高音量，而是收回权限、缩短期限或重新报价。`,
+      dialogue: [`我听懂了。现在把需要${position}授权的部分单独说一遍。`, `“${privateConflict}”改变了条件，原来的同意自然失效。我们从头谈。`, `${publicGoal}可以先做一小段。兑现之后，我再决定要不要开放下一步。`],
+    },
+    {
+      decision: `认准方向后会迅速拉人、找资源、跑现场，遇阻时优先换方法而不是换目标；只有明确的伤害证据能让其停下来重算。`,
+      bottom: `可以为${publicGoal}得罪掌权者，不能把“${privateConflict}”造成的伤口包装成动员口号；行动必须给受影响者留下位置。`,
+      voice: `公开表达直接、有热度，喜欢追问下一步；私下谈到失败时会慢下来，不拿乐观催别人振作。`,
+      dialogue: [`别只告诉${position}不行。谁能批、什么时候再谈，也一起说。`, `停一下。${publicGoal}不是拿别人的伤口证明我们正确。`, `“${privateConflict}”我不会瞒你。知道以后还愿意继续，我们就去敲下一扇门。`],
+    },
+    {
+      decision: `先占住能保护人的位置，再处理解释和归责；${position}的判断更多落在路线、距离与时机上，而不是口头表态。`,
+      bottom: `不会因“${privateConflict}”把无辜者推出掩体，也不会为证明忠诚放弃必要核验；保护谁，不等于纵容谁。`,
+      voice: `话少，指令具体，常用位置和动作代替情绪；信任建立后会主动交出一段视野或退路。`,
+      dialogue: [`靠右，低头。${position}的解释等过了这道门再听。`, `我护你出去，不等于“${privateConflict}”这笔账就算了。`, `${publicGoal}还需要活人去做。后面给我，你看住前方。`],
+    },
+    {
+      decision: `把${system}视为可复核的工具而非身份光环，通常先分清事实、假设和愿望，再为${publicGoal}选择能留下记录的做法。`,
+      bottom: `接受未知，也接受阶段性失败；不能接受为了掩盖“${privateConflict}”而删改原始数据，或把一次经验冒充普遍结论。`,
+      voice: `措辞准确但不故作艰深，承认不知道时很干脆；遇到夸张判断，会先追问样本、步骤和复测结果。`,
+      dialogue: [`${position}目前只能证明到这里。后面的空白，不拿语气填。`, `涉及“${privateConflict}”的原始记录先别动。结论能改，证据不能重来。`, `${publicGoal}不能只靠一次好运。把过程写清楚，让别人也试一次。`],
+    },
+    {
+      decision: `习惯提前备好人员、器材和退路，再用${position}的权限迅速拍板；若有人提出更稳妥的路径，也会要求对方把责任一并接过去。`,
+      bottom: `愿意替团队扛住${privateConflict}带来的压力，却不能接受保护对象毫不知情；照顾若剥夺选择，就必须及时收手。`,
+      voice: `安排事情利落，关心经常表现为命令；被拒绝时会先冷脸，随后把可选方案和后果重新摆出来。`,
+      dialogue: [`${position}能给的装备在桌上，路线在终端里。要改就现在说。`, `我可以替你挡住“${privateConflict}”的一次冲击，不能替你决定以后。`, `${publicGoal}按你的方案走。出了问题先撤，我留下收尾。`],
+    },
+    {
+      decision: `先听各方把理由说完，再从利益流向和责任归属判断哪里出了问题；${position}使其对漂亮口号尤其警惕。`,
+      bottom: `可以讨论${publicGoal}要付出多大成本，但不会允许“${privateConflict}”被改写成某个人应得的命运；谁获益，谁就必须留下名字。`,
+      voice: `平时耐心，拆穿回避时却很直接；不靠讽刺压人，常用一个具体问题让对方无法继续含糊。`,
+      dialogue: [`理由先放一边。告诉${position}，这个结果最终对谁最有利。`, `别把“${privateConflict}”说成天气。代价落在谁身上，就由谁留下名字。`, `${publicGoal}可以谈。你肯把真实条件摆出来，我们就还有余地。`],
+    },
+  ];
+  const relationLines = [
+    `你若愿意一起做${publicGoal}，就把不同意见留在桌面上，别留到事后。`,
+    `我能以${position}的身份帮你一次；下一次，希望你先告诉我真实打算。`,
+    `我挑的是${position}不能放过的错，不是要你走。真要你走时，我会明说。`,
+    `${system}这部分我不擅长。你来，但决定和后果我们一人一半。`,
+    `不用急着向${position}证明你可信。愿意尊重一次沉默，已经是个开始。`,
+    `别光看我笑。要一起做${publicGoal}，失败后的清理也得一起算上。`,
+    `${position}的小合作做完以前，我们不谈信任；做完以后，也不用急着给它命名。`,
+    `你可以劝我停，但要带着${position}能核验的证据来。只说担心，拦不住我。`,
+    `这条为${publicGoal}准备的退路只交给同行者。记住它，也别拿去炫耀。`,
+    `你肯承认不知道，我就愿意把${system}的下一步推演给你看。`,
+    `方案由你选。只要你不隐瞒代价，${position}该出的那份由我来出。`,
+    `和${position}把真实条件摆出来，立场不同也能共事；藏着掖着，就到此为止。`,
+  ];
+  const style = styles[index % styles.length];
+  if (name === '闻人静仪') style.decision = '先听学生、教师和家长说完，再判断学校能承担什么；沉默不算同意。';
+  if (name === '法蒂玛·拉赫曼') style.decision = '先核对账目、来源和责任，再决定交易能否继续；价格可变，记录不能消失。';
+  if (name === '奥利弗·陈') style.decision = '分清观测与错觉，再靠近入口；也要复核停止条件。';
+  return { ...style, dialogue: [...style.dialogue, relationLines[index % relationLines.length]] };
+}
 
 const earthNpcEntries = earthNpcRows.map(([name, affiliation, position, system, personality, publicGoal, privateConflict, playerInterface]) => {
   const detail = earthNpcDetailMap.get(name);
+  const humanization = earthNpcHumanization.get(name);
   if (!detail) throw new Error(`缺少地球NPC详情: ${name}`);
+  if (!humanization) throw new Error(`缺少地球NPC活人化补充: ${name}`);
+  const [dailyAnchor, expressionAndAction, stressResponse, relationshipEntry] = earthNpcHumanization.get(name);
+  const baseDetailed = getEarthNpcDetail(name);
+  const proseFallback = earthNpcProseFallback({ name, position, system, publicGoal, privateConflict, preferences: baseDetailed.preferences, index: earthNpcRows.findIndex(row => row[0] === name) });
+  const detailed = { ...baseDetailed, decisionStyle: baseDetailed.decisionStyle ?? proseFallback.decision, bottomLine: baseDetailed.bottomLine ?? proseFallback.bottom, voice: baseDetailed.voice ?? proseFallback.voice, dialogue: baseDetailed.dialogue ?? proseFallback.dialogue };
+  const character = getEarthNpcPersonality(name, earthNpcRows.findIndex(row => row[0] === name));
+  const scenarioDialogue = detailed.dialogue ?? [
+    `我的目标很明确：${publicGoal}。你可以反对，但别替我改写。`,
+    `真正麻烦的是${privateConflict}。在它解决前，我不会假装局势简单。`,
+    `坐在${position}这个位置上，我能答应的事有限；答应了，就会留下结果。`,
+  ];
+  const dialogue = [detailed.speech, ...(baseDetailed.dialogue ? [character.dialogue[0], ...scenarioDialogue] : scenarioDialogue)]
+    .map(line => `    - "${line}"`).join('\n');
   return [
-  `${name}人物档案`,
-  `角色信息:\n  姓名: ${name}\n  性别: ${earthMaleNpcNames.has(name) ? '男' : '女'}\n  实际年龄: ${detail.age ?? '未知'}\n  外表年龄: ${earthNpcApparentAge(detail.age, system)}\n  归属: ${affiliation}\n  职位: ${position}\n  体系与能力: ${system}\n角色外观:\n  外貌描述: ${detail.appearance}\n角色性格与事迹:\n  性格: ${personality}\n  事迹:\n${detail.deeds.map(deed => `    - ${deed}`).join('\n')}\n人物驱动:\n  公开目标: ${publicGoal}\n  私人矛盾: ${privateConflict}\n  玩家接口: ${playerInterface}\n运行边界:\n  - 本档案是可继续细化的初始版本，不预设已经认识<user>或与其建立关系\n  - 外表年龄随实际修炼状态变化，不能覆盖真实年龄、阅历和社会身份\n  - 角色只能依据亲历、权限、调查和可靠情报行动，不因职位自动全知\n  - 所属机构影响其职责与资源，不抹除个人判断，也不固定其善恶与最终立场\n  - 关系、能力、职位和目标可因剧情产生后果明确的变化，但不得无缘由重置`,
+    `${name}人物档案`,
+    `角色信息:\n  姓名: ${name}\n  性别: ${earthMaleNpcNames.has(name) ? '男' : '女'}\n  实际年龄: ${detail.age ?? '未知'}\n  外表年龄: ${earthNpcApparentAge(detail.age, system)}\n  年龄说明: 修炼、觉醒或超凡技术调理延缓了外貌衰老；年轻外表不削减真实阅历和社会资历\n  出生地: ${detailed.birthplace}\n  归属: ${affiliation}\n  职位: ${position}\n  体系与能力: ${system}\n出身与关键背景:\n  家庭与成长: ${detailed.background}\n  关键事迹:\n${detail.deeds.map(deed => `    - ${deed}`).join('\n')}\n修炼与技能关联:\n  来源和表现: ${detailed.cultivation}\n  职业联系: 能力的使用方式受${position}的职责约束，不能脱离训练、设备、权限和现场条件无限发挥\n外貌识别:\n  特征: ${detail.appearance}\n  年轻化表现: 面部与体态停留在${earthNpcApparentAge(detail.age, system)}左右，疲惫、旧伤和习惯仍会留下可辨认的个人痕迹\n性格结构:\n  原始倾向: ${personality}\n  性格反差: ${character.contrast}\n  外在表现: ${character.outward}\n  内在底色: ${character.inward}\n  反差触发: ${character.trigger}\n  日常行为: ${expressionAndAction}\n行事作风:\n  常态: 以自身职业经验处理问题，不因玩家身份自动服从或亲近\n  压力反应: ${stressResponse}\n  决策习惯: 先判断自己掌握的证据、权限和代价，再决定合作、拒绝或承担风险\n理念与底线:\n  公开目标: ${publicGoal}\n  现实矛盾: ${privateConflict}\n  底线表现: 压力不会自动改写其既有原则；若必须越界，角色会明确知道自己越过了什么，并承担由此产生的关系与制度后果\n偏好与生活细节:\n  偏好: ${detailed.preferences}\n  日常锚点: ${dailyAnchor}\n人际关系与玩家接口:\n  玩家接口: ${playerInterface}\n  关系入口: ${relationshipEntry}\n  关系节奏: ${character.relationPace}\n  变化依据: 信任只因共同经历、守约、冲突处理和长期相处而变化，不因玩家是主角自动增加\n语言特征:\n  说话底色: 词句受职业习惯、性格反差和当下关系影响；公开场合与私下相处可以呈现不同温度\n  参考对白:\n${dialogue}\n动态变化边界:\n  - 可因亲历事件、利益交换、证据与长期相处改变合作程度、表达温度和公开立场\n  - 不无故改变出身、修炼来源、能力代价、核心原则或已经确认的重大经历\n运行边界:\n  - 不预设已经认识<user>；只能依据亲历、权限、调查和可靠情报行动\n  - 所属机构提供职责与资源，不使角色全知，也不固定其善恶和最终阵营`,
   ];
 });
+
+for (const entry of earthNpcEntries) {
+  const name = entry[0].replace(/人物档案$/, '');
+  const index = earthNpcRows.findIndex(row => row[0] === name);
+  const [, , position, system, , publicGoal, privateConflict] = earthNpcRows[index];
+  const baseDetailed = getEarthNpcDetail(name);
+  const proseFallback = earthNpcProseFallback({ name, position, system, publicGoal, privateConflict, preferences: baseDetailed.preferences, index });
+  const detailed = { ...baseDetailed, decisionStyle: baseDetailed.decisionStyle ?? proseFallback.decision, bottomLine: baseDetailed.bottomLine ?? proseFallback.bottom, voice: baseDetailed.voice ?? proseFallback.voice };
+  entry[1] = entry[1]
+    .replace('  年龄说明: 修炼、觉醒或超凡技术调理延缓了外貌衰老；年轻外表不削减真实阅历和社会资历\n', '')
+    .replace(/职业联系: 能力的使用方式受(.+?)的职责约束，不能脱离训练、设备、权限和现场条件无限发挥/, '职业联系: 能力受$1的职责、训练、设备和现场条件约束')
+    .replace(/年轻化表现: 面部与体态停留在(.+?)左右，疲惫、旧伤和习惯仍会留下可辨认的个人痕迹/, '年轻化表现: 面部与体态处于$1，疲惫、旧伤和习惯仍可辨认')
+    .replace('  常态: 以自身职业经验处理问题，不因玩家身份自动服从或亲近\n', '')
+    .replace('  变化依据: 信任只因共同经历、守约、冲突处理和长期相处而变化，不因玩家是主角自动增加', '  变化依据: 只认共同经历、守约和长期相处');
+  if (detailed.decisionStyle) entry[1] = entry[1].replace('先判断自己掌握的证据、权限和代价，再决定合作、拒绝或承担风险', detailed.decisionStyle);
+  if (detailed.bottomLine) entry[1] = entry[1].replace('压力不会自动改写其既有原则；若必须越界，角色会明确知道自己越过了什么，并承担由此产生的关系与制度后果', detailed.bottomLine);
+  if (detailed.voice) entry[1] = entry[1].replace('词句受职业习惯、性格反差和当下关系影响；公开场合与私下相处可以呈现不同温度', detailed.voice);
+}
 
 const earthCityEntries = earthCityRows.map(([name, affiliation, nodeType, governance, role, openingState, locations, npcs, conflict, anomaly, development]) => [
   `${name}城市节点`,
@@ -783,15 +939,23 @@ entries.push(
 // EJS entries are evaluated independently by some Tavern Helper builds.  Do not
 // rely on EJS预处理 having executed first or on `define()` leaking lexical names.
 const earthRouteContext = `const twEarthList = value => Array.isArray(value) ? value : (typeof value === 'string' ? value.split(/[，,|]/).map(item => item.trim()).filter(Boolean) : []);
+const twEarthRouterReady = getvar('daoyuan_earth.router_ready', { scope: 'local', defaults: false }) === true;
 const twEarthWorldValue = getvar('daoyuan_earth.current_world', { scope: 'local', defaults: '自动判断' });
 const twEarthRegion = String(getvar('daoyuan_earth.region', { scope: 'local', defaults: '' }) || '');
 const twEarthFactions = twEarthList(getvar('daoyuan_earth.factions', { scope: 'local', defaults: [] })).slice(0, 4);
-const twEarthCharacters = twEarthList(getvar('daoyuan_earth.characters', { scope: 'local', defaults: [] })).slice(0, 3);
+const twEarthCountries = twEarthList(getvar('daoyuan_earth.allowed_countries', { scope: 'local', defaults: [] })).slice(0, 2);
+const twEarthSchools = twEarthList(getvar('daoyuan_earth.allowed_schools', { scope: 'local', defaults: [] })).slice(0, 2);
+const twEarthOrganizations = twEarthList(getvar('daoyuan_earth.allowed_organizations', { scope: 'local', defaults: [] })).slice(0, 4);
+const twEarthSects = twEarthList(getvar('daoyuan_earth.allowed_sects', { scope: 'local', defaults: [] })).slice(0, 3);
+const twEarthCharacters = twEarthList(getvar('daoyuan_earth.allowed_characters', { scope: 'local', defaults: getvar('daoyuan_earth.characters', { scope: 'local', defaults: [] }) })).slice(0, 3);
 const twEarthNpcs = twEarthList(getvar('daoyuan_earth.allowed_npcs', { scope: 'local', defaults: [] })).slice(0, 4);
 const twEarthCities = twEarthList(getvar('daoyuan_earth.allowed_cities', { scope: 'local', defaults: [] })).slice(0, 3);
 const twEarthSwarmThreat = getvar('daoyuan_earth.swarm_threat', { scope: 'local', defaults: '无' });
 const twEarthBook = getvar('daoyuan_earth.worldbook_name', { scope: 'local', defaults: '灵力复苏地球附属世界书' });
-const twEarthActive = twEarthWorldValue === '地球' || matchChatMessages(['地球灵力复苏', '地球篇', '返回地球', '前往地球', '地球局势'], { start: -4 });`;
+const twEarthMatch = keys => matchChatMessages(keys, { start: -8 });
+const twEarthActive = twEarthRouterReady
+  ? twEarthWorldValue === '地球'
+  : twEarthWorldValue === '地球' || matchChatMessages(['地球灵力复苏', '地球篇', '返回地球', '前往地球', '地球局势'], { start: -4 });`;
 
 const ejsEntries = [
   {
@@ -801,16 +965,18 @@ const ejsEntries = [
 <%_
 const twEarthList = value => Array.isArray(value) ? value : (typeof value === 'string' ? value.split(/[，,|]/).map(item => item.trim()).filter(Boolean) : []);
 const twEarthWorldValue = getvar('daoyuan_earth.current_world', { scope: 'local', defaults: '自动判断' });
+const twEarthRouterReady = getvar('daoyuan_earth.router_ready', { scope: 'local', defaults: false }) === true;
+define('twEarthRouterReady', twEarthRouterReady);
 define('twEarthWorld', twEarthWorldValue);
 define('twEarthRegion', getvar('daoyuan_earth.region', { scope: 'local', defaults: '' }));
 define('twEarthPhase', getvar('daoyuan_earth.phase', { scope: 'local', defaults: '局部复苏' }));
 define('twEarthFactions', twEarthList(getvar('daoyuan_earth.factions', { scope: 'local', defaults: [] })).slice(0, 4));
-define('twEarthCharacters', twEarthList(getvar('daoyuan_earth.characters', { scope: 'local', defaults: [] })).slice(0, 3));
+define('twEarthCharacters', twEarthList(getvar('daoyuan_earth.allowed_characters', { scope: 'local', defaults: getvar('daoyuan_earth.characters', { scope: 'local', defaults: [] }) })).slice(0, 3));
 define('twEarthNpcs', twEarthList(getvar('daoyuan_earth.allowed_npcs', { scope: 'local', defaults: [] })).slice(0, 4));
 define('twEarthCities', twEarthList(getvar('daoyuan_earth.allowed_cities', { scope: 'local', defaults: [] })).slice(0, 3));
 define('twEarthSwarmThreat', getvar('daoyuan_earth.swarm_threat', { scope: 'local', defaults: '无' }));
 define('twEarthBook', getvar('daoyuan_earth.worldbook_name', { scope: 'local', defaults: '灵力复苏地球附属世界书' }));
-define('twEarthActive', twEarthWorldValue === '地球' || matchChatMessages(['地球灵力复苏', '地球篇', '返回地球', '前往地球', '地球局势'], { start: -4 }));
+define('twEarthActive', twEarthRouterReady ? twEarthWorldValue === '地球' : twEarthWorldValue === '地球' || matchChatMessages(['地球灵力复苏', '地球篇', '返回地球', '前往地球', '地球局势'], { start: -4 }));
 _%>`,
   },
   {
@@ -819,11 +985,22 @@ _%>`,
     content: `@@generate_before
 <%_
 ${earthRouteContext}
-if (twEarthActive) {
+const twEarthFallbackNames = ${JSON.stringify([
+  ...earthNpcRows.map(row => row[0]),
+  ...earthCityRows.map(row => row[0]),
+  '中国', '美国', '俄罗斯', '欧盟', '修真大学', '灵能学院', '共鸣学院', '以太大学',
+  '九州灵工联合体', '普罗米修斯生命集团', '赫尔墨斯以太工业', '极冠重工', '天穹轨道集团',
+  '全球异常响应理事会', '世界灵能研究共同体', '跨界生命权利委员会', '新人类互助网络', '地球守望阵线',
+  '开门者联盟', '华夏复苏道统议会', '自然之约', '零号港', '白手套公司', '纯净人类阵线', '血肉升格会', '静默区',
+  '天机阁', '万宝楼', '黑金阁', '大周仙朝', '蜀山剑门', '昆仑道门', '万法宗', '合欢宗', '大雷音寺', '广寒宫',
+  '太阳神宫', '血神宫', '万魂殿', '尸魔宗', '妖族', '宫银叶', '红莲', '黑姬结灯', '九歌', '显宝', '君姝', '云初未来', '海伊',
+])};
+const twEarthFallbackMatched = !twEarthRouterReady && twEarthMatch(twEarthFallbackNames);
+if (twEarthActive || twEarthFallbackMatched) {
   if (typeof getwi !== 'function') {
     print('[地球附属世界书：当前EJS环境缺少getwi，无法动态装载条目]');
   } else {
-    const names = ['地球篇总纲', '灵力复苏开局与时间基准', '双界接触阶段', '相交秘境与跨界规则', '地球天道跨界压制', '开放世界与玩家边界', '地球统一阶位与DC换算', '修炼与外貌年龄规则', '现代武器与超凡目标判定', '地球开放局势'];
+    const names = ['地球篇总纲', '灵力复苏开局与时间基准', '地球世界推演运行规则', '双界接触阶段', '相交秘境与跨界规则', '地球天道跨界压制', '开放世界与玩家边界', '地球统一阶位与DC换算', '修炼与外貌年龄规则', '现代武器与超凡目标判定', '地球开放局势'];
     const loaded = [];
     for (const name of names) {
       const value = await getwi(twEarthBook, name);
@@ -840,7 +1017,7 @@ _%>`,
     content: `@@generate_before
 <%_
 ${earthRouteContext}
-if (twEarthActive && typeof getwi === 'function') {
+if ((twEarthActive || !twEarthRouterReady) && typeof getwi === 'function') {
   const routes = [
     { keys: ['中国', '华夏', '修真大学'], names: ['中国超凡体系', '中国综合修真大学体系'] },
     { keys: ['美国', '心灵灵能', '灵能学院'], names: ['美国超凡体系', '美国灵能学院体系'] },
@@ -848,9 +1025,13 @@ if (twEarthActive && typeof getwi === 'function') {
     { keys: ['欧盟', '欧洲', '以太术式', '以太大学'], names: ['欧盟超凡体系', '欧盟以太大学联盟'] },
   ];
   const loaded = [];
+  let routeCount = 0;
   for (const route of routes) {
-    const active = route.keys.some(key => twEarthRegion.includes(key) || twEarthFactions.includes(key)) || matchChatMessages(route.keys, { start: -6 });
+    if (routeCount >= 2) break;
+    const scripted = route.keys.some(key => twEarthRegion.includes(key) || twEarthFactions.includes(key) || twEarthCountries.includes(key) || twEarthSchools.includes(key)) || route.names.some(name => twEarthCountries.includes(name) || twEarthSchools.includes(name));
+    const active = twEarthRouterReady ? scripted : twEarthMatch(route.keys);
     if (!active) continue;
+    routeCount += 1;
     for (const name of route.names) {
       const value = await getwi(twEarthBook, name);
       if (value) loaded.push(value);
@@ -869,7 +1050,7 @@ _%>`,
     content: `@@generate_before
 <%_
 ${earthRouteContext}
-if (twEarthActive && typeof getwi === 'function') {
+if ((twEarthActive || !twEarthRouterReady) && typeof getwi === 'function') {
   const names = [
     '九州灵工联合体', '普罗米修斯生命集团', '赫尔墨斯以太工业', '极冠重工', '天穹轨道集团',
     '全球异常响应理事会', '世界灵能研究共同体', '跨界生命权利委员会',
@@ -879,7 +1060,7 @@ if (twEarthActive && typeof getwi === 'function') {
   const loaded = [];
   for (const name of names) {
     if (loaded.length >= 4) break;
-    const active = twEarthFactions.includes(name) || matchChatMessages([name], { start: -8 });
+    const active = twEarthRouterReady ? (twEarthOrganizations.includes(name) || twEarthFactions.includes(name)) : twEarthMatch([name]);
     if (!active) continue;
     const value = await getwi(twEarthBook, name);
     if (value) loaded.push(value);
@@ -894,12 +1075,12 @@ _%>`,
     content: `@@generate_before
 <%_
 ${earthRouteContext}
-if (twEarthActive && typeof getwi === 'function') {
+if ((twEarthActive || !twEarthRouterReady) && typeof getwi === 'function') {
   const names = ['天机阁', '万宝楼', '黑金阁', '大周仙朝', '蜀山剑门', '昆仑道门', '万法宗', '合欢宗', '大雷音寺', '广寒宫', '太阳神宫', '血神宫', '万魂殿', '尸魔宗', '妖族'];
   const loaded = [];
   for (const name of names) {
     if (loaded.length >= 3) break;
-    const active = twEarthFactions.includes(name) || matchChatMessages([name], { start: -8 });
+    const active = twEarthRouterReady ? (twEarthSects.includes(name) || twEarthFactions.includes(name)) : twEarthMatch([name]);
     if (!active) continue;
     const value = await getwi(twEarthBook, name + '地球策略');
     if (value) loaded.push(value);
@@ -914,12 +1095,12 @@ _%>`,
     content: `@@generate_before
 <%_
 ${earthRouteContext}
-if (twEarthActive && typeof getwi === 'function') {
+if ((twEarthActive || !twEarthRouterReady) && typeof getwi === 'function') {
   const names = ['宫银叶', '红莲', '黑姬结灯', '九歌', '显宝', '君姝', '云初未来', '海伊'];
   const loaded = [];
   for (const name of names) {
     if (loaded.length >= 3) break;
-    const active = twEarthCharacters.includes(name) || matchChatMessages([name], { start: -8 });
+    const active = twEarthRouterReady ? twEarthCharacters.includes(name) : twEarthMatch([name]);
     if (!active) continue;
     const value = await getwi(twEarthBook, name + '地球接口');
     if (value) loaded.push(value);
@@ -934,12 +1115,13 @@ _%>`,
     content: `@@generate_before
 <%_
 ${earthRouteContext}
-if (twEarthActive && typeof getwi === 'function') {
+if ((twEarthActive || !twEarthRouterReady) && typeof getwi === 'function') {
   const names = ${JSON.stringify(earthNpcRows.map(row => row[0]))};
   const loaded = [];
   for (const name of names) {
     if (loaded.length >= 4) break;
-    if (!twEarthNpcs.includes(name)) continue;
+    const active = twEarthRouterReady ? twEarthNpcs.includes(name) : twEarthMatch([name]);
+    if (!active) continue;
     const value = await getwi(twEarthBook, name + '人物档案');
     if (value) loaded.push(value);
   }
@@ -957,12 +1139,13 @@ _%>`,
     content: `@@generate_before
 <%_
 ${earthRouteContext}
-if (twEarthActive && typeof getwi === 'function') {
+if ((twEarthActive || !twEarthRouterReady) && typeof getwi === 'function') {
   const names = ${JSON.stringify(earthCityRows.map(row => row[0]))};
   const loaded = [];
   for (const name of names) {
     if (loaded.length >= 3) break;
-    if (!twEarthCities.includes(name)) continue;
+    const active = twEarthRouterReady ? twEarthCities.includes(name) : twEarthMatch([name]);
+    if (!active) continue;
     const value = await getwi(twEarthBook, name + '城市节点');
     if (value) loaded.push(value);
   }
@@ -977,7 +1160,7 @@ _%>`,
 <%_
 ${earthRouteContext}
 const twEarthSwarmMatched = twEarthSwarmThreat !== '无' || matchChatMessages(['噬界虫群', '虫群', '虫巢', '母巢女王', '节点母虫', '吞灵虫', '拟生虫姬'], { start: -8 });
-if (twEarthActive && twEarthSwarmMatched && typeof getwi === 'function') {
+if ((twEarthActive || !twEarthRouterReady) && twEarthSwarmMatched && typeof getwi === 'function') {
   const names = ['噬界虫群总纲', '噬界虫群单位与阶位', '双界虫灾与合作契机'];
   const loaded = [];
   for (const name of names) {
@@ -1076,11 +1259,14 @@ const artifact = {
   entries: Object.fromEntries(entries.map((entry, uid) => [String(uid), worldbookEntry(entry, uid)])),
 };
 
+const outputPath = process.env.WORLD_BOOK_OUTPUT
+  ? path.resolve(process.env.WORLD_BOOK_OUTPUT)
+  : path.join(root, '灵力复苏地球附属世界书.json');
 fs.writeFileSync(
-  path.join(root, '灵力复苏地球附属世界书.json'),
+  outputPath,
   `${JSON.stringify(artifact, null, 2)}\n`,
   'utf8',
 );
 
 const enabledCount = Object.values(artifact.entries).filter(entry => !entry.disable).length;
-console.log(`generated ${entries.length} entries (${enabledCount} enabled monitor, ${entries.length - enabledCount} disabled draft entries)`);
+console.log(`generated ${entries.length} entries (${enabledCount} enabled monitor, ${entries.length - enabledCount} disabled draft entries) -> ${outputPath}`);

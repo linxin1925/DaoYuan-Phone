@@ -4,6 +4,7 @@ import { loadUiPreferences, saveUiPreferences } from '../services/storageService
 import { getConnections, MAPS, mapNodeClass, mapNodeColor, normalizeMapNode, resolveWorldMapLocation, type MapFaction, type MapRealm } from '../services/mapService';
 import type { EarthSimulationState, EarthTimeRatio } from '../earthSimulation/types';
 import type { XuantianSimulationState } from '../xuantianSimulation/types';
+import type { StoryDirectorPlan, XuantianFaultLog } from '../storyDirector/types';
 import beautyPlaqueUrl from '../assets/beauty-plaque.png?inline';
 import {
   getDefaultPortraitUrl,
@@ -48,8 +49,8 @@ interface WanbaoGenerationState { status: 'idle' | 'running' | 'success' | 'erro
 interface WorldStatus { time: string; location: string; energy: string; }
 interface YujianSettingsDraft { customPrompt: string; apiBaseUrl: string; apiKey: string; apiModel: string; storyParseEnabled: boolean; }
 interface BeautyApiSettingsDraft { apiBaseUrl: string; apiKey: string; apiModel: string; autoEnabled: boolean; autoInterval: number; }
-interface EarthApiSettingsDraft { enabled: boolean; apiBaseUrl: string; apiKey: string; apiModel: string; temperature: number; timeoutSeconds: number; replyInterval: number; maxWorldDays: number; timeRatio: EarthTimeRatio; }
-interface XuantianApiSettingsDraft { enabled: boolean; apiBaseUrl: string; apiKey: string; apiModel: string; temperature: number; timeoutSeconds: number; replyInterval: number; maxWorldDays: number; }
+interface EarthApiSettingsDraft { enabled: boolean; apiBaseUrl: string; apiKey: string; apiModel: string; temperature: number; timeoutSeconds: number; replyInterval: number; retryCount: number; maxWorldDays: number; timeRatio: EarthTimeRatio; }
+interface XuantianApiSettingsDraft { enabled: boolean; apiBaseUrl: string; apiKey: string; apiModel: string; temperature: number; timeoutSeconds: number; replyInterval: number; retryCount: number; maxWorldDays: number; }
 const EARTH_TIME_RATIO_OPTIONS: Array<{ value: EarthTimeRatio; label: string; note: string }> = [
   { value: '1:5', label: '地球 1 天＝玄天界 5 天', note: '地球较慢：玄天界累计经过 5 天，地球推进 1 天。' },
   { value: '1:2', label: '地球 1 天＝玄天界 2 天', note: '地球较慢：玄天界累计经过 2 天，地球推进 1 天。' },
@@ -72,7 +73,7 @@ type SettingsSection = 'home' | 'yujian' | 'beauty' | 'xianwang' | 'wanbao' | 'i
 type EarthSettingsTab = 'overview' | 'regions' | 'forces' | 'events';
 type XuantianSettingsTab = 'overview' | 'regions' | 'forces' | 'events';
 type PetSize = 'small' | 'medium' | 'large';
-type PetKind = 'whale' | 'ziwei';
+type PhoneDisplayMode = 'drawer' | 'floating';
 interface YujianLoreEntry { uid: string; name: string; content: string; keys: string[]; }
 
 const mapFactionPortraits: Record<string, string[]> = {
@@ -193,6 +194,14 @@ function button(doc: Document, className: string, label: string, action: string,
   node.dataset.action = action;
   if (key) node.dataset.key = key;
   return node;
+}
+
+async function copyTextWithFallback(doc:Document,text:string):Promise<boolean>{
+  const clipboards=[doc.defaultView?.navigator?.clipboard,(()=>{try{return doc.defaultView?.parent?.navigator?.clipboard;}catch{return undefined;}})()];
+  for(const clipboard of clipboards){try{if(clipboard?.writeText){await clipboard.writeText(text);return true;}}catch{}}
+  const documents=[doc,(()=>{try{return doc.defaultView?.parent?.document;}catch{return undefined;}})()].filter((item):item is Document=>Boolean(item));
+  for(const targetDoc of documents){const area=targetDoc.createElement('textarea');try{area.value=text;area.readOnly=true;area.style.cssText='position:fixed;left:-9999px;top:0;opacity:0';targetDoc.body.append(area);area.focus();area.select();area.setSelectionRange(0,text.length);if(targetDoc.execCommand?.('copy'))return true;}catch{}finally{area.remove();}}
+  return false;
 }
 
 function appendListItem(doc: Document, list: HTMLElement, title: string, meta: string, value: string): void {
@@ -483,8 +492,8 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
   let wanbaoModelOptions: string[] = [];
   let fetchingXianwangModels = false;
   let fetchingWanbaoModels = false;
-  let earthApiSettings: EarthApiSettingsDraft = { enabled: false, apiBaseUrl: '', apiKey: '', apiModel: '', temperature: 0.3, timeoutSeconds: 120, replyInterval: 5, maxWorldDays: 30, timeRatio: '1:1' };
-  let xuantianApiSettings: XuantianApiSettingsDraft = { enabled: false, apiBaseUrl: '', apiKey: '', apiModel: '', temperature: 0.3, timeoutSeconds: 120, replyInterval: 5, maxWorldDays: 30 };
+  let earthApiSettings: EarthApiSettingsDraft = { enabled: false, apiBaseUrl: '', apiKey: '', apiModel: '', temperature: 0.3, timeoutSeconds: 120, replyInterval: 5, retryCount: 1, maxWorldDays: 30, timeRatio: '1:1' };
+  let xuantianApiSettings: XuantianApiSettingsDraft = { enabled: false, apiBaseUrl: '', apiKey: '', apiModel: '', temperature: 0.3, timeoutSeconds: 120, replyInterval: 5, retryCount: 1, maxWorldDays: 30 };
   let worldSimulationFeatures = { earthEnabled: false, xuantianEnabled: false };
   let featureModuleFlags: FeatureModuleFlags = { yujian:false, beauty:false, xianwang:false, wanbao:false, world:false };
   const expandedXuantianForceRegions = new Set<string>(['中央神州']);
@@ -494,11 +503,13 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
   let fetchingXuantianModels = false;
   let earthSimulationRunning = false;
   let xuantianSimulationState: XuantianSimulationState | null = null;
+  let storyDirectorPlan: StoryDirectorPlan | null = null;
+  let xuantianFaultLogs: XuantianFaultLog[] = [];
   let xuantianSimulationRunning = false;
-  let contentBeautifierEnabled = true;
+  let contentBeautifierEnabled = false;
   let configHelperEnabled = true;
-  let petKind: PetKind = 'whale';
   let petSize: PetSize = 'large';
+  let phoneDisplayMode: PhoneDisplayMode = 'drawer';
   let settingsSection: SettingsSection = 'home';
   let earthSettingsTab: EarthSettingsTab = 'overview';
   let xuantianSettingsTab: XuantianSettingsTab = 'overview';
@@ -1062,7 +1073,9 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
       if(!currentEvents.length)eventList.append(element(doc, 'p', 'xuantian-empty', '暂无已确认事件。完成一次推演后，各事件会独立记录阶段、地域、参与势力与进度。'));
       events.append(eventHead, eventList);
       layout.append(regions, events);
-      page.append(layout, element(doc, 'p', 'xuantian-preview-note', '推演结果写入当前聊天的独立状态账本；原版世界书保持只读。'));
+      page.append(layout);
+      if(storyDirectorPlan){const plan=storyDirectorPlan;const node=plan.nodes.find(item=>item.id===plan.currentNodeId)||plan.nodes.find(item=>item.status==='current'||item.status==='available');const director=element(doc,'section','xuantian-panel');const head=element(doc,'div','xuantian-panel-head');head.append(element(doc,'div',undefined,'动态剧情导演'),element(doc,'span','xuantian-badge',`${plan.mode} · ${Math.round(plan.confidence*100)}%`));director.append(head,element(doc,'strong',undefined,plan.arcTitle),element(doc,'p','xuantian-panel-note',plan.assessment));if(node)director.append(element(doc,'p',undefined,`当前问题：${node.dramaticQuestion}`),element(doc,'small',undefined,`可感知开场：${node.observableSetup}`));page.append(director);}
+      page.append(element(doc, 'p', 'xuantian-preview-note', '推演结果与分支剧情图写入当前聊天的独立状态账本；原版世界书保持只读。'));
     }
 
     if (xuantianSettingsTab === 'regions') {
@@ -1182,8 +1195,8 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
     }
     appendSimulationModelControls(form, 'xuantian');
     const twoCol=element(doc,'div','earth-sim-form-grid');
-    for (const [label,key] of [['温度','temperature'],['超时（秒）','timeoutSeconds'],['自动推进间隔（轮）','replyInterval'],['单次最大世界日','maxWorldDays']] as const) { const wrap=element(doc,'label','settings-field'); wrap.append(element(doc,'span','settings-label',label)); const input=doc.createElement('input'); input.type='number'; input.value=String(xuantianApiSettings[key]); input.dataset.xuantianApiSetting=key; wrap.append(input); twoCol.append(wrap); }
-    form.append(twoCol,button(doc,'primary-button','保存玄天界推演设置','xuantian-api-save')); content.append(form,element(doc,'p','earth-sim-disabled-note','启用后按“自动推进间隔”统计新的 AI 回复；推演只读原版主世界书，并写入当前聊天的独立状态账本。'));
+    for (const [label,key] of [['温度','temperature'],['超时（秒）','timeoutSeconds'],['自动推进间隔（轮）','replyInterval'],['失败后重试次数','retryCount'],['单次最大世界日','maxWorldDays']] as const) { const wrap=element(doc,'label','settings-field'); wrap.append(element(doc,'span','settings-label',label)); const input=doc.createElement('input'); input.type='number'; input.min=key==='retryCount'?'0':''; input.max=key==='retryCount'?'2':''; input.value=String(xuantianApiSettings[key]); input.dataset.xuantianApiSetting=key; wrap.append(input); twoCol.append(wrap); }
+    form.append(twoCol,element(doc,'p','earth-sim-disabled-note',`每次玄天界推演通常请求 1 次；当前设置下，结构、限流或服务端错误发生时最多请求 ${xuantianApiSettings.retryCount+1} 次。鉴权、配置、世界书前置条件或越权状态变更不会重试。`),button(doc,'primary-button','保存玄天界推演设置','xuantian-api-save')); content.append(form,element(doc,'p','earth-sim-disabled-note','启用后按“自动推进间隔”统计新的 AI 回复；推演只读原版主世界书，并写入当前聊天的独立状态账本。'));
   }
 
   function renderEarthApiSettings(content: HTMLElement): void {
@@ -1196,9 +1209,9 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
     const ratioSelect = doc.createElement('select'); ratioSelect.className = 'earth-time-ratio-select'; ratioSelect.dataset.earthApiSetting = 'timeRatio';
     for (const option of EARTH_TIME_RATIO_OPTIONS) { const node = element(doc, 'option', undefined, option.label); node.value = option.value; node.selected = option.value === earthApiSettings.timeRatio; ratioSelect.append(node); }
     ratioField.append(ratioSelect, element(doc, 'small', 'earth-time-ratio-note', earthTimeRatioNote(earthApiSettings.timeRatio)));
-    const twoCol = element(doc, 'div', 'earth-sim-form-grid'); for (const [label, key] of [['温度', 'temperature'], ['超时（秒）', 'timeoutSeconds'], ['有效回复间隔', 'replyInterval'], ['单次最大世界日', 'maxWorldDays']] as const) { const wrap = element(doc, 'label', 'settings-field'); wrap.append(element(doc, 'span', 'settings-label', label)); const input = doc.createElement('input'); input.type = 'number'; input.value = String(earthApiSettings[key]); input.dataset.earthApiSetting = key; wrap.append(input); twoCol.append(wrap); }
+    const twoCol = element(doc, 'div', 'earth-sim-form-grid'); for (const [label, key] of [['温度', 'temperature'], ['超时（秒）', 'timeoutSeconds'], ['有效回复间隔', 'replyInterval'], ['失败后重试次数', 'retryCount'], ['单次最大世界日', 'maxWorldDays']] as const) { const wrap = element(doc, 'label', 'settings-field'); wrap.append(element(doc, 'span', 'settings-label', label)); const input = doc.createElement('input'); input.type = 'number'; input.min = key === 'retryCount' ? '0' : ''; input.max = key === 'retryCount' ? '2' : ''; input.value = String(earthApiSettings[key]); input.dataset.earthApiSetting = key; wrap.append(input); twoCol.append(wrap); }
     appendSimulationModelControls(form, 'earth');
-    form.append(ratioField, twoCol, button(doc, 'primary-button', '保存推演设置', 'earth-api-save'));
+    form.append(ratioField, twoCol, element(doc,'p','earth-sim-disabled-note',`每次地球推演通常请求 1 次；当前设置下最多请求 ${earthApiSettings.retryCount+1} 次。鉴权、配置、世界书前置条件或越权状态变更不会重试。`), button(doc, 'primary-button', '保存推演设置', 'earth-api-save'));
     const privacyNote = element(doc, 'p', 'earth-sim-disabled-note', '获取模型列表或手动推演时，会将填写的 URL 与 API 密钥发送给该服务。');
     const resetPanel = element(doc, 'section', 'earth-reset-panel');
     const resetCopy = element(doc, 'div', 'earth-reset-copy'); resetCopy.append(element(doc, 'strong', undefined, '重新开始地球推演'), element(doc, 'small', undefined, '清除当前聊天的日期、事件与势力进度；保留 API 设置和附属世界书。'));
@@ -1221,21 +1234,24 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
   function renderSettings(content: HTMLElement): void {
     if (settingsSection === 'pet') {
       content.append(button(doc, 'settings-back-button', '← 返回设置', 'settings-home'));
-      appendPageHeading(doc, content, '桌宠外观与大小', '切换桌宠形象与显示尺寸，设置仅保存在当前浏览器。', '本地偏好');
-      const petPanel = appendPanel(doc, content, '桌宠设置', '鲸鱼娘与紫薇共用同一尺寸和窄屏边界约束。');
-      const petKindRow = element(doc, 'div', 'pet-size-options pet-kind-options');
-      for (const entry of [{ value: 'whale', label: '鲸鱼娘', note: '动态 WebM' }, { value: 'ziwei', label: '紫薇', note: '透明 PNG 序列' }] as const) {
-        const label = element(doc, 'label', 'pet-size-option'); const input = doc.createElement('input'); input.type = 'radio'; input.name = 'daoyuan-pet-kind'; input.value = entry.value; input.checked = petKind === entry.value;
-        input.addEventListener('change', () => { if (input.checked) { petKind = entry.value; sendAction('SET_PET_KIND', { kind: entry.value }); announcement = `桌宠已切换为${entry.label}。`; render(); } });
-        label.append(input, element(doc, 'span', undefined, entry.label), element(doc, 'small', undefined, entry.note)); petKindRow.append(label);
+      appendPageHeading(doc, content, '小手机与鲸鱼娘', '调整小手机的收纳方式和鲸鱼娘尺寸，设置仅保存在当前浏览器。', '本地偏好');
+      const displayPanel = appendPanel(doc, content, '小手机显示方式', '选择收纳到右侧边缘，或保持原来的悬浮显示方式。');
+      const displayModeRow = element(doc, 'div', 'pet-size-options phone-display-mode-options');
+      for (const entry of [{ value: 'drawer', label: '侧边抽屉', note: '点击外部自动缩回，桌面端移到右侧可展开' }, { value: 'floating', label: '自由浮窗', note: '可拖到屏幕任意位置，打开后保持显示' }] as const) {
+        const label = element(doc, 'label', 'pet-size-option phone-display-mode-option');
+        const input = doc.createElement('input'); input.type = 'radio'; input.name = 'daoyuan-phone-display-mode'; input.value = entry.value; input.checked = phoneDisplayMode === entry.value;
+        input.addEventListener('change', () => { if (input.checked) { phoneDisplayMode = entry.value; sendAction('SET_PHONE_DISPLAY_MODE', { mode: entry.value }); announcement = `小手机已切换为${entry.label}。`; render(); } });
+        label.append(input, element(doc, 'span', undefined, entry.label), element(doc, 'small', undefined, entry.note)); displayModeRow.append(label);
       }
+      displayPanel.append(displayModeRow);
+      const petPanel = appendPanel(doc, content, '鲸鱼娘设置', '选择鲸鱼娘的显示尺寸。');
       const petSizeRow = element(doc, 'div', 'pet-size-options');
       for (const entry of [{ value: 'small', label: '小', note: '最省空间' }, { value: 'medium', label: '中', note: '适中尺寸' }, { value: 'large', label: '大', note: '当前默认' }] as const) {
         const label = element(doc, 'label', 'pet-size-option'); const input = doc.createElement('input'); input.type = 'radio'; input.name = 'daoyuan-pet-size'; input.value = entry.value; input.checked = petSize === entry.value;
         input.addEventListener('change', () => { if (input.checked) { petSize = entry.value; sendAction('SET_PET_SIZE', { size: entry.value }); announcement = `桌宠已调整为${entry.label}号。`; render(); } });
         label.append(input, element(doc, 'span', undefined, entry.label), element(doc, 'small', undefined, entry.note)); petSizeRow.append(label);
       }
-      petPanel.append(petKindRow, petSizeRow); return;
+      petPanel.append(petSizeRow); return;
     }
     if (settingsSection === 'content-beautifier') {
       content.append(button(doc, 'settings-back-button', '← 返回设置', 'settings-home'));
@@ -1266,11 +1282,15 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
       const appendApiFields = (target:HTMLElement, prefix:'xuantian'|'earth', settings:XuantianApiSettingsDraft|EarthApiSettingsDraft):void => {
         for (const [label,key,type,placeholder] of [['基础 URL','apiBaseUrl','url','https://api.example.com/v1'],['API 密钥','apiKey','password','仅保存在宿主本地设置'],['模型名称','apiModel','text','例如：推演专用模型']] as const) { const wrap=element(doc,'label','settings-field'); wrap.append(element(doc,'span','settings-label',label)); const input=doc.createElement('input'); input.type=type; input.placeholder=placeholder; input.value=String(settings[key]); if(prefix==='xuantian') input.dataset.xuantianApiSetting=key; else input.dataset.earthApiSetting=key; if(key==='apiBaseUrl') configureApiUrlInput(input); wrap.append(input); target.append(wrap); }
         appendSimulationModelControls(target, prefix);
-        const twoCol=element(doc,'div','earth-sim-form-grid'); for(const [label,key] of [['温度','temperature'],['超时（秒）','timeoutSeconds'],['自动推进间隔（轮）','replyInterval'],['单次最大世界日','maxWorldDays']] as const){const wrap=element(doc,'label','settings-field');wrap.append(element(doc,'span','settings-label',label));const input=doc.createElement('input');input.type='number';input.value=String(settings[key]);if(prefix==='xuantian')input.dataset.xuantianApiSetting=key;else input.dataset.earthApiSetting=key;wrap.append(input);twoCol.append(wrap);} target.append(twoCol);
+        const twoCol=element(doc,'div','earth-sim-form-grid'); for(const [label,key] of [['温度','temperature'],['超时（秒）','timeoutSeconds'],['自动推进间隔（轮）','replyInterval'],['失败后重试次数','retryCount'],['单次最大世界日','maxWorldDays']] as const){const wrap=element(doc,'label','settings-field');wrap.append(element(doc,'span','settings-label',label));const input=doc.createElement('input');input.type='number';input.min=key==='retryCount'?'0':'';input.max=key==='retryCount'?'2':'';input.value=String(settings[key]);if(prefix==='xuantian')input.dataset.xuantianApiSetting=key;else input.dataset.earthApiSetting=key;wrap.append(input);twoCol.append(wrap);} target.append(twoCol,element(doc,'p','earth-sim-disabled-note',`每次通常请求 1 次；当前设置下单次${prefix==='xuantian'?'玄天界':'地球'}推演最多请求 ${settings.retryCount+1} 次。鉴权、配置、世界书前置条件或越权状态变更不会重试。`));
       };
 
       const xuantianPanel=appendPanel(doc,content,'玄天界推演 API','服务原版五域、势力与并行事件线；读取主世界书，状态写入当前聊天独立账本。'); xuantianPanel.classList.add('earth-sim-api-form','world-settings-section');
       const xuantianToggle=element(doc,'label','settings-auto-toggle'); const xuantianInput=doc.createElement('input'); xuantianInput.type='checkbox'; xuantianInput.checked=xuantianApiSettings.enabled; xuantianInput.dataset.xuantianApiSetting='enabled'; const xuantianCopy=element(doc,'span','settings-auto-toggle-copy'); xuantianCopy.append(element(doc,'strong',undefined,'启用玄天界推演 API'),element(doc,'small',undefined,'仅控制玄天界接口调用。')); xuantianToggle.append(xuantianInput,xuantianCopy); xuantianPanel.append(xuantianToggle); appendApiFields(xuantianPanel,'xuantian',xuantianApiSettings); xuantianPanel.append(button(doc,'primary-button','保存玄天界 API','xuantian-api-save'),element(doc,'p','world-clear-note','危险操作：只清空当前对话的玄天界势力、事件线、时间和正文注入。'),button(doc,'earth-reset-button','清空当前对话的玄天界推演','xuantian-simulation-clear'));
+
+      const logPanel=appendPanel(doc,content,'玄天界推演故障日志',`当前聊天共 ${xuantianFaultLogs.length} 条；记录请求、重试、结构校验与提交结果，仅用于测试排障。`); logPanel.classList.add('world-settings-section');
+      const logActions=element(doc,'div','xuantian-log-actions'); const clearLogs=button(doc,'danger-button','清空日志','xuantian-clear-logs'); clearLogs.disabled=!xuantianFaultLogs.length; logActions.append(button(doc,'secondary-button','复制全部日志','xuantian-copy-logs'),clearLogs); logPanel.append(logActions);
+      const logList=element(doc,'div','xuantian-event-list'); for(const log of [...xuantianFaultLogs].reverse()){const item=element(doc,'article','xuantian-event-summary');item.append(element(doc,'span','xuantian-event-kind',log.level),element(doc,'strong',undefined,log.message),element(doc,'small',undefined,`${log.at} · 序列 ${log.sequence} · 请求 ${log.requestCount}${log.detail?` · ${log.detail}`:''}`));logList.append(item);} if(!xuantianFaultLogs.length)logList.append(element(doc,'p','xuantian-empty','暂无日志。完成一次推演后会记录结果；失败与重试会保留详细原因。')); logPanel.append(logList);
 
       const earthPanel=appendPanel(doc,content,'地球推演 API','服务地球附属世界书与独立演化，不读取玄天界 API 配置。'); earthPanel.classList.add('earth-sim-api-form','world-settings-section');
       const earthToggle=element(doc,'label','settings-auto-toggle'); const earthInput=doc.createElement('input'); earthInput.type='checkbox'; earthInput.checked=earthApiSettings.enabled; earthInput.dataset.earthApiSetting='enabled'; const earthCopy=element(doc,'span','settings-auto-toggle-copy'); earthCopy.append(element(doc,'strong',undefined,'启用地球推演 API'),element(doc,'small',undefined,'AI 提出变化并通过检查后才保存。')); earthToggle.append(earthInput,earthCopy); earthPanel.append(earthToggle); appendApiFields(earthPanel,'earth',earthApiSettings);
@@ -1412,7 +1432,7 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
       { key: 'injection', icon: '◇', title: '主线注入', note: '选择可影响后续剧情的模块', scope: '默认关闭' },
       { key: 'dlc', icon: '卷', title: 'DLC 剧情拓展', note: '成组导入、挂载检测与修复', scope: '用户管理' },
       { key: 'world', icon: '界', title: '世界推演设置', note: '双界启停、玄天界 API 与地球 API', scope: '统一入口' },
-      { key: 'pet', icon: '宠', title: '桌宠外观与大小', note: '切换形象与显示尺寸', scope: '本地偏好' },
+      { key: 'pet', icon: '宠', title: '小手机与鲸鱼娘', note: '侧边抽屉或自由浮窗，及鲸鱼娘尺寸', scope: '本地偏好' },
       { key: 'content-beautifier', icon: '阅', title: '正文美化', note: '正文阅读器扫描开关', scope: 'V26' },
       { key: 'config-helper', icon: '助', title: '道渊配置小助手', note: '悬浮球显示设置', scope: 'V1.3.4' },
     ];
@@ -1439,6 +1459,9 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
     }
     content.append(grid);
     content.append(element(doc, 'p', 'notice muted', 'API 密钥仅保存在当前浏览器本地设置中，不写入聊天变量或模型提示词。'));
+    const resetPanel = appendPanel(doc, content, '恢复出厂设置', '清空小手机全部配置和记录，包括各模块数据、联系人、聊天记录、推演账本、预设、自定义立绘及导入配置。不会删除酒馆角色卡、原始世界书或 MVU 世界数据。');
+    resetPanel.classList.add('phone-factory-reset-panel');
+    resetPanel.append(button(doc, 'earth-reset-button', '清空小手机所有配置与记录', 'phone-factory-reset'));
   }
 
   function renderPromptInjectionSettings(content: HTMLElement): void {
@@ -2382,6 +2405,14 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
     } else if (action === 'xuantian-sim-tab') {
       const next = actionNode.dataset.key as XuantianSettingsTab | undefined;
       if (next) { xuantianSettingsTab = next; announcement = ''; render(); }
+    } else if(action==='xuantian-copy-logs'){
+      const exported=JSON.stringify({exportedAt:new Date().toISOString(),storyPlan:storyDirectorPlan,logs:xuantianFaultLogs},null,2);
+      void copyTextWithFallback(root.ownerDocument,exported).then(ok=>{announcement=ok?`已复制 ${xuantianFaultLogs.length} 条玄天界故障日志。`:'自动复制被浏览器拦截；日志已保留在本页，可直接选中。';render();});
+    } else if(action==='xuantian-clear-logs'){
+      if(!xuantianFaultLogs.length)return;
+      const confirmed=uiView.confirm('确认清空当前聊天的全部玄天界推演故障日志？此操作不会清除世界状态或剧情大纲。');
+      if(!confirmed)return;
+      announcement='正在清空当前聊天的玄天界推演故障日志…';render();sendAction('CLEAR_XUANTIAN_FAULT_LOGS');
     } else if (action === 'xuantian-region-select') {
       const next = actionNode.dataset.key;
       if (next) { selectedXuantianRegion = next; render(); }
@@ -2586,6 +2617,11 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
       loreSelected = loreEntries.filter(entry => selected.has(entry.uid)).map(entry => ({ uid: entry.uid, content: entry.content }));
       sendAction('SAVE_YUJIAN_SETTINGS', { ...yujianSettings, loreSelected });
       announcement = '玉简设定已保存'; render();
+    } else if (action === 'phone-factory-reset') {
+      if (!uiView.confirm('确定清空整个小手机的所有配置与记录吗？\n\n此操作不可撤销，将删除联系人、玉简聊天、仙网内容、绝色榜、万宝记录、推演账本、API 配置、预设、自定义立绘及导入配置。\n\n不会删除酒馆角色卡、原始世界书或 MVU 世界数据。')) return;
+      announcement = '正在恢复小手机出厂状态…';
+      render();
+      sendAction('FACTORY_RESET_PHONE');
     } else if (action === 'yujian-history-import') {
       if (importingStatusHistory) return;
       importingStatusHistory = true;
@@ -2603,21 +2639,21 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
       render();
       sendAction('REQUEST_YUJIAN_MODELS', { apiBaseUrl: yujianSettings.apiBaseUrl, apiKey: yujianSettings.apiKey });
     } else if (action === 'xuantian-models-fetch') {
-      root.querySelectorAll<HTMLInputElement>('[data-xuantian-api-setting]').forEach(node=>{const key=node.dataset.xuantianApiSetting;if(key==='enabled')xuantianApiSettings.enabled=node.checked;else if(key==='apiBaseUrl'||key==='apiKey'||key==='apiModel')xuantianApiSettings[key]=node.value;else if(key==='temperature'||key==='timeoutSeconds'||key==='replyInterval'||key==='maxWorldDays')xuantianApiSettings[key]=Number(node.value);});if(fetchingXuantianModels)return;fetchingXuantianModels=true;announcement='正在获取玄天界推演模型列表…';render();sendAction('REQUEST_XUANTIAN_MODELS',{apiBaseUrl:xuantianApiSettings.apiBaseUrl,apiKey:xuantianApiSettings.apiKey});
+      root.querySelectorAll<HTMLInputElement>('[data-xuantian-api-setting]').forEach(node=>{const key=node.dataset.xuantianApiSetting;if(key==='enabled')xuantianApiSettings.enabled=node.checked;else if(key==='apiBaseUrl'||key==='apiKey'||key==='apiModel')xuantianApiSettings[key]=node.value;else if(key==='temperature'||key==='timeoutSeconds'||key==='replyInterval'||key==='retryCount'||key==='maxWorldDays')xuantianApiSettings[key]=Number(node.value);});if(fetchingXuantianModels)return;fetchingXuantianModels=true;announcement='正在获取玄天界推演模型列表…';render();sendAction('REQUEST_XUANTIAN_MODELS',{apiBaseUrl:xuantianApiSettings.apiBaseUrl,apiKey:xuantianApiSettings.apiKey});
     } else if (action === 'xuantian-api-save') {
       root.querySelectorAll<HTMLInputElement>('[data-xuantian-api-setting]').forEach(node => {
         const key=node.dataset.xuantianApiSetting;
         if(key==='enabled') xuantianApiSettings.enabled=node.checked;
         else if(key==='apiBaseUrl'||key==='apiKey'||key==='apiModel') xuantianApiSettings[key]=node.value;
-        else if(key==='temperature'||key==='timeoutSeconds'||key==='replyInterval'||key==='maxWorldDays') xuantianApiSettings[key]=Number(node.value);
+        else if(key==='temperature'||key==='timeoutSeconds'||key==='replyInterval'||key==='retryCount'||key==='maxWorldDays') xuantianApiSettings[key]=Number(node.value);
       });
       sendAction('SAVE_XUANTIAN_SETTINGS',{...xuantianApiSettings});announcement='正在保存玄天界推演 API 设置…';render();
     } else if (action === 'earth-models-fetch') {
       root.querySelectorAll<HTMLInputElement | HTMLSelectElement>('[data-earth-api-setting]').forEach(node => {
         const key = node.dataset.earthApiSetting;
-        if (key === 'enabled' && node instanceof HTMLInputElement) earthApiSettings.enabled = node.checked;
+        if (key === 'enabled' && node.type === 'checkbox') earthApiSettings.enabled = node.checked;
         else if (key === 'apiBaseUrl' || key === 'apiKey' || key === 'apiModel') earthApiSettings[key] = node.value;
-        else if (key === 'temperature' || key === 'timeoutSeconds' || key === 'replyInterval' || key === 'maxWorldDays') earthApiSettings[key] = Number(node.value);
+        else if (key === 'temperature' || key === 'timeoutSeconds' || key === 'replyInterval' || key === 'retryCount' || key === 'maxWorldDays') earthApiSettings[key] = Number(node.value);
         else if (key === 'timeRatio') earthApiSettings.timeRatio = node.value as EarthTimeRatio;
       });
       if (fetchingEarthModels) return;
@@ -2634,9 +2670,9 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
     } else if (action === 'earth-api-save') {
       root.querySelectorAll<HTMLInputElement | HTMLSelectElement>('[data-earth-api-setting]').forEach(node => {
         const key = node.dataset.earthApiSetting;
-        if (key === 'enabled' && node instanceof HTMLInputElement) earthApiSettings.enabled = node.checked;
+        if (key === 'enabled' && node.type === 'checkbox') earthApiSettings.enabled = node.checked;
         else if (key === 'apiBaseUrl' || key === 'apiKey' || key === 'apiModel') earthApiSettings[key] = node.value;
-        else if (key === 'temperature' || key === 'timeoutSeconds' || key === 'replyInterval' || key === 'maxWorldDays') earthApiSettings[key] = Number(node.value);
+        else if (key === 'temperature' || key === 'timeoutSeconds' || key === 'replyInterval' || key === 'retryCount' || key === 'maxWorldDays') earthApiSettings[key] = Number(node.value);
         else if (key === 'timeRatio') earthApiSettings.timeRatio = node.value as EarthTimeRatio;
       });
       sendAction('SAVE_EARTH_SETTINGS', { ...earthApiSettings });
@@ -2879,9 +2915,9 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
     const target = event.target as HTMLInputElement | HTMLSelectElement | null;
     if (target?.matches('[data-earth-api-setting]')) {
       const key = target.dataset.earthApiSetting;
-      if (key === 'enabled' && target instanceof HTMLInputElement) earthApiSettings.enabled = target.checked;
+      if (key === 'enabled' && target.type === 'checkbox') earthApiSettings.enabled = target.checked;
       else if (key === 'apiBaseUrl' || key === 'apiKey' || key === 'apiModel') earthApiSettings[key] = target.value;
-      else if (key === 'temperature' || key === 'timeoutSeconds' || key === 'replyInterval' || key === 'maxWorldDays') earthApiSettings[key] = Number(target.value);
+      else if (key === 'temperature' || key === 'timeoutSeconds' || key === 'replyInterval' || key === 'retryCount' || key === 'maxWorldDays') earthApiSettings[key] = Number(target.value);
       else if (key === 'timeRatio') { earthApiSettings.timeRatio = target.value as EarthTimeRatio; const note = root.querySelector<HTMLElement>('.earth-time-ratio-note'); if (note) note.textContent = earthTimeRatioNote(earthApiSettings.timeRatio); }
       return;
     }
@@ -3032,6 +3068,8 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
       earthSimulationState = message.payload.earthSimulationState && typeof message.payload.earthSimulationState === 'object' ? message.payload.earthSimulationState as EarthSimulationState : null;
       if (message.payload.xuantianApiSettings && typeof message.payload.xuantianApiSettings === 'object') xuantianApiSettings = { ...xuantianApiSettings, ...(message.payload.xuantianApiSettings as Partial<XuantianApiSettingsDraft>) };
       xuantianSimulationState = message.payload.xuantianSimulationState && typeof message.payload.xuantianSimulationState === 'object' ? message.payload.xuantianSimulationState as XuantianSimulationState : null;
+      storyDirectorPlan=message.payload.storyDirectorPlan&&typeof message.payload.storyDirectorPlan==='object'?message.payload.storyDirectorPlan as StoryDirectorPlan:null;
+      xuantianFaultLogs=Array.isArray(message.payload.xuantianFaultLogs)?message.payload.xuantianFaultLogs as XuantianFaultLog[]:[];
       if(message.payload.featureModuleFlags&&typeof message.payload.featureModuleFlags==='object')featureModuleFlags={...featureModuleFlags,...message.payload.featureModuleFlags as Partial<FeatureModuleFlags>};
       if(message.payload.worldSimulationFeatures&&typeof message.payload.worldSimulationFeatures==='object')worldSimulationFeatures={...worldSimulationFeatures,...message.payload.worldSimulationFeatures as Partial<typeof worldSimulationFeatures>};
       const activeModule = featureModuleForApp[active];
@@ -3047,7 +3085,7 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
       if (message.payload.earthWorldbookStatus && typeof message.payload.earthWorldbookStatus === 'object') earthWorldbookStatus = message.payload.earthWorldbookStatus as EarthWorldbookStatusView;
       if (typeof message.payload.earthWorldbookMountedEntryCount === 'number') earthWorldbookMountedEntryCount = message.payload.earthWorldbookMountedEntryCount;
       if (message.payload.petSize === 'small' || message.payload.petSize === 'medium' || message.payload.petSize === 'large') petSize = message.payload.petSize;
-      if (message.payload.petKind === 'whale' || message.payload.petKind === 'ziwei') petKind = message.payload.petKind;
+      if (message.payload.phoneDisplayMode === 'drawer' || message.payload.phoneDisplayMode === 'floating') phoneDisplayMode = message.payload.phoneDisplayMode;
       loreSelected = readLoreSelected();
       if (Array.isArray(message.payload.yujianContacts)) {
         worldContacts = (message.payload.yujianContacts as WorldYujianContact[]).filter(contact => typeof contact?.name === 'string').map((contact, index) => ({
@@ -3144,6 +3182,11 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
         : `配置小助手设置失败：${typeof message.payload.error === 'string' ? message.payload.error : '未知错误'}`;
       render();
     }
+    if (message.action === 'PHONE_DISPLAY_MODE_STATUS') {
+      if (message.payload.mode === 'drawer' || message.payload.mode === 'floating') phoneDisplayMode = message.payload.mode;
+      announcement = message.payload.ok === true ? `小手机已切换为${phoneDisplayMode === 'drawer' ? '侧边抽屉' : '自由浮窗'}。` : '小手机显示方式保存失败。';
+      render();
+    }
     if (message.action === 'USER_SCRIPT_STATUS') {
       announcement = message.payload.ok === true
         ? `${message.payload.enabled === true ? '脚本扩展已启用。' : '脚本扩展已关闭。'}${message.payload.reloadRequired === true ? '刷新酒馆后完全生效。' : ''}`
@@ -3196,8 +3239,9 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
     }
     if(message.action==='XUANTIAN_MODELS_DATA'){fetchingXuantianModels=false;xuantianModelOptions=Array.isArray(message.payload.models)?message.payload.models.filter((model):model is string=>typeof model==='string'):[];announcement=message.payload.ok===true?(xuantianModelOptions.length?`已获取 ${xuantianModelOptions.length} 个玄天界推演模型。`:'玄天界推演模型列表为空。'):`获取玄天界推演模型失败：${typeof message.payload.error==='string'?message.payload.error:'未知错误'}`;render();}
     if(message.action==='XUANTIAN_SETTINGS_STATUS'){if(message.payload.settings&&typeof message.payload.settings==='object')xuantianApiSettings={...xuantianApiSettings,...message.payload.settings as Partial<XuantianApiSettingsDraft>};announcement=message.payload.ok===true?'玄天界推演 API 设置已保存。':`保存失败：${typeof message.payload.error==='string'?message.payload.error:'未知错误'}`;render();}
-    if(message.action==='XUANTIAN_SIMULATION_STATUS'){if(message.payload.retrying===true){xuantianSimulationRunning=true;announcement=typeof message.payload.error==='string'?message.payload.error:'首次输出结构不可读，正在自动纠正…';render();}else{xuantianSimulationRunning=false;if(message.payload.state&&typeof message.payload.state==='object')xuantianSimulationState=message.payload.state as XuantianSimulationState;const skipped=Array.isArray(message.payload.skipped)?message.payload.skipped.filter((item):item is string=>typeof item==='string'):[];announcement=message.payload.ok===true?`玄天界推演已提交：${typeof message.payload.actions==='number'?message.payload.actions:0} 项状态变更${skipped.length?`；跳过 ${skipped.length} 项：${skipped.slice(0,2).join('；')}`:''}。`:`玄天界推演失败：${typeof message.payload.error==='string'?message.payload.error:'未知错误'}`;render();}}
-    if(message.action==='XUANTIAN_SIMULATION_RESET_STATUS'){if(message.payload.state&&typeof message.payload.state==='object')xuantianSimulationState=message.payload.state as XuantianSimulationState;announcement=message.payload.ok===true?'玄天界推演账本已重置。':`重置失败：${typeof message.payload.error==='string'?message.payload.error:'未知错误'}`;render();}
+    if(message.action==='XUANTIAN_SIMULATION_STATUS'){if(message.payload.retrying===true){xuantianSimulationRunning=true;announcement=typeof message.payload.error==='string'?message.payload.error:'推演响应不可用，正在按设置重试…';render();}else{xuantianSimulationRunning=false;if(message.payload.state&&typeof message.payload.state==='object')xuantianSimulationState=message.payload.state as XuantianSimulationState;if(message.payload.storyPlan&&typeof message.payload.storyPlan==='object')storyDirectorPlan=message.payload.storyPlan as StoryDirectorPlan;const skipped=Array.isArray(message.payload.skipped)?message.payload.skipped.filter((item):item is string=>typeof item==='string'):[];const calls=`API 请求 ${Number(message.payload.requestCount)||0}/${Number(message.payload.maxRequests)||1} 次`;announcement=message.payload.ok===true?`世界推演与剧情导演已提交：${typeof message.payload.actions==='number'?message.payload.actions:0} 项状态变更；${calls}${skipped.length?`；跳过 ${skipped.length} 项：${skipped.slice(0,2).join('；')}`:''}。`:`玄天界推演失败：${typeof message.payload.error==='string'?message.payload.error:'未知错误'}；${calls}。`;render();}}
+    if(message.action==='XUANTIAN_SIMULATION_RESET_STATUS'){if(message.payload.state&&typeof message.payload.state==='object')xuantianSimulationState=message.payload.state as XuantianSimulationState;if(message.payload.ok===true)storyDirectorPlan=null;announcement=message.payload.ok===true?'玄天界推演账本与剧情图已重置。':`重置失败：${typeof message.payload.error==='string'?message.payload.error:'未知错误'}`;render();}
+    if(message.action==='XUANTIAN_FAULT_LOG_CLEAR_STATUS'){if(message.payload.ok===true)xuantianFaultLogs=[];announcement=message.payload.ok===true?'已清空当前聊天的玄天界推演故障日志。':`清空日志失败：${typeof message.payload.error==='string'?message.payload.error:'未知错误'}`;render();}
     if (message.action === 'EARTH_SETTINGS_STATUS') {
       if (message.payload.settings && typeof message.payload.settings === 'object') earthApiSettings = { ...earthApiSettings, ...(message.payload.settings as Partial<EarthApiSettingsDraft>) };
       announcement = message.payload.ok === true ? '地球推演 API 设置已保存。' : `保存失败：${typeof message.payload.error === 'string' ? message.payload.error : '未知错误'}`;
@@ -3221,10 +3265,11 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
         const worldbookEntries = Number(message.payload.worldbookEntries) || 0;
         const assistantFloors = Number(message.payload.assistantFloors) || 0;
         const changes = Number(message.payload.actions) || 0;
+        const calls = `API 请求 ${Number(message.payload.requestCount) || 0}/${Number(message.payload.maxRequests) || 1} 次`;
         announcement = changes > 0
-          ? `地球推演完成：参考了 ${worldbookEntries} 条世界书设定和最近 ${assistantFloors} 条 AI 回复，世界状态已更新 ${changes} 项。`
-          : `地球推演完成：参考了 ${worldbookEntries} 条世界书设定和最近 ${assistantFloors} 条 AI 回复，本轮没有产生需要保存的新变化。`;
-      } else announcement = `手动推演失败：${typeof message.payload.error === 'string' ? message.payload.error : '未知错误'}`;
+          ? `地球推演完成：参考了 ${worldbookEntries} 条世界书设定和最近 ${assistantFloors} 条 AI 回复，世界状态已更新 ${changes} 项；${calls}。`
+          : `地球推演完成：参考了 ${worldbookEntries} 条世界书设定和最近 ${assistantFloors} 条 AI 回复，本轮没有产生需要保存的新变化；${calls}。`;
+      } else announcement = `地球推演失败：${typeof message.payload.error === 'string' ? message.payload.error : '未知错误'}；API 请求 ${Number(message.payload.requestCount) || 0}/${Number(message.payload.maxRequests) || 1} 次。`;
       render();
     }
     if (message.action === 'BEAUTY_MODELS_DATA') {
@@ -3311,6 +3356,20 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
           ? `回复生成成功，但历史保存失败：${message.payload.storageWarning}`
           : '传讯已写入玉简，回复已同步。')
         : `传讯失败：${typeof message.payload.error === 'string' ? message.payload.error : '未知错误'}`;
+      render();
+    }
+    if (message.action === 'FACTORY_RESET_STATUS') {
+      if (message.payload.ok === true) {
+        featureModuleFlags = { yujian:false, beauty:false, xianwang:false, wanbao:false, world:false };
+        worldSimulationFeatures = { xuantianEnabled:false, earthEnabled:false };
+        settingsSection = 'home'; active = 'settings';
+        announcement = '小手机所有配置与记录已清空，正在刷新酒馆完成出厂重置。';
+        render();
+        uiView.setTimeout(() => { try { (uiView.parent !== uiView ? uiView.parent : uiView).location.reload(); } catch { uiView.location.reload(); } }, 350);
+        return;
+      } else {
+        announcement = `恢复出厂设置失败：${typeof message.payload.error === 'string' ? message.payload.error : '未知错误'}`;
+      }
       render();
     }
     if (message.action === 'YUJIAN_HISTORY_IMPORT_STATUS') {

@@ -18,17 +18,21 @@
     "test:content-package": "node --experimental-strip-types scripts/validate-content-package.mjs",
     "test:user-scripts": "node --experimental-strip-types scripts/validate-user-script-runtime.mjs",
     "build:earth-worldbook": "node scripts/build-earth-worldbook-seed.mjs",
+    "build:xuantian-worldbook": "node ../玄天界推演规则书/生成世界书.mjs",
     "test:earth-worldbook": "node --experimental-strip-types scripts/validate-earth-worldbook.mjs",
     "test:earth-worldbook-manager": "node --experimental-strip-types scripts/validate-earth-worldbook-manager.mjs",
     "test:earth-simulation": "node --experimental-strip-types scripts/validate-earth-simulation.mjs",
     "test:xuantian-simulation": "node --experimental-strip-types scripts/validate-xuantian-simulation.mjs",
+    "test:xuantian-worldbook": "node --experimental-strip-types scripts/validate-xuantian-worldbook.mjs",
+    "test:world-simulation-core": "node --experimental-strip-types scripts/validate-world-simulation-core.mjs",
     "test:earth-runtime": "node --experimental-strip-types scripts/validate-earth-runtime.mjs",
     "test:earth-ui": "node scripts/validate-earth-ui-state.mjs",
     "package:candidate": "node scripts/package-candidate.mjs",
     "package:v11-test": "node scripts/package-candidate.mjs --v11-test",
     "package:v12-test": "node scripts/package-candidate.mjs --v12-test",
+    "package:v12-cdn": "node scripts/package-cdn-external.mjs",
     "package:formal": "node scripts/package-candidate.mjs --formal",
-    "check": "pnpm typecheck && pnpm test:fixtures && pnpm test:spirit-stones && pnpm test:wanbao-transactions && pnpm test:wanbao-pricing && pnpm test:prompt-injection && pnpm test:content-package && pnpm test:user-scripts && pnpm test:earth-worldbook && pnpm test:earth-worldbook-manager && pnpm test:earth-simulation && pnpm test:xuantian-simulation && pnpm test:trends-ui && pnpm test:forum-news-ui && pnpm test:v08 && pnpm build && pnpm package:v12-test"
+    "check": "pnpm typecheck && pnpm test:fixtures && pnpm test:spirit-stones && pnpm test:wanbao-transactions && pnpm test:wanbao-pricing && pnpm test:prompt-injection && pnpm test:content-package && pnpm test:user-scripts && pnpm test:earth-worldbook && pnpm test:earth-worldbook-manager && pnpm test:world-simulation-core && pnpm test:earth-simulation && pnpm test:xuantian-worldbook && pnpm test:xuantian-simulation && pnpm test:trends-ui && pnpm test:forum-news-ui && pnpm test:v08 && pnpm build && pnpm package:v12-test"
   },
   "dependencies": {
     "vue": "^3.5.34",

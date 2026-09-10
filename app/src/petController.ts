@@ -1,4 +1,4 @@
-import { WHALE_PET_VIDEOS, ZIWEI_FRAME_DURATION, ZIWEI_PET_SEQUENCES, type PetKind, type PetState } from './petAssets';
+import { WHALE_PET_VIDEOS, type PetKind, type PetState } from './petAssets';
 
 export type PetSize = 'small' | 'medium' | 'large';
 
@@ -7,11 +7,10 @@ const LOOPING_STATES = new Set<PetState>(['Idle', 'PhoneLoop']);
 export class ZiweiPetController {
   private state: PetState = 'Idle';
   private transitionTimer: number | null = null;
-  private frameTimer: number | null = null;
-  private frameIndex = 0;
   private frontIndex = 0;
   private renderGeneration = 0;
   private destroyed = false;
+  private alphaCompatibilityChecked = new WeakSet<HTMLVideoElement>();
 
   constructor(
     private readonly root: HTMLButtonElement,
@@ -36,7 +35,6 @@ export class ZiweiPetController {
   setKind(kind: PetKind): void {
     if (this.destroyed) return;
     this.root.dataset.petKind = kind;
-    this.clearFrameTimer();
     for (const video of this.videos) {
       video.pause();
       video.classList.remove('is-front');
@@ -51,7 +49,6 @@ export class ZiweiPetController {
   openPhone(): void {
     if (this.destroyed || (this.state !== 'Idle' && this.state !== 'PhoneExit')) return;
     this.clearTransitionTimer();
-    this.clearFrameTimer();
     this.renderState('TapReaction');
     this.schedule(() => {
       this.renderState('PhoneEnter');
@@ -69,7 +66,6 @@ export class ZiweiPetController {
     this.destroyed = true;
     this.renderGeneration += 1;
     this.clearTransitionTimer();
-    this.clearFrameTimer();
     this.image.removeAttribute('src');
     for (const video of this.videos) {
       video.pause();
@@ -89,11 +85,6 @@ export class ZiweiPetController {
     this.root.classList.remove('is-pet-fallback');
     this.root.setAttribute('aria-expanded', String(state === 'PhoneEnter' || state === 'PhoneLoop'));
 
-    if (this.root.dataset.petKind === 'ziwei') {
-      this.renderZiweiState(state, generation);
-      return;
-    }
-
     this.image.removeAttribute('src');
     const nextIndex = this.frontIndex === 0 ? 1 : 0;
     const current = this.videos[this.frontIndex];
@@ -106,6 +97,7 @@ export class ZiweiPetController {
       if (this.destroyed || generation !== this.renderGeneration) return;
       next.onloadeddata = null;
       next.currentTime = 0;
+      this.detectLostAlpha(next);
       next.classList.add('is-front');
       current.classList.remove('is-front');
       current.pause();
@@ -131,20 +123,25 @@ export class ZiweiPetController {
     this.root.dispatchEvent(new CustomEvent('daoyuan:pet-statechange', { detail: { state } }));
   }
 
-  private renderZiweiState(state: PetState, generation: number): void {
-    const frames = ZIWEI_PET_SEQUENCES[state];
-    this.frameIndex = 0;
-    this.image.src = frames[0];
-    if (frames.length > 1) {
-      this.frameTimer = window.setInterval(() => {
-        if (this.destroyed || generation !== this.renderGeneration) return;
-        this.frameIndex = (this.frameIndex + 1) % frames.length;
-        this.image.src = frames[this.frameIndex];
-      }, ZIWEI_FRAME_DURATION[state]);
+  private detectLostAlpha(video: HTMLVideoElement): void {
+    if (this.alphaCompatibilityChecked.has(video) || !video.videoWidth || !video.videoHeight) return;
+    this.alphaCompatibilityChecked.add(video);
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = 2;
+      canvas.height = 2;
+      const context = canvas.getContext('2d', { willReadFrequently: true });
+      if (!context) return;
+      context.drawImage(video, 0, 0, 2, 2);
+      const pixels = context.getImageData(0, 0, 2, 2).data;
+      let opaqueBlackCorners = 0;
+      for (let index = 0; index < pixels.length; index += 4) {
+        if (pixels[index + 3] > 245 && pixels[index] < 12 && pixels[index + 1] < 12 && pixels[index + 2] < 12) opaqueBlackCorners += 1;
+      }
+      if (opaqueBlackCorners === 4) this.root.classList.add('is-alpha-fallback');
+    } catch {
+      // Canvas probing is optional. Normal transparent playback remains the default.
     }
-    if (state === 'PhoneEnter') this.schedule(() => this.renderState('PhoneLoop'), 880);
-    if (state === 'PhoneExit') this.schedule(() => this.renderState('Idle'), 720);
-    this.root.dispatchEvent(new CustomEvent('daoyuan:pet-statechange', { detail: { state } }));
   }
 
   private schedule(callback: () => void, delay: number): void {
@@ -157,11 +154,5 @@ export class ZiweiPetController {
   private clearTransitionTimer(): void {
     if (this.transitionTimer !== null) window.clearTimeout(this.transitionTimer);
     this.transitionTimer = null;
-  }
-
-
-  private clearFrameTimer(): void {
-    if (this.frameTimer !== null) window.clearInterval(this.frameTimer);
-    this.frameTimer = null;
   }
 }

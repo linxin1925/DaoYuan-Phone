@@ -47,6 +47,10 @@ assert.match(uiSource, /root\.addEventListener\('focusout', onFocusOut, true\)/,
 assert.match(uiSource, /content\.style\.overflowY = 'hidden'/, '点击控件时必须从源头冻结滚动容器，不能先移动再拉回');
 
 const indexSource = await (await import('node:fs/promises')).readFile(new URL('../src/index.ts', import.meta.url), 'utf8');
+assert.match(indexSource, /DEFAULT_FEATURE_MODULE_FLAGS:[^=]+\= \{ yujian:false, beauty:false, xianwang:false, wanbao:false, world:false \}/, '小手机功能模块首次默认必须全部关闭');
+assert.match(indexSource, /DEFAULT_WORLD_SIMULATION_FEATURES:[^=]+\= \{ xuantianEnabled:false, earthEnabled:false \}/, '双界推演入口首次默认必须全部关闭');
+assert.match(indexSource, /getItem\(CONTENT_BEAUTIFIER_ENABLED_KEY\) === 'true'/, '正文美化必须仅在玩家明确开启后运行');
+assert.match(indexSource, /getItem\(CONFIG_HELPER_ENABLED_KEY\) !== 'false'/, '道渊配置小助手必须保持首次默认开启');
 for (const seedImport of ['wanNianChouYuan.json', 'heHuanZong.json', 'luoYang.json', 'shuShan.json', 'wanFaZong.json']) {
   assert.ok(!indexSource.includes(seedImport), `运行包不应再内置 DLC 种子：${seedImport}`);
 }
@@ -55,6 +59,7 @@ for (const obsoleteModule of ['expansionManager', 'detectScriptDlcId']) {
 }
 
 const packageSource = await (await import('node:fs/promises')).readFile(new URL('./package-candidate.mjs', import.meta.url), 'utf8');
+assert.match(packageSource, /let enabled=false;try\{const storage=window\.parent\?\.localStorage\?\?localStorage;enabled=storage\.getItem\('\$\{CONTENT_BEAUTIFIER_ENABLED_KEY\}'\)==='true'/, '候选包中的正文美化启动器必须默认关闭');
 assert.match(packageSource, /data:image\\\\\/\(\?:png\|jpe\?g\|webp\|gif\);base64/, '正文美化必须允许状态栏本地导入后保存的 data:image 立绘');
 assert.match(packageSource, /url\.protocol === 'https:' \|\| url\.protocol === 'http:'/, '正文美化必须允许状态栏保存的自定义 HTTP(S) 立绘 URL');
 assert.match(packageSource, /\.replace\(originalPortraitUrlGuard, customPortraitUrlGuard\)/, '正文美化打包时必须接入自定义立绘协议白名单');
@@ -75,5 +80,5 @@ assert.match(stylesSource, /\.content-package-panel\s*\{[^}]*margin-top:\s*18px;
 const shellSource = await (await import('node:fs/promises')).readFile(new URL('../src/shell.css', import.meta.url), 'utf8');
 assert.match(shellSource, /width:\s*clamp\(130px,\s*14\.95vw,\s*192\.4px\)/, '桌宠大号宽度应比原值放大 30%');
 assert.match(shellSource, /@media \(max-width: 600px\), \(pointer: coarse\)[\s\S]*?#daoyuan-feature-orb \{ width: 80\.6px; height: 98\.8px; \}/, '移动端桌宠与点击外框应同步放大 30%');
-assert.match(shellSource, /data-pet-kind="ziwei"[^}]*\.dsh-pet-image \{ display: block; transform: scale\(\.445\); transform-origin: center bottom; \}/, '紫薇可见主体应按鲸鱼娘标准校准，且保持底部锚点');
+assert.doesNotMatch(shellSource, /data-pet-kind="ziwei"/, '桌宠外壳不得再包含紫薇分支');
 console.log('User script runtime and scroll fixtures: OK');

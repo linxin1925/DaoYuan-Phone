@@ -1,6 +1,7 @@
 import type { ForumPost, NewsPaper, TrendPost } from '../contract/appData';
 import type { EarthSimulationState } from '../earthSimulation/types';
 import type { XuantianSimulationState } from '../xuantianSimulation/types';
+import type { StoryDirectorPlan } from '../storyDirector/types';
 
 export interface PromptInjectionSettings {
   yujian: boolean;
@@ -43,6 +44,7 @@ export interface PromptInjectionSource {
   merchantTransactions: MerchantTransactionFact[];
   earthSimulation?: EarthSimulationState | null;
   xuantianSimulation?: XuantianSimulationState | null;
+  storyDirector?: StoryDirectorPlan | null;
 }
 
 export interface PromptInjectionApi {
@@ -106,6 +108,17 @@ ${regionLines.join('\n')}
 ${factionLines.length?factionLines.join('\n'):'- 暂无已确认变化'}
 并行事件线：
 ${eventLines.length?eventLines.join('\n'):'- 暂无已确认事件线'}`);
+  }
+  if (source.storyDirector) {
+    const plan = source.storyDirector;
+    const current=plan.nodes.find(node=>node.id===plan.currentNodeId)||plan.nodes.find(node=>node.status==='available'||node.status==='current');
+    if(current)sections.unshift(`【剧情导演当前节点｜叙事建议，不是已经发生的事实】
+篇章：${clean(plan.arcTitle,140)}；模式：${clean(plan.mode,20)}；意图置信度：${Math.round(plan.confidence*100)}%。
+当前戏剧问题：${clean(current.dramaticQuestion,300)}
+可观察开场：${clean(current.observableSetup,500)}
+可能代价：${clean(current.stakes,300)}
+允许的响应方向：\n${current.branches.map(branch=>`- 当玩家实际表现为“${clean(branch.trigger,240)}”时，才沿该方向发展；${clean(branch.playerFreedom,220)}`).join('\n')}
+执行边界：只表现当前节点可感知的一小步。不得展示分支结果、隐藏节点或完整大纲；玩家拒绝、拖延、绕开或做出意外行动都必须成立。不得把大纲当事实复述，不得替玩家决定行动。`);
   }
   if (settings.yujian && source.yujianMessages.length) {
     const lines = source.yujianMessages.slice(-8).map(message =>

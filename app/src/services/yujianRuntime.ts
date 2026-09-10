@@ -7,8 +7,12 @@ interface YujianRuntimeHost {
     getMvuData?: (scope?: unknown) => unknown | Promise<unknown>;
     replaceMvuData?: (data: unknown, scope?: unknown) => unknown | Promise<unknown>;
   };
-  TavernHelper?: { generate?: (input: unknown) => unknown | Promise<unknown> };
+  TavernHelper?: {
+    generate?: (input: unknown) => unknown | Promise<unknown>;
+    stopGenerationById?: (generationId: string) => boolean;
+  };
   generate?: (input: unknown) => unknown | Promise<unknown>;
+  stopGenerationById?: (generationId: string) => boolean;
   getCurrentMessageId?: () => string | number;
   getVariables?: (scope?: unknown) => unknown;
   getCharWorldbookNames?: (scope?: string) => { primary?: string; additional?: string[] };
@@ -138,23 +142,30 @@ function readSelectedLoreFromRuntime(runtime: YujianRuntimeHost): string[] {
   } catch { return []; }
 }
 
-export async function fetchYujianModels(apiBaseUrl: string, apiKey: string): Promise<string[]> {
+export async function fetchYujianModels(apiBaseUrl: string, apiKey: string, control?: StoryYujianParseControl): Promise<string[]> {
   if (!apiBaseUrl.trim()) throw new Error('请先填写基础 URL');
+  assertStoryYujianParseEnabled(control);
   let lastError = '';
   for (const endpoint of modelEndpoints(apiBaseUrl)) {
     try {
-      const response = await fetch(endpoint, { method: 'GET', headers: apiKey ? { Authorization: `Bearer ${apiKey}` } : {} });
+      const response = await fetch(endpoint, { method: 'GET', headers: apiKey ? { Authorization: `Bearer ${apiKey}` } : {}, signal: control?.signal });
+      assertStoryYujianParseEnabled(control);
       if (!response.ok) { lastError = `${response.status} ${(await response.text()).slice(0, 160)}`; continue; }
       const models = extractModelIds(await response.json());
       if (models.length) return models;
       lastError = '返回中没有模型';
-    } catch (error) { lastError = error instanceof Error ? error.message : String(error); }
+    } catch (error) {
+      if (control?.signal?.aborted || (error instanceof DOMException && error.name === 'AbortError')) throw error;
+      lastError = error instanceof Error ? error.message : String(error);
+    }
   }
+  assertStoryYujianParseEnabled(control);
   const tavern = typeof window !== 'undefined' ? (window as unknown as { SillyTavern?: { getContext?: () => { getRequestHeaders?: () => Record<string, string> } } }).SillyTavern : undefined;
   const requestHeaders = tavern?.getContext?.()?.getRequestHeaders?.();
   if (requestHeaders) {
     const base = apiBaseUrl.trim().replace(/\/+$/, '').replace(/\/(?:chat\/completions|responses|messages|models)$/i, '');
-    const response = await fetch('/api/backends/chat-completions/status', { method: 'POST', headers: { ...requestHeaders, 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_completion_source: 'openai', reverse_proxy: base, proxy_password: apiKey || '' }) });
+    const response = await fetch('/api/backends/chat-completions/status', { method: 'POST', headers: { ...requestHeaders, 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_completion_source: 'openai', reverse_proxy: base, proxy_password: apiKey || '' }), signal: control?.signal });
+    assertStoryYujianParseEnabled(control);
     if (!response.ok) throw new Error(`获取模型列表失败：直连 ${lastError || '失败'}；酒馆代理 ${response.status}`);
     const models = extractModelIds(await response.json());
     if (models.length) return models;
@@ -415,36 +426,39 @@ export function sendYujianMessageWithProgress(
   text: string,
   onProgress?: (phase: 'user-written' | 'reply-written') => void,
   sourceMessageId?: string | number | null,
+  control?: StoryYujianParseControl,
 ): Promise<YujianSendResult> {
   if (activeSend) return Promise.reject(new Error('已有一条玉简传讯正在生成中'));
   activeSend = (async () => {
     const runtime = hostWindow as unknown as YujianRuntimeHost;
+    assertStoryYujianParseEnabled(control);
     let storageWarning = '';
     const storyTime = await readYujianStoryTime(hostWindow, sourceMessageId);
     try { await appendStandaloneYujianRecord(hostWindow, chatId, charName, 'me', text, storyTime); onProgress?.('user-written'); }
     catch (error) { if (!isYujianStorageError(error)) throw error; storageWarning = error.message; }
     const settings = readSettings(hostWindow);
     const prompt = await buildOriginalInjection(runtime, chatId, charName, settings.customPrompt);
+    assertStoryYujianParseEnabled(control);
     let result: unknown;
     if (settings.apiBaseUrl && settings.apiModel) {
       let endpoint = settings.apiBaseUrl.replace(/\/+$/, '');
       if (!endpoint.endsWith('/chat/completions')) endpoint += '/chat/completions';
-      const response = await fetchAuto(settings.apiBaseUrl, {
+      const response = await fetchAuto(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(settings.apiKey ? { Authorization: `Bearer ${settings.apiKey}` } : {}) },
         body: JSON.stringify({ model: settings.apiModel, messages: [{ role: 'system', content: prompt }, { role: 'user', content: text }], temperature: 0.7, max_tokens: 2000 }),
+        signal: control?.signal,
       });
+      assertStoryYujianParseEnabled(control);
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(`API 请求失败: ${response.status} - ${errorText}`);
       }
       result = await response.json();
     } else {
-      const generate = runtime.generate ?? runtime.TavernHelper?.generate;
-      if (typeof generate !== 'function') throw new Error('酒馆生成能力不可用');
-      // 原版直接调用全局 generate；不要绑定到 runtime/TavernHelper 对象上。
-      result = await generate({ user_input: `${prompt}\n\n${text}` });
+      result = await generateYujianWithControl(runtime, `${prompt}\n\n${text}`, control, 'send');
     }
+    assertStoryYujianParseEnabled(control);
     const reply = extractGeneratedText(result);
     if (!reply) throw new Error('生成结果为空');
     try { await appendStandaloneYujianRecord(hostWindow, chatId, charName, 'them', reply, storyTime); onProgress?.('reply-written'); }
@@ -461,6 +475,33 @@ export interface StoryYujianEvent {
   storyTime: string;
 }
 
+export interface StoryYujianParseControl {
+  signal?: AbortSignal;
+  isEnabled?: () => boolean;
+}
+
+function assertStoryYujianParseEnabled(control?: StoryYujianParseControl): void {
+  if (control?.signal?.aborted || control?.isEnabled?.() === false) {
+    throw new DOMException('玉简正文解析已关闭', 'AbortError');
+  }
+}
+
+async function generateYujianWithControl(runtime: YujianRuntimeHost, prompt: string, control: StoryYujianParseControl | undefined, operation: 'send' | 'story'): Promise<unknown> {
+  const generate = runtime.generate ?? runtime.TavernHelper?.generate;
+  const stopGenerationById = runtime.stopGenerationById ?? runtime.TavernHelper?.stopGenerationById;
+  if (typeof generate !== 'function') throw new Error('酒馆生成能力不可用');
+  if (typeof stopGenerationById !== 'function') throw new Error('当前酒馆助手不支持按任务取消生成，请配置玉简独立 API 后再使用');
+  assertStoryYujianParseEnabled(control);
+  const generationId = `daoyuan-yujian-${operation}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const stop = (): void => { try { stopGenerationById(generationId); } catch { /* host cancellation is best-effort */ } };
+  control?.signal?.addEventListener('abort', stop, { once: true });
+  try {
+    return await generate({ user_input: prompt, generation_id: generationId, should_silence: true });
+  } finally {
+    control?.signal?.removeEventListener('abort', stop);
+  }
+}
+
 const STORY_PARSE_PROMPT = `你是修仙世界玉简通信逐字提取器，不是剧情摘要器。
 
 参考原卡世界书“玉简”更新规则：玉简是类似微信的好友通信；只有主角与好友实际发生消息收发时才新增历史记录。好友主动来讯通常源于主角重大成就或变故、好友发现机缘或遭遇危机求救，或关系达到日常问候/挑衅条件；这些触发条件只能帮助核验，不能用来推断正文没有写出的消息。消息应是贴合人物的自然、口语化通信正文，而不是旁白摘要。
@@ -475,26 +516,29 @@ const STORY_PARSE_PROMPT = `你是修仙世界玉简通信逐字提取器，不�
 
 若无法逐字定位消息原文，events返回空数组。只返回合法JSON，无Markdown：{"schemaVersion":1,"events":[{"contact":"联系人姓名","direction":"to_player或from_player","content":"正文中的消息原文","evidenceQuote":"正文中的媒介与收发证据原句","storyTime":"正文内时间；未知则空字符串"}]}`;
 
-export async function extractStoryYujianEvents(hostWindow: Window, story: string): Promise<StoryYujianEvent[]> {
+export async function extractStoryYujianEvents(hostWindow: Window, story: string, control?: StoryYujianParseControl): Promise<StoryYujianEvent[]> {
   if (!story.trim()) return [];
+  assertStoryYujianParseEnabled(control);
   const runtime = hostWindow as unknown as YujianRuntimeHost;
   const settings = readSettings(hostWindow);
   let result: unknown;
   if (settings.apiBaseUrl && settings.apiModel) {
     let endpoint = settings.apiBaseUrl.replace(/\/+$/, '');
     if (!endpoint.endsWith('/chat/completions')) endpoint += '/chat/completions';
-    const response = await fetchAuto(settings.apiBaseUrl, {
+    assertStoryYujianParseEnabled(control);
+    const response = await fetchAuto(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...(settings.apiKey ? { Authorization: `Bearer ${settings.apiKey}` } : {}) },
       body: JSON.stringify({ model: settings.apiModel, temperature: 0, max_tokens: 2400, messages: [{ role: 'system', content: STORY_PARSE_PROMPT }, { role: 'user', content: story.slice(0, 16000) }] }),
+      signal: control?.signal,
     });
+    assertStoryYujianParseEnabled(control);
     if (!response.ok) throw new Error(`玉简正文解析请求失败：${response.status} ${(await response.text()).slice(0, 160)}`);
     result = await response.json();
   } else {
-    const generate = runtime.generate ?? runtime.TavernHelper?.generate;
-    if (typeof generate !== 'function') throw new Error('酒馆生成能力不可用');
-    result = await generate({ user_input: `${STORY_PARSE_PROMPT}\n\n【待解析正文】\n${story.slice(0, 16000)}` });
+    result = await generateYujianWithControl(runtime, `${STORY_PARSE_PROMPT}\n\n【待解析正文】\n${story.slice(0, 16000)}`, control, 'story');
   }
+  assertStoryYujianParseEnabled(control);
   const raw = extractGeneratedText(result).replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
   let parsed: unknown;
   try { parsed = JSON.parse(raw); } catch { throw new Error('玉简正文解析返回不是合法 JSON'); }

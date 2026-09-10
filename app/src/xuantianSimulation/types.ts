@@ -31,6 +31,6 @@ export type XuantianSimulationAction =
   | { type: 'set-calendar-label'; label: string }
   | { type: 'set-region-state'; regionId: XuantianRegionId; status: XuantianRegionState['status']; pressureDelta?: number; summary: string }
   | { type: 'set-faction-state'; factionId: string; status: XuantianFactionStatus; relation?: XuantianRelation; influenceDelta?: number; activity: string }
-  | { type: 'create-event'; event: Omit<XuantianEventLine, 'phase' | 'progress' | 'status' | 'startedAtDay' | 'updatedAtDay'> }
+  | { type: 'create-event'; event: Omit<XuantianEventLine, 'phase' | 'progress' | 'status' | 'startedAtDay' | 'updatedAtDay'> & Partial<Pick<XuantianEventLine, 'phase' | 'progress'>> }
   | { type: 'advance-event'; eventId: string; nextPhase: XuantianEventPhase; progress: number; summary: string; consequence?: string }
   | { type: 'close-event'; eventId: string; summary: string; consequence: string };

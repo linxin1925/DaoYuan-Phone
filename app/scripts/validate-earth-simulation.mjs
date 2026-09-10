@@ -6,7 +6,7 @@ import { EarthSimulationStateSchema } from '../src/earthSimulation/schema.ts';
 const opening = createDefaultEarthSimulationState('chat-a', '2026-08-26');
 assert.equal(EarthSimulationStateSchema.parse(opening).chatId, 'chat-a');
 assert.equal(Object.keys(opening.npcs).length, 72); assert.equal(Object.keys(opening.cities).length, 30);
-assert.equal(Object.values(opening.cities).filter((city) => city.kind === 'intersection-zone' && city.stage === '不存在').length, 5);
+assert.equal(Object.values(opening.cities).filter((city) => city.kind === 'intersection-zone' && city.stage === '不存在').length, 6);
 assert.equal(opening.schools.first_school.stage, '筹备启动'); assert.equal(opening.contactStage, '互不知情'); assert.equal(opening.swarmEarthStage, '零星迹象');
 assert.equal(opening.timeRatio, '1:1'); assert.equal(opening.earthDayRemainder, 0);
 assert.equal(opening.autoCounter, 0); assert.deepEqual(opening.processedMessageIds, []); assert.deepEqual(opening.processedAutoMessageFingerprints, []);
@@ -28,7 +28,7 @@ const slowTwo = earthSimulationReducer(slowOne, { type: 'advance-world-days', da
 const fast = earthSimulationReducer(earthSimulationReducer(opening, { type: 'set-time-ratio', ratio: '5:1' }), { type: 'advance-world-days', days: 2 }); assert.equal(fast.earthDate, '2026-09-05'); assert.equal(fast.xuantianDate, '2026-08-28');
 const eventState = { ...opening, events: [{ id: 'school-build', kind: '建设', stage: '提议', status: 'active', summary: '', worldDate: opening.earthDate }] };
 assert.equal(earthSimulationReducer(eventState, { type: 'advance-event', eventId: 'school-build', nextStage: '筹备' }).events[0].stage, '筹备');
-assert.throws(() => earthSimulationReducer(eventState, { type: 'advance-event', eventId: 'school-build', nextStage: '执行' }), /只允许/);
+assert.equal(earthSimulationReducer(eventState, { type: 'advance-event', eventId: 'school-build', nextStage: '执行', summary:'多年筹备后进入施工' }).events[0].stage, '执行');
 const earthSwarm = earthSimulationReducer(opening, { type: 'set-swarm-stage', world: 'earth', stage: '局部虫巢' }); assert.equal(earthSwarm.swarmXuantianStage, '零星迹象');
 assert.equal(earthSimulationReducer(earthSwarm, { type: 'set-secret-realm-stage', stage: '信息联系' }).swarmPassageOpen, true);
 let capped = opening; for (let index = 0; index < 205; index += 1) capped = earthSimulationReducer(capped, { type: 'remember-fingerprint', fingerprint: `fp-${index}` }); assert.equal(capped.processedMessageFingerprints.length, 200);

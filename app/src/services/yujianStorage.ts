@@ -39,6 +39,20 @@ const MAX_CONTACTS_PER_CHAT = 80;
 const MAX_CHAT_RECORDS = 24;
 const MAX_FALLBACK_CHARS = 1_500_000;
 
+export async function clearAllYujianStorage(hostWindow: Window): Promise<void> {
+  for (const key of [LEGACY_HISTORY_KEY, LEGACY_CONTACT_KEY, LEGACY_PROCESSED_KEY, FALLBACK_HISTORY_KEY, FALLBACK_CONTACT_KEY, 'daoyuan_yujian_processed_fallback_v2']) {
+    hostWindow.localStorage.removeItem(key);
+  }
+  initialization.delete(hostWindow);
+  if (!hostWindow.indexedDB) return;
+  await new Promise<void>((resolve, reject) => {
+    const request = hostWindow.indexedDB.deleteDatabase(DB_NAME);
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
+    request.onblocked = () => reject(new Error('玉简数据库正在被占用，请刷新酒馆后重试'));
+  });
+}
+
 interface ChatRecord<T> { chatId: string; value: T; updatedAt: number }
 
 export class YujianStorageError extends Error {

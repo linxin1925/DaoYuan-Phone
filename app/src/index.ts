@@ -20,7 +20,7 @@ import appCss from './styles.css?inline';
 import shellCss from './shell.css?inline';
 import { ZiweiPetController, type PetSize } from './petController';
 import type { PetKind } from './petAssets';
-import { readProcessedYujianStories, writeProcessedYujianStories } from './services/yujianStorage';
+import { clearAllYujianStorage, readProcessedYujianStories, writeProcessedYujianStories } from './services/yujianStorage';
 import { createMerchantApiGenerator, estimateMerchantItems, generateMerchantProducts, projectSellItems, readMerchantProducts, readMerchantQuotes, writeMerchantProducts, writeMerchantQuotes, type MerchantApiSettings, type MerchantProduct, type MerchantQuote, type MerchantSettings } from './services/merchantRuntime';
 import { applyMerchantTrade, type MerchantCurrencyMode } from './services/merchantCore';
 import { createTavernWorldbookAdapter, probeWorldbookRuntime, type TavernWorldbookRuntime } from './dlc/worldbookAdapter';
@@ -38,8 +38,12 @@ import { applyXuantianCandidate, generateXuantianCandidate, xuantianCandidateVal
 import { createDefaultXuantianSimulationState, initializeXuantianSimulationState } from './xuantianSimulation/defaults';
 import { XuantianSimulationStateSchema } from './xuantianSimulation/schema';
 import { XUANTIAN_SIMULATION_STATE_KEY, type XuantianSimulationState } from './xuantianSimulation/types';
+import { XUANTIAN_RULE_BOOK_NAME, xuantianRulebookEntries } from './xuantianSimulation/worldbookSeed';
+import { STORY_DIRECTOR_STATE_KEY, StoryDirectorPlanSchema, XUANTIAN_FAULT_LOG_KEY, validateStoryDirectorTransition, type StoryDirectorPlan, type XuantianFaultLog } from './storyDirector/types';
+import { inferElapsedWorldDays } from './worldSimulation/time';
 import { importWorldbookPackage, parseContentPackage } from './services/contentPackage';
 import { normalizeUserScripts, UserScriptRuntime, type UserScriptPackage } from './services/userScriptRuntime';
+import { createCacheStore } from './services/indexedDbCache';
 import { createUserDlcId, normalizeUserDlcs, type UserDlcRecord, type UserDlcStatus } from './services/userDlcRegistry';
 
 const SCRIPT_ID = 'daoyuan-feature-frontend-hud';
@@ -50,6 +54,8 @@ const IPHONE_HEIGHT = 844;
 const IPHONE_RATIO = IPHONE_WIDTH / IPHONE_HEIGHT;
 const PET_SIZE_KEY = 'daoyuan_ziwei_pet_size_v1';
 const PET_KIND_KEY = 'daoyuan_pet_kind_v1';
+const PHONE_DISPLAY_MODE_KEY = 'daoyuan_phone_display_mode_v1';
+const PHONE_FLOATING_POSITION_KEY = 'daoyuan_phone_floating_position_v1';
 const CONTENT_BEAUTIFIER_ENABLED_KEY = 'daoyuan_content_beautifier_enabled_v1';
 const FEATURE_MODULE_FLAGS_KEY = 'daoyuan_feature_module_flags_v1';
 const WORLD_SIMULATION_FEATURES_KEY = 'daoyuan_world_simulation_features_v1';
@@ -88,9 +94,23 @@ const EARTH_API_SETTINGS_KEY = 'daoyuan_earth_api_settings_v1';
 const XUANTIAN_API_SETTINGS_KEY = 'daoyuan_xuantian_api_settings_v1';
 const USER_SCRIPT_PACKAGES_KEY = 'daoyuan_user_script_packages_v1';
 const USER_DLC_REGISTRY_KEY = 'daoyuan_user_dlc_registry_v1';
+const FACTORY_RESET_STATE_KEY = 'daoyuan_phone_factory_reset_v1';
+const PHONE_LOCAL_STORAGE_KEYS = [
+  PET_SIZE_KEY, PET_KIND_KEY, PHONE_DISPLAY_MODE_KEY, PHONE_FLOATING_POSITION_KEY, CONTENT_BEAUTIFIER_ENABLED_KEY, FEATURE_MODULE_FLAGS_KEY,
+  WORLD_SIMULATION_FEATURES_KEY, CONFIG_HELPER_ENABLED_KEY, EARTH_API_SETTINGS_KEY,
+  XUANTIAN_API_SETTINGS_KEY, USER_SCRIPT_PACKAGES_KEY, USER_DLC_REGISTRY_KEY,
+  'daoyuan_feature_frontend_ui_v1', 'daoyuan_wx_settings', 'daoyuan_wx_lore_selected',
+  'daoyuan_wx_presets', 'daoyuan_yujian_hidden_contacts_v1', 'daoyuan_beauty_api_settings',
+  'daoyuan_xianwang_api_settings', 'daoyuan_wanbao_api_settings_v1', 'daoyuan_wanbao_settings_v1',
+  'daoyuan_prompt_injection_settings', 'daoyuan_wanbao_runtime_v1', 'daoyuan_wanbao_quotes_v1',
+  'daoyuan_wanbao_debug_logs_v1', 'daoyuan_wanbao_transaction_facts_v1', 'daoyuan_wanbao_generation_state_v1',
+  'daoyuan_wanbao_auto_state_v1', 'daoyuan_custom_portraits', 'daoyuan_female_portraits',
+  'daoyuan_portrait_set_index', 'daoyuan_portraits_cache',
+] as const;
 
 type ShellMode = 'phone';
 type Layout = 'phone';
+type PhoneDisplayMode = 'drawer' | 'floating';
 
 function record(value: unknown): Record<string, unknown> | null {
   return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : null;
@@ -111,18 +131,34 @@ function savePetSize(hostWindow: Window, size: PetSize): void {
   try { hostWindow.localStorage.setItem(PET_SIZE_KEY, size); } catch { /* optional preference */ }
 }
 
-function readPetKind(hostWindow: Window): PetKind {
-  try { return hostWindow.localStorage.getItem(PET_KIND_KEY) === 'ziwei' ? 'ziwei' : 'whale'; }
-  catch { return 'whale'; }
+function readPhoneDisplayMode(hostWindow: Window): PhoneDisplayMode {
+  try { return ['floating', 'resident'].includes(hostWindow.localStorage.getItem(PHONE_DISPLAY_MODE_KEY) ?? '') ? 'floating' : 'drawer'; }
+  catch { return 'drawer'; }
 }
 
-function savePetKind(hostWindow: Window, kind: PetKind): void {
-  try { hostWindow.localStorage.setItem(PET_KIND_KEY, kind); } catch { /* optional preference */ }
+function savePhoneDisplayMode(hostWindow: Window, mode: PhoneDisplayMode): void {
+  try { hostWindow.localStorage.setItem(PHONE_DISPLAY_MODE_KEY, mode); } catch { /* optional preference */ }
+}
+
+function readPhoneFloatingPosition(hostWindow: Window): { left: number; top: number } | null {
+  try {
+    const value = JSON.parse(hostWindow.localStorage.getItem(PHONE_FLOATING_POSITION_KEY) || 'null') as { left?: unknown; top?: unknown } | null;
+    return value && Number.isFinite(value.left) && Number.isFinite(value.top) ? { left: Number(value.left), top: Number(value.top) } : null;
+  } catch { return null; }
+}
+
+function savePhoneFloatingPosition(hostWindow: Window, position: { left: number; top: number }): void {
+  try { hostWindow.localStorage.setItem(PHONE_FLOATING_POSITION_KEY, JSON.stringify(position)); } catch { /* optional preference */ }
+}
+
+function readPetKind(hostWindow: Window): PetKind {
+  try { hostWindow.localStorage.removeItem(PET_KIND_KEY); } catch { /* legacy preference cleanup is optional */ }
+  return 'whale';
 }
 
 function readContentBeautifierEnabled(hostWindow: Window): boolean {
-  try { return hostWindow.localStorage.getItem(CONTENT_BEAUTIFIER_ENABLED_KEY) !== 'false'; }
-  catch { return true; }
+  try { return hostWindow.localStorage.getItem(CONTENT_BEAUTIFIER_ENABLED_KEY) === 'true'; }
+  catch { return false; }
 }
 
 function saveContentBeautifierEnabled(hostWindow: Window, enabled: boolean): void {
@@ -153,23 +189,34 @@ function saveUserDlcs(hostWindow: Window, records: readonly UserDlcRecord[]): vo
   hostWindow.localStorage.setItem(USER_DLC_REGISTRY_KEY, JSON.stringify(records));
 }
 
-function readEarthApiSettings(hostWindow: Window): EarthApiSettings & { enabled: boolean; replyInterval: number } {
+type SimulationApiControls = { enabled: boolean; replyInterval: number; retryCount: number };
+
+function readEarthApiSettings(hostWindow: Window): EarthApiSettings & SimulationApiControls {
   try {
     const value = JSON.parse(hostWindow.localStorage.getItem(EARTH_API_SETTINGS_KEY) || '{}') as Record<string, unknown>;
     const timeRatio = ['1:5','1:2','1:1','2:1','5:1','10:1'].includes(String(value.timeRatio)) ? String(value.timeRatio) as EarthTimeRatio : '1:1';
-    return { enabled: value.enabled === true, apiBaseUrl: typeof value.apiBaseUrl === 'string' ? value.apiBaseUrl : '', apiKey: typeof value.apiKey === 'string' ? value.apiKey : '', apiModel: typeof value.apiModel === 'string' ? value.apiModel : '', temperature: Math.max(0, Math.min(2, finiteNumber(value.temperature, .3))), timeoutSeconds: Math.max(5, Math.min(600, finiteNumber(value.timeoutSeconds, 120))), replyInterval: Math.max(1, Math.min(100, Math.floor(finiteNumber(value.replyInterval, 5)))), maxWorldDays: Math.max(0, Math.min(365, Math.floor(finiteNumber(value.maxWorldDays, 30)))), timeRatio };
-  } catch { return { enabled: false, apiBaseUrl: '', apiKey: '', apiModel: '', temperature: .3, timeoutSeconds: 120, replyInterval: 5, maxWorldDays: 30, timeRatio: '1:1' }; }
+    return { enabled: value.enabled === true, apiBaseUrl: typeof value.apiBaseUrl === 'string' ? value.apiBaseUrl : '', apiKey: typeof value.apiKey === 'string' ? value.apiKey : '', apiModel: typeof value.apiModel === 'string' ? value.apiModel : '', temperature: Math.max(0, Math.min(2, finiteNumber(value.temperature, .3))), timeoutSeconds: Math.max(5, Math.min(600, finiteNumber(value.timeoutSeconds, 120))), replyInterval: Math.max(1, Math.min(100, Math.floor(finiteNumber(value.replyInterval, 5)))), retryCount: Math.max(0, Math.min(2, Math.floor(finiteNumber(value.retryCount, 1)))), maxWorldDays: Math.max(1, Math.min(36500, Math.floor(finiteNumber(value.maxWorldDays, 30)))), timeRatio };
+  } catch { return { enabled: false, apiBaseUrl: '', apiKey: '', apiModel: '', temperature: .3, timeoutSeconds: 120, replyInterval: 5, retryCount: 1, maxWorldDays: 30, timeRatio: '1:1' }; }
 }
 
 function saveEarthApiSettings(hostWindow: Window, settings: ReturnType<typeof readEarthApiSettings>): void {
   hostWindow.localStorage.setItem(EARTH_API_SETTINGS_KEY, JSON.stringify(settings));
 }
 
-function readXuantianApiSettings(hostWindow: Window): XuantianApiSettings & { enabled:boolean; replyInterval:number } {
-  try { const value=JSON.parse(hostWindow.localStorage.getItem(XUANTIAN_API_SETTINGS_KEY)||'{}') as Record<string,unknown>; return {enabled:value.enabled===true,apiBaseUrl:typeof value.apiBaseUrl==='string'?value.apiBaseUrl:'',apiKey:typeof value.apiKey==='string'?value.apiKey:'',apiModel:typeof value.apiModel==='string'?value.apiModel:'',temperature:Math.max(0,Math.min(2,finiteNumber(value.temperature,.3))),timeoutSeconds:Math.max(5,Math.min(600,finiteNumber(value.timeoutSeconds,120))),replyInterval:Math.max(1,Math.min(100,Math.floor(finiteNumber(value.replyInterval,5)))),maxWorldDays:Math.max(1,Math.min(30,Math.floor(finiteNumber(value.maxWorldDays,30))))}; }
-  catch { return {enabled:false,apiBaseUrl:'',apiKey:'',apiModel:'',temperature:.3,timeoutSeconds:120,replyInterval:5,maxWorldDays:30}; }
+function readXuantianApiSettings(hostWindow: Window): XuantianApiSettings & SimulationApiControls {
+  try { const value=JSON.parse(hostWindow.localStorage.getItem(XUANTIAN_API_SETTINGS_KEY)||'{}') as Record<string,unknown>; return {enabled:value.enabled===true,apiBaseUrl:typeof value.apiBaseUrl==='string'?value.apiBaseUrl:'',apiKey:typeof value.apiKey==='string'?value.apiKey:'',apiModel:typeof value.apiModel==='string'?value.apiModel:'',temperature:Math.max(0,Math.min(2,finiteNumber(value.temperature,.3))),timeoutSeconds:Math.max(5,Math.min(600,finiteNumber(value.timeoutSeconds,120))),replyInterval:Math.max(1,Math.min(100,Math.floor(finiteNumber(value.replyInterval,5)))),retryCount:Math.max(0,Math.min(2,Math.floor(finiteNumber(value.retryCount,1)))),maxWorldDays:Math.max(1,Math.min(36500,Math.floor(finiteNumber(value.maxWorldDays,30))))}; }
+  catch { return {enabled:false,apiBaseUrl:'',apiKey:'',apiModel:'',temperature:.3,timeoutSeconds:120,replyInterval:5,retryCount:1,maxWorldDays:30}; }
 }
 function saveXuantianApiSettings(hostWindow:Window,settings:ReturnType<typeof readXuantianApiSettings>):void{hostWindow.localStorage.setItem(XUANTIAN_API_SETTINGS_KEY,JSON.stringify(settings));}
+
+function shouldRetrySimulation(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  if (/请求失败：(?:401|403|404)\b/.test(message)) return false;
+  if (/请先配置|世界书.*(?:未挂载|不可读|为空)|聊天上下文不可用|不支持聊天本地变量|推演已关闭|已切换对话/.test(message)) return false;
+  if (/storyAssessment|剧情图|剧情分支|剧情节点/.test(message)) return true;
+  if (/未找到(?:事件|势力)|未知势力|只能推进|只允许|不得|不能继续|进度必须增加|活跃事件.*上限|越权/.test(message)) return false;
+  return /JSON|结构|格式|storyAssessment|剧情图|剧情分支|返回为空|请求失败：(?:408|409|425|429|5\d\d)\b|超时|timeout|aborted|fetch/i.test(message);
+}
 
 const MERCHANT_TRANSACTION_STORAGE_KEY = 'daoyuan_wanbao_transaction_facts_v1';
 const MERCHANT_GENERATION_STATE_KEY = 'daoyuan_wanbao_generation_state_v1';
@@ -460,7 +507,7 @@ class FeatureShell {
       beauty:['REQUEST_BEAUTY_MODELS','GENERATE_BEAUTY_RANK','GENERATE_BEAUTY_REPLY'],
       xianwang:['REQUEST_XIANWANG_MODELS','GENERATE_TRENDS','DELETE_TREND','GENERATE_FORUM','DELETE_FORUM_POST','GENERATE_NEWS','DELETE_NEWS_PAPER','TOGGLE_TREND_LIKE','TOGGLE_FORUM_LIKE','TOGGLE_NEWS_LIKE','SUBMIT_FORUM_COMMENT'],
       wanbao:['REQUEST_WANBAO_MODELS','GENERATE_WANBAO','ESTIMATE_WANBAO','DELETE_WANBAO_PRODUCT','DELETE_WANBAO_TRANSACTION','CLEAR_WANBAO_TRANSACTIONS','BUY_WANBAO','SELL_WANBAO'],
-      world:['REQUEST_EARTH_MODELS','REQUEST_XUANTIAN_MODELS','GENERATE_XUANTIAN_SIMULATION','RESET_XUANTIAN_SIMULATION','GENERATE_EARTH_SIMULATION','RESET_EARTH_SIMULATION'],
+      world:['REQUEST_EARTH_MODELS','REQUEST_XUANTIAN_MODELS','GENERATE_XUANTIAN_SIMULATION','RESET_XUANTIAN_SIMULATION','CLEAR_XUANTIAN_FAULT_LOGS','GENERATE_EARTH_SIMULATION','RESET_EARTH_SIMULATION'],
     };
     return (Object.keys(groups) as FeatureModuleKey[]).find(key => groups[key].includes(action)) ?? null;
   }
@@ -497,6 +544,7 @@ class FeatureShell {
   private readonly layout: Layout = 'phone';
   private readonly shellMode: ShellMode = 'phone';
   private resizeFrame = 0;
+  private drawerHideTimer: number | null = null;
   private shellPosition: { left: number; top: number } | null = null;
   private shellPositionBeforeKeyboard: { left: number; top: number } | null = null;
   private keyboardViewportActive = false;
@@ -513,7 +561,11 @@ class FeatureShell {
   private forumGenerationInFlight = false;
   private newsGenerationInFlight = false;
   private yujianStoryParseInFlight = false;
-  private pendingYujianStoryParse: { messageId: string; story: string } | null = null;
+  private pendingYujianStoryParse: { messageId: string; story: string; revision: number } | null = null;
+  private yujianStoryParseRevision = 0;
+  private yujianStoryParseAbortController: AbortController | null = null;
+  private yujianSendAbortController: AbortController | null = null;
+  private yujianModelsAbortController: AbortController | null = null;
   private autoSchedulerInFlight = false;
   private promptInjectionCleanup: (() => void) | null = null;
   private promptInjectionRevision = 0;
@@ -526,14 +578,19 @@ class FeatureShell {
   private earthSimulationState: EarthSimulationState | null = null;
   private earthSimulationInFlight = false;
   private xuantianSimulationState: XuantianSimulationState | null = null;
+  private storyDirectorPlan: StoryDirectorPlan | null = null;
+  private xuantianFaultLogs: XuantianFaultLog[] = [];
   private xuantianSimulationInFlight = false;
   private previewMode = false;
+  private phoneDisplayMode: PhoneDisplayMode = 'drawer';
 
   start(): void {
     if (typeof document === 'undefined' || typeof window === 'undefined') return;
     const hostContext = resolveHostContext();
     this.hostWindow = hostContext.window;
     this.hostDocument = hostContext.document;
+    this.phoneDisplayMode = readPhoneDisplayMode(this.hostWindow);
+    this.shellPosition = readPhoneFloatingPosition(this.hostWindow);
     const dlcRuntime = runtime as unknown as TavernWorldbookRuntime;
     this.dlcCapability = probeWorldbookRuntime(dlcRuntime);
     if (this.dlcCapability.canList && this.dlcCapability.canRead) {
@@ -599,6 +656,7 @@ class FeatureShell {
     this.host = this.hostDocument.createElement('div');
     this.host.id = HOST_ID;
     this.host.dataset.mode = 'phone';
+    this.host.dataset.displayMode = this.phoneDisplayMode;
     this.host.hidden = true;
     this.hostDocument.body.append(this.host);
 
@@ -648,6 +706,7 @@ class FeatureShell {
   private async loadAppData(): Promise<void> {
     const operationContext = captureOperationContext(this.session);
     try {
+      await this.applyPendingFactoryResetForCurrentChat();
       const appData = await this.repository.load();
       if (this.session.phase === 'destroyed' || !isCurrentOperationContext(this.session, operationContext)) return;
       this.appData = appData;
@@ -669,6 +728,23 @@ class FeatureShell {
       this.scheduleDerivedReconciliation();
     } catch (error) {
       console.warn('[道渊玉简] chat data unavailable; using empty data', error);
+    }
+  }
+
+  private async applyPendingFactoryResetForCurrentChat(): Promise<void> {
+    if (!this.hostWindow || !this.session.chatId) return;
+    try {
+      const state = JSON.parse(this.hostWindow.localStorage.getItem(FACTORY_RESET_STATE_KEY) || '{}') as { resetAt?: unknown; clearedChatIds?: unknown };
+      if (typeof state.resetAt !== 'number' || !Number.isFinite(state.resetAt)) return;
+      const clearedChatIds = Array.isArray(state.clearedChatIds) ? state.clearedChatIds.filter((id): id is string => typeof id === 'string') : [];
+      if (clearedChatIds.includes(this.session.chatId)) return;
+      await this.repository.clearAll();
+      const simulationStore = this.earthVariableStore();
+      simulationStore?.set(EARTH_SIMULATION_STATE_KEY, null);
+      simulationStore?.set(XUANTIAN_SIMULATION_STATE_KEY, null);
+      this.hostWindow.localStorage.setItem(FACTORY_RESET_STATE_KEY, JSON.stringify({ resetAt: state.resetAt, clearedChatIds: [...clearedChatIds, this.session.chatId].slice(-200) }));
+    } catch (error) {
+      console.warn('[道渊小手机] 当前聊天的历史出厂重置未完成', error);
     }
   }
 
@@ -928,6 +1004,29 @@ class FeatureShell {
 
   private bindHostEvents(): void {
     if (!this.hostWindow) return;
+    const onOutsidePointerDown = (event: PointerEvent): void => {
+      if (this.phoneDisplayMode !== 'drawer') return;
+      if (!this.session.visible || !this.host || !this.orb) return;
+      const target = event.target;
+      if (!target || !('nodeType' in target)) return;
+      const targetNode = target as Node;
+      if (this.host.contains(targetNode) || this.orb.contains(targetNode)) return;
+      this.close();
+    };
+    this.hostWindow.addEventListener('pointerdown', onOutsidePointerDown, true);
+    this.session.disposers.push(() => this.hostWindow?.removeEventListener('pointerdown', onOutsidePointerDown, true));
+
+    const onEdgePointerMove = (event: PointerEvent): void => {
+      if (this.phoneDisplayMode !== 'drawer') return;
+      if (this.session.visible || event.pointerType !== 'mouse' || !this.hostWindow) return;
+      if (!this.hostWindow.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+      const visualViewport = this.hostWindow.visualViewport;
+      const viewportRight = (visualViewport?.offsetLeft ?? 0) + (visualViewport?.width ?? this.hostWindow.innerWidth);
+      if (event.clientX >= viewportRight - 12) this.open();
+    };
+    this.hostWindow.addEventListener('pointermove', onEdgePointerMove, { passive: true });
+    this.session.disposers.push(() => this.hostWindow?.removeEventListener('pointermove', onEdgePointerMove));
+
     const onMessage = (event: MessageEvent): void => {
       if (!this.frame || event.source !== this.frame.contentWindow) return;
       const message = parseBridgeMessage(event.data);
@@ -1185,7 +1284,7 @@ class FeatureShell {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       this.frame?.contentWindow?.postMessage(makeBridgeMessage('event', 'WANBAO_GENERATION_STATUS', { ok: false, error: error instanceof Error ? error.message : String(error) }), '*');
-      writeMerchantGenerationState(this.hostWindow, chatId, { status: 'error', startedAt, finishedAt: new Date().toISOString(), message: `万宝货单生成失败：${errorMessage}` });
+      if (this.featureEnabled('wanbao')) writeMerchantGenerationState(this.hostWindow, chatId, { status: 'error', startedAt, finishedAt: new Date().toISOString(), message: `万宝货单生成失败：${errorMessage}` });
       this.wanbaoStatus(false, `万宝货单生成失败：${errorMessage}`);
     } finally {
       this.merchantGenerationInFlight = false;
@@ -1202,6 +1301,7 @@ class FeatureShell {
     this.merchantGenerationInFlight = true;
     try {
       const quotes = await estimateMerchantItems(generate, items, this.merchantProducts);
+      if (!this.featureEnabled('wanbao')) throw new Error('万宝商行已关闭，本次估价结果未写入');
       this.merchantQuotes = quotes;
       writeMerchantQuotes(this.hostWindow, this.session.chatId ?? '__default__', this.merchantQuotes);
       this.frame?.contentWindow?.postMessage(makeBridgeMessage('event', 'WANBAO_ESTIMATE_STATUS', { ok:true, message:`已一次性完成 ${items.length} 件物品估价` }), '*');
@@ -1503,11 +1603,15 @@ class FeatureShell {
       this.positionOrb();
       this.sendContext();
     }
-    if (action === 'SET_PET_KIND' && (payload.kind === 'whale' || payload.kind === 'ziwei')) {
-      const kind = payload.kind as PetKind;
-      if (this.hostWindow) savePetKind(this.hostWindow, kind);
-      this.petController?.setKind(kind);
-      this.positionOrb();
+    if (action === 'SET_PHONE_DISPLAY_MODE' && (payload.mode === 'drawer' || payload.mode === 'floating')) {
+      this.phoneDisplayMode = payload.mode;
+      if (this.hostWindow) savePhoneDisplayMode(this.hostWindow, this.phoneDisplayMode);
+      if (this.host) {
+        this.host.dataset.displayMode = this.phoneDisplayMode;
+        if (this.session.visible) this.host.hidden = false;
+      }
+      this.resize();
+      this.frame?.contentWindow?.postMessage(makeBridgeMessage('event', 'PHONE_DISPLAY_MODE_STATUS', { ok: true, mode: this.phoneDisplayMode }), '*');
       this.sendContext();
     }
     if (action === 'SET_MAP_VIEW') void this.saveMapView(payload);
@@ -1522,12 +1626,14 @@ class FeatureShell {
     if (action === 'SAVE_XUANTIAN_SETTINGS') void this.saveXuantianSettings(payload);
     if (action === 'GENERATE_XUANTIAN_SIMULATION') void this.generateXuantianSimulation(true);
     if (action === 'RESET_XUANTIAN_SIMULATION') void this.resetXuantianSimulation();
+    if (action === 'CLEAR_XUANTIAN_FAULT_LOGS') this.clearXuantianFaultLogs();
     if (action === 'SAVE_EARTH_SETTINGS') void this.saveEarthSettings(payload);
     if (action === 'GENERATE_EARTH_SIMULATION') void this.generateEarthSimulation(true);
     if (action === 'RESET_EARTH_SIMULATION') void this.resetEarthSimulation();
     if (action === 'CLEAR_EARTH_SIMULATION') void this.clearSingleWorldSimulation('earth');
     if (action === 'CLEAR_XUANTIAN_SIMULATION') void this.clearSingleWorldSimulation('xuantian');
     if (action === 'SAVE_YUJIAN_SETTINGS') this.saveYujianSettings(payload);
+    if (action === 'FACTORY_RESET_PHONE') void this.factoryResetPhone();
     if (action === 'IMPORT_STATUS_YUJIAN_HISTORY') void this.importStatusYujianHistory(true);
     if (action === 'DELETE_YUJIAN_MESSAGE') void this.deleteYujianMessage(payload);
     if (action === 'CLEAR_YUJIAN_HISTORY') void this.clearYujianHistory(payload);
@@ -1558,6 +1664,7 @@ class FeatureShell {
       if (key in current) {
         const flags = { ...current, [key]: payload.enabled === true };
         saveFeatureModuleFlags(this.hostWindow, flags);
+        if (key === 'yujian' && !flags.yujian) this.stopYujianOperations();
         this.frame?.contentWindow?.postMessage(makeBridgeMessage('event', 'FEATURE_MODULE_FLAGS_STATUS', { ok:true, flags }), '*');
         void this.refreshPromptInjection();
         this.sendContext();
@@ -1783,18 +1890,23 @@ class FeatureShell {
 
   private async sendYujianModels(payload: Record<string, unknown>): Promise<void> {
     const frame = this.frame;
+    const controller = new AbortController();
+    this.yujianModelsAbortController?.abort();
+    this.yujianModelsAbortController = controller;
     try {
       const models = await fetchYujianModels(
         typeof payload.apiBaseUrl === 'string' ? payload.apiBaseUrl : '',
         typeof payload.apiKey === 'string' ? payload.apiKey : '',
+        { signal: controller.signal, isEnabled: () => this.featureEnabled('yujian') },
       );
       frame?.contentWindow?.postMessage(makeBridgeMessage('event', 'YUJIAN_MODELS_DATA', { ok: true, models }), '*');
     } catch (error) {
+      if (controller.signal.aborted) return;
       frame?.contentWindow?.postMessage(makeBridgeMessage('event', 'YUJIAN_MODELS_DATA', {
         ok: false,
         error: error instanceof Error ? error.message : String(error),
       }), '*');
-    }
+    } finally { if (this.yujianModelsAbortController === controller) this.yujianModelsAbortController = null; }
   }
 
   private async sendEarthModels(payload: Record<string, unknown>): Promise<void> {
@@ -1830,15 +1942,25 @@ class FeatureShell {
   }
 
   private async saveXuantianSettings(payload:Record<string,unknown>):Promise<void>{
-    if(!this.hostWindow)return;const current=readXuantianApiSettings(this.hostWindow);const settings={...current,enabled:payload.enabled===true,apiBaseUrl:typeof payload.apiBaseUrl==='string'?payload.apiBaseUrl:'',apiKey:typeof payload.apiKey==='string'?payload.apiKey:'',apiModel:typeof payload.apiModel==='string'?payload.apiModel:'',temperature:Math.max(0,Math.min(2,finiteNumber(payload.temperature,current.temperature))),timeoutSeconds:Math.max(5,Math.min(600,finiteNumber(payload.timeoutSeconds,current.timeoutSeconds))),replyInterval:Math.max(1,Math.min(100,Math.floor(finiteNumber(payload.replyInterval,current.replyInterval)))),maxWorldDays:Math.max(1,Math.min(30,Math.floor(finiteNumber(payload.maxWorldDays,current.maxWorldDays))))};saveXuantianApiSettings(this.hostWindow,settings);this.frame?.contentWindow?.postMessage(makeBridgeMessage('event','XUANTIAN_SETTINGS_STATUS',{ok:true,settings}), '*');this.sendContext();
+    if(!this.hostWindow)return;const current=readXuantianApiSettings(this.hostWindow);const settings={...current,enabled:payload.enabled===true,apiBaseUrl:typeof payload.apiBaseUrl==='string'?payload.apiBaseUrl:'',apiKey:typeof payload.apiKey==='string'?payload.apiKey:'',apiModel:typeof payload.apiModel==='string'?payload.apiModel:'',temperature:Math.max(0,Math.min(2,finiteNumber(payload.temperature,current.temperature))),timeoutSeconds:Math.max(5,Math.min(600,finiteNumber(payload.timeoutSeconds,current.timeoutSeconds))),replyInterval:Math.max(1,Math.min(100,Math.floor(finiteNumber(payload.replyInterval,current.replyInterval)))),retryCount:Math.max(0,Math.min(2,Math.floor(finiteNumber(payload.retryCount,current.retryCount)))),maxWorldDays:Math.max(1,Math.min(36500,Math.floor(finiteNumber(payload.maxWorldDays,current.maxWorldDays))))};saveXuantianApiSettings(this.hostWindow,settings);this.frame?.contentWindow?.postMessage(makeBridgeMessage('event','XUANTIAN_SETTINGS_STATUS',{ok:true,settings}), '*');this.sendContext();
   }
 
   private async readPrimaryXuantianWorldbook():Promise<Array<{name:string;content:string}>>{
-    if(!this.worldbookAdapter)throw new Error('当前酒馆缺少世界书读取接口');const mounted=await this.worldbookAdapter.getMountedNames();const primary=mounted[0];if(!primary)throw new Error('当前角色没有主世界书，无法进行玄天界推演');const entries=await this.worldbookAdapter.read(primary);return entries.filter(entry=>entry.enabled!==false&&typeof entry.content==='string'&&entry.content.trim()).map(entry=>({name:typeof entry.name==='string'?entry.name:'未命名条目',content:String(entry.content)}));
+    if(!this.worldbookAdapter)throw new Error('当前酒馆缺少世界书读取接口');const mounted=await this.worldbookAdapter.getMountedNames();const primary=mounted[0];if(!primary)throw new Error('当前角色没有主世界书，无法进行玄天界推演');const primaryEntries=await this.worldbookAdapter.read(primary);const names=await this.worldbookAdapter.listNames();const ruleEntries=names.includes(XUANTIAN_RULE_BOOK_NAME)?await this.worldbookAdapter.read(XUANTIAN_RULE_BOOK_NAME):xuantianRulebookEntries();const entries=[...primaryEntries,...ruleEntries.filter(entry=>!String(entry.name??'').includes('EJS'))];return entries.filter(entry=>entry.enabled!==false&&typeof entry.content==='string'&&entry.content.trim()).map(entry=>({name:typeof entry.name==='string'?entry.name:'未命名条目',content:String(entry.content)}));
   }
 
   private async resetXuantianSimulation():Promise<void>{
-    const notify=(payload:Record<string,unknown>):void=>this.frame?.contentWindow?.postMessage(makeBridgeMessage('event','XUANTIAN_SIMULATION_RESET_STATUS',payload),'*');try{if(!this.session.chatId)throw new Error('当前聊天上下文不可用');const store=this.earthVariableStore();if(!store)throw new Error('当前酒馆不支持聊天本地变量写回');const state=createDefaultXuantianSimulationState(this.session.chatId);store.set(XUANTIAN_SIMULATION_STATE_KEY,state);this.xuantianSimulationState=state;notify({ok:true,state});this.sendContext();}catch(error){notify({ok:false,error:error instanceof Error?error.message:String(error)});}
+    const notify=(payload:Record<string,unknown>):void=>this.frame?.contentWindow?.postMessage(makeBridgeMessage('event','XUANTIAN_SIMULATION_RESET_STATUS',payload),'*');try{if(!this.session.chatId)throw new Error('当前聊天上下文不可用');const store=this.earthVariableStore();if(!store)throw new Error('当前酒馆不支持聊天本地变量写回');const state=createDefaultXuantianSimulationState(this.session.chatId);store.set(XUANTIAN_SIMULATION_STATE_KEY,state);store.set(STORY_DIRECTOR_STATE_KEY,null);this.xuantianSimulationState=state;this.storyDirectorPlan=null;notify({ok:true,state});this.sendContext();}catch(error){notify({ok:false,error:error instanceof Error?error.message:String(error)});}
+  }
+
+  private appendXuantianFaultLog(store:{get(key:string):unknown;set(key:string,value:unknown):void}|null,entry:Omit<XuantianFaultLog,'at'>):void{
+    if(!store)return;const existing=store.get(XUANTIAN_FAULT_LOG_KEY);const logs=Array.isArray(existing)?existing.filter((item):item is XuantianFaultLog=>Boolean(item&&typeof item==='object'&&typeof (item as XuantianFaultLog).message==='string')).slice(-59):[];const next=[...logs,{...entry,at:new Date().toISOString()}];store.set(XUANTIAN_FAULT_LOG_KEY,next);this.xuantianFaultLogs=next;
+  }
+
+  private clearXuantianFaultLogs():void{
+    const notify=(payload:Record<string,unknown>):void=>this.frame?.contentWindow?.postMessage(makeBridgeMessage('event','XUANTIAN_FAULT_LOG_CLEAR_STATUS',payload),'*');
+    try{const store=this.earthVariableStore();if(!store)throw new Error('当前酒馆不支持聊天本地变量写回');store.set(XUANTIAN_FAULT_LOG_KEY,[]);this.xuantianFaultLogs=[];notify({ok:true});this.sendContext();}
+    catch(error){notify({ok:false,error:error instanceof Error?error.message:String(error)});}
   }
 
   private async generateXuantianSimulation(manual=false):Promise<void>{
@@ -1847,10 +1969,12 @@ class FeatureShell {
     if(this.xuantianSimulationInFlight)return;
     this.xuantianSimulationInFlight=true;
     const notify=(payload:Record<string,unknown>):void=>this.frame?.contentWindow?.postMessage(makeBridgeMessage('event','XUANTIAN_SIMULATION_STATUS',payload),'*');
+    let requestCount=0,maxRequests=1;
     try{
       if(!this.hostWindow||!this.session.chatId)throw new Error('当前聊天上下文不可用');
       const operationChatId=this.session.chatId;
       const settings=readXuantianApiSettings(this.hostWindow);
+      maxRequests=1+settings.retryCount;
       const worldbook=await this.readPrimaryXuantianWorldbook();
       if(!worldbook.length)throw new Error('当前角色主世界书内容为空');
       const chat=this.hostWindow.SillyTavern?.getContext?.()?.chat??[];
@@ -1858,13 +1982,19 @@ class FeatureShell {
       const store=this.earthVariableStore();
       if(!store)throw new Error('当前酒馆不支持聊天本地变量写回');
       let state=initializeXuantianSimulationState(store.get(XUANTIAN_SIMULATION_STATE_KEY),this.session.chatId);
+      const storedPlan=store.get(STORY_DIRECTOR_STATE_KEY);let previousPlan:StoryDirectorPlan|null=null;try{previousPlan=StoryDirectorPlanSchema.parse(storedPlan);}catch{previousPlan=null;}
+      const storyContext=(Array.isArray(chat)?chat:[]).map((raw,index)=>({raw:raw as {is_user?:unknown;is_system?:unknown;mes?:unknown},index})).filter(({raw})=>raw.is_system!==true&&typeof raw.mes==='string'&&raw.mes.trim()).slice(-20).map(({raw,index})=>`[${raw.is_user===true?'玩家':'叙事'}层 ${index}]\n${String(raw.mes).trim().slice(0,5000)}`).join('\n\n').slice(-48000);
       const latestWorldData=await this.mvuChannel?.readLatestVariables();
       const statStoryTime=latestWorldData?.variables?projectWorldStatus(latestWorldData.variables).time:this.worldStatus.time;
-      if(statStoryTime&&statStoryTime!=='未接入'&&statStoryTime!=='未知')state=XuantianSimulationStateSchema.parse({...state,calendarLabel:statStoryTime}) as XuantianSimulationState;
+      const hasStoryTime=Boolean(statStoryTime&&statStoryTime!=='未接入'&&statStoryTime!=='未知');
+      const authoritativeWorldDays=hasStoryTime?inferElapsedWorldDays(state.calendarLabel,statStoryTime):null;
+      if(hasStoryTime)state=XuantianSimulationStateSchema.parse({...state,calendarLabel:statStoryTime}) as XuantianSimulationState;
+      if(!manual&&authoritativeWorldDays===0){const unchanged={...state,autoCounter:0};store.set(XUANTIAN_SIMULATION_STATE_KEY,unchanged);this.xuantianSimulationState=unchanged;notify({ok:true,requestCount:0,maxRequests,actions:0,state:unchanged,skipped:['故事时钟没有前进，本轮未调用 API']});this.sendContext();return;}
       const fingerprint=storyFingerprint(`${state.sequence}\n${floors.map(floor=>`${floor.index}:${floor.content}`).join('\n')}`);
       let committed:ReturnType<typeof applyXuantianCandidate>|null=null;
       let correction='';
-      for(let attempt=0;attempt<2;attempt+=1){try{const candidate=await generateXuantianCandidate(settings,state,worldbook,floors,correction);committed=applyXuantianCandidate(state,candidate,fingerprint,settings.maxWorldDays);break;}catch(error){correction=xuantianCandidateValidationMessage(error);if(attempt===1)throw new Error(`玄天界推演输出两次未通过校验：${correction}`);notify({ok:false,retrying:true,error:`首次输出结构不可读，正在自动纠正：${correction}`});}}
+      const clockDays=authoritativeWorldDays!==null&&authoritativeWorldDays>0?authoritativeWorldDays:undefined;
+      for(let attempt=0;attempt<maxRequests;attempt+=1){try{requestCount+=1;const candidate=await generateXuantianCandidate(settings,state,worldbook,floors,correction,clockDays,storyContext,previousPlan);committed=applyXuantianCandidate(state,candidate,fingerprint,settings.maxWorldDays,clockDays);if(!committed.storyPlan)throw new Error('模型未返回完整的 storyAssessment 分支剧情图');validateStoryDirectorTransition(previousPlan,committed.storyPlan);break;}catch(error){committed=null;correction=xuantianCandidateValidationMessage(error);this.appendXuantianFaultLog(store,{level:attempt+1<maxRequests?'retry':'error',sequence:state.sequence,requestCount,message:attempt+1<maxRequests?'候选输出未通过校验，准备重试':'候选输出校验失败',detail:correction});if(attempt+1>=maxRequests||!shouldRetrySimulation(error))throw new Error(`玄天界推演失败：${correction}`);notify({ok:false,retrying:true,requestCount,maxRequests,error:`第 ${requestCount} 次请求未通过，正在重试：${correction}`});}}
       if(!committed)throw new Error('玄天界推演未产生可提交状态');
       this.syncChatContext();
       if(this.session.chatId!==operationChatId)throw new Error('推演期间已切换对话，本次结果已丢弃，未写入任何对话');
@@ -1872,27 +2002,42 @@ class FeatureShell {
       const latestState=initializeXuantianSimulationState(store.get(XUANTIAN_SIMULATION_STATE_KEY),operationChatId);
       const committedState=manual?{...committed.state,autoCounter:0,processedMessageIds:[],processedMessageFingerprints:[]}:{...committed.state,autoCounter:Math.max(0,latestState.autoCounter-settings.replyInterval),processedMessageIds:latestState.processedMessageIds,processedMessageFingerprints:latestState.processedMessageFingerprints};
       store.set(XUANTIAN_SIMULATION_STATE_KEY,committedState);
+      if(committed.storyPlan){store.set(STORY_DIRECTOR_STATE_KEY,committed.storyPlan);this.storyDirectorPlan=committed.storyPlan;}
       this.xuantianSimulationState=committedState;
-      notify({ok:true,assistantFloors:floors.length,worldbookEntries:worldbook.length,actions:committed.actions.length,skipped:committed.skipped,rationale:committed.rationale,state:committedState});
+      this.appendXuantianFaultLog(store,{level:'info',sequence:committedState.sequence,requestCount,message:'世界推演与剧情导演结果已提交',detail:`状态动作 ${committed.actions.length}；剧情图 ${committed.storyPlan?'已更新':'未返回'}`});
+      notify({ok:true,requestCount,maxRequests,assistantFloors:floors.length,worldbookEntries:worldbook.length,actions:committed.actions.length,storyPlan:committed.storyPlan,skipped:committed.skipped,rationale:committed.rationale,state:committedState});
       this.sendContext();
-    }catch(error){notify({ok:false,error:error instanceof Error?error.message:String(error)});}finally{this.xuantianSimulationInFlight=false;}
+    }catch(error){const store=this.earthVariableStore();this.appendXuantianFaultLog(store,{level:'error',sequence:this.xuantianSimulationState?.sequence??0,requestCount,message:'玄天界推演失败',detail:error instanceof Error?error.message:String(error)});notify({ok:false,requestCount,maxRequests,error:error instanceof Error?error.message:String(error)});this.sendContext();}finally{this.xuantianSimulationInFlight=false;}
   }
 
   private async saveEarthSettings(payload: Record<string, unknown>): Promise<void> {
-    if (!this.hostWindow) return;
-    const current = readEarthApiSettings(this.hostWindow);
-    const timeRatio = ['1:5','1:2','1:1','2:1','5:1','10:1'].includes(String(payload.timeRatio)) ? String(payload.timeRatio) as EarthTimeRatio : current.timeRatio;
-    const settings = { ...current, enabled: payload.enabled === true, apiBaseUrl: typeof payload.apiBaseUrl === 'string' ? payload.apiBaseUrl : '', apiKey: typeof payload.apiKey === 'string' ? payload.apiKey : '', apiModel: typeof payload.apiModel === 'string' ? payload.apiModel : '', temperature: Math.max(0, Math.min(2, finiteNumber(payload.temperature, current.temperature))), timeoutSeconds: Math.max(5, Math.min(600, finiteNumber(payload.timeoutSeconds, current.timeoutSeconds))), replyInterval: Math.max(1, Math.min(100, Math.floor(finiteNumber(payload.replyInterval, current.replyInterval)))), maxWorldDays: Math.max(0, Math.min(365, Math.floor(finiteNumber(payload.maxWorldDays, current.maxWorldDays)))), timeRatio };
-    saveEarthApiSettings(this.hostWindow, settings);
-    const store = this.earthVariableStore();
-    const storedEarth = store?.get(EARTH_SIMULATION_STATE_KEY);
-    if (store && this.session.chatId && storedEarth) {
-      const existing = initializeEarthSimulationState(storedEarth, this.session.chatId, new Date().toISOString().slice(0, 10));
-      const state = earthSimulationReducer(existing, { type: 'set-time-ratio', ratio: settings.timeRatio });
-      store.set(EARTH_SIMULATION_STATE_KEY, state); this.earthSimulationState = state; await this.refreshPromptInjection();
+    const notify = (payload: Record<string, unknown>): void => this.frame?.contentWindow?.postMessage(makeBridgeMessage('event', 'EARTH_SETTINGS_STATUS', payload), '*');
+    if (!this.hostWindow) { notify({ ok: false, error: '宿主窗口尚未就绪，设置未保存。' }); return; }
+    try {
+      const current = readEarthApiSettings(this.hostWindow);
+      const timeRatio = ['1:5','1:2','1:1','2:1','5:1','10:1'].includes(String(payload.timeRatio)) ? String(payload.timeRatio) as EarthTimeRatio : current.timeRatio;
+      const settings = { ...current, enabled: payload.enabled === true, apiBaseUrl: typeof payload.apiBaseUrl === 'string' ? payload.apiBaseUrl : '', apiKey: typeof payload.apiKey === 'string' ? payload.apiKey : '', apiModel: typeof payload.apiModel === 'string' ? payload.apiModel : '', temperature: Math.max(0, Math.min(2, finiteNumber(payload.temperature, current.temperature))), timeoutSeconds: Math.max(5, Math.min(600, finiteNumber(payload.timeoutSeconds, current.timeoutSeconds))), replyInterval: Math.max(1, Math.min(100, Math.floor(finiteNumber(payload.replyInterval, current.replyInterval)))), retryCount: Math.max(0, Math.min(2, Math.floor(finiteNumber(payload.retryCount, current.retryCount)))), maxWorldDays: Math.max(1, Math.min(36500, Math.floor(finiteNumber(payload.maxWorldDays, current.maxWorldDays)))), timeRatio };
+      saveEarthApiSettings(this.hostWindow, settings);
+      const persisted = readEarthApiSettings(this.hostWindow);
+      notify({ ok: true, settings: persisted });
+      this.sendContext();
+
+      // The API configuration is already durable at this point. Updating an existing
+      // chat ledger must not turn a successful settings save into an apparent failure.
+      const store = this.earthVariableStore();
+      const storedEarth = store?.get(EARTH_SIMULATION_STATE_KEY);
+      if (store && this.session.chatId && storedEarth) {
+        const existing = initializeEarthSimulationState(storedEarth, this.session.chatId, new Date().toISOString().slice(0, 10));
+        const state = earthSimulationReducer(existing, { type: 'set-time-ratio', ratio: persisted.timeRatio });
+        store.set(EARTH_SIMULATION_STATE_KEY, state);
+        this.earthSimulationState = state;
+        try { await this.refreshPromptInjection(); }
+        catch (error) { console.warn('[道渊地球推演] API 设置已保存，但当前聊天状态同步失败', error); }
+        this.sendContext();
+      }
+    } catch (error) {
+      notify({ ok: false, error: error instanceof Error ? error.message : String(error) });
     }
-    this.frame?.contentWindow?.postMessage(makeBridgeMessage('event', 'EARTH_SETTINGS_STATUS', { ok: true, settings: { ...settings, apiKey: settings.apiKey } }), '*');
-    this.sendContext();
   }
 
   private earthVariableStore(): { get(key: string): unknown; set(key: string, value: unknown): void } | null {
@@ -1935,6 +2080,7 @@ class FeatureShell {
     if (this.earthSimulationInFlight) return;
     this.earthSimulationInFlight = true;
     const notify = (payload: Record<string, unknown>): void => this.frame?.contentWindow?.postMessage(makeBridgeMessage('event', 'EARTH_SIMULATION_STATUS', payload), '*');
+    let requestCount = 0, maxRequests = 1;
     try {
       if (!this.hostWindow || !this.session.chatId) throw new Error('当前聊天上下文不可用');
       const operationChatId = this.session.chatId;
@@ -1946,6 +2092,7 @@ class FeatureShell {
       const chat = this.hostWindow.SillyTavern?.getContext?.()?.chat ?? [];
       const floors = selectRecentAssistantFloors(Array.isArray(chat) ? chat : [], 5);
       const settings = readEarthApiSettings(this.hostWindow);
+      maxRequests = 1 + settings.retryCount;
       const store = this.earthVariableStore();
       if (!store) throw new Error('当前酒馆不支持聊天本地变量写回');
       const existing = store.get(EARTH_SIMULATION_STATE_KEY);
@@ -1955,6 +2102,11 @@ class FeatureShell {
       const earthOpeningDate = new Date().toISOString().slice(0, 10);
       const initialized = initializeEarthSimulationState(existing, this.session.chatId, earthOpeningDate);
       const state = earthSimulationReducer(initialized, { type: 'set-time-ratio', ratio: settings.timeRatio });
+      const latestWorldData = await this.mvuChannel?.readLatestVariables();
+      const storyTime = latestWorldData?.variables ? projectWorldStatus(latestWorldData.variables).time : this.worldStatus.time;
+      const xuantianClock = initializeXuantianSimulationState(store.get(XUANTIAN_SIMULATION_STATE_KEY), this.session.chatId);
+      const elapsedFromStoryClock = storyTime && storyTime !== '未接入' && storyTime !== '未知' ? inferElapsedWorldDays(xuantianClock.calendarLabel, storyTime) : null;
+      const authoritativeWorldDays = elapsedFromStoryClock !== null && elapsedFromStoryClock > 0 ? elapsedFromStoryClock : undefined;
       // Manual ticks are independent world turns. The same narrative context may
       // legitimately drive multiple later Earth ticks, so sequence participates
       // in the audit fingerprint instead of blocking repeated context.
@@ -1962,15 +2114,16 @@ class FeatureShell {
       const worldbook = mounted.map(entry => ({ name: typeof entry.name === 'string' ? entry.name : '', content: typeof entry.content === 'string' ? entry.content : '' }));
       let committed: ReturnType<typeof applyEarthCandidate> | null = null;
       let correction = '';
-      for (let attempt = 0; attempt < 2; attempt += 1) {
+      for (let attempt = 0; attempt < maxRequests; attempt += 1) {
         try {
-          const candidate = await generateEarthCandidate(settings, state, worldbook, floors, correction);
-          committed = applyEarthCandidate(state, candidate, fingerprint, settings.maxWorldDays);
+          requestCount += 1;
+          const candidate = await generateEarthCandidate(settings, state, worldbook, floors, correction, authoritativeWorldDays);
+          committed = applyEarthCandidate(state, candidate, fingerprint, settings.maxWorldDays, authoritativeWorldDays);
           break;
         } catch (error) {
           correction = earthCandidateValidationMessage(error);
-          if (attempt === 1) throw new Error(`地球推演输出两次未通过校验：${correction}`);
-          notify({ ok: false, retrying: true, error: `首次输出未通过校验，正在自动纠正：${correction}` });
+          if (attempt + 1 >= maxRequests || !shouldRetrySimulation(error)) throw new Error(`地球推演失败：${correction}`);
+          notify({ ok: false, retrying: true, requestCount, maxRequests, error: `第 ${requestCount} 次请求未通过，正在重试：${correction}` });
         }
       }
       if (!committed) throw new Error('地球推演未产生可提交状态');
@@ -1982,9 +2135,9 @@ class FeatureShell {
       store.set(EARTH_SIMULATION_STATE_KEY, committedState);
       this.earthSimulationState = committedState;
       await this.refreshPromptInjection();
-      notify({ ok: true, assistantFloors: floors.length, worldbookEntries: mounted.length, actions: committed.actions.length, rationale: committed.rationale, state: committedState });
+      notify({ ok: true, requestCount, maxRequests, assistantFloors: floors.length, worldbookEntries: mounted.length, actions: committed.actions.length, rationale: committed.rationale, state: committedState });
       this.sendContext();
-    } catch (error) { notify({ ok: false, error: error instanceof Error ? error.message : String(error) }); }
+    } catch (error) { notify({ ok: false, requestCount, maxRequests, error: error instanceof Error ? error.message : String(error) }); }
     finally { this.earthSimulationInFlight = false; }
   }
 
@@ -2040,10 +2193,53 @@ class FeatureShell {
       storyParseEnabled: typeof payload.storyParseEnabled === 'boolean' ? payload.storyParseEnabled : false,
     };
     this.hostWindow.localStorage.setItem('daoyuan_wx_settings', JSON.stringify(settings));
+    if (!settings.storyParseEnabled) this.stopYujianStoryParsing();
     if (Array.isArray(payload.loreSelected)) {
       this.hostWindow.localStorage.setItem('daoyuan_wx_lore_selected', JSON.stringify({ __global__: payload.loreSelected }));
     }
     this.frame?.contentWindow?.postMessage(makeBridgeMessage('event', 'YUJIAN_SEND_STATUS', { settingsSaved: true }), '*');
+  }
+
+  private async factoryResetPhone(): Promise<void> {
+    if (!this.hostWindow) return;
+    try {
+      this.stopYujianOperations();
+      saveFeatureModuleFlags(this.hostWindow, { ...DEFAULT_FEATURE_MODULE_FLAGS });
+      saveWorldSimulationFeatures(this.hostWindow, { ...DEFAULT_WORLD_SIMULATION_FEATURES });
+      this.promptInjectionRevision += 1;
+      this.promptInjectionCleanup?.();
+      this.promptInjectionCleanup = null;
+      const managedWorldbooks = readUserDlcs(this.hostWindow).map(record => record.worldbookName).filter(Boolean);
+      if (managedWorldbooks.length && this.worldbookAdapter?.detach) {
+        try { await this.worldbookAdapter.detach(managedWorldbooks); }
+        catch (error) { console.warn('[道渊小手机] 已保留导入世界书文件，但解除挂载失败', error); }
+      }
+      this.userScriptRuntime?.start([]);
+      await clearAllYujianStorage(this.hostWindow);
+      await createCacheStore<unknown>().clear();
+      this.appData = await this.repository.clearAll();
+      const simulationStore = this.earthVariableStore();
+      simulationStore?.set(EARTH_SIMULATION_STATE_KEY, null);
+      simulationStore?.set(XUANTIAN_SIMULATION_STATE_KEY, null);
+      for (const key of PHONE_LOCAL_STORAGE_KEYS) this.hostWindow.localStorage.removeItem(key);
+      for (let index = this.hostWindow.localStorage.length - 1; index >= 0; index -= 1) {
+        const key = this.hostWindow.localStorage.key(index);
+        if (key?.startsWith('daoyuan_beauty_replies:') || key?.startsWith('daoyuan_app_read_state:')) this.hostWindow.localStorage.removeItem(key);
+      }
+      this.hostWindow.localStorage.setItem(FACTORY_RESET_STATE_KEY, JSON.stringify({ resetAt: Date.now(), clearedChatIds: this.session.chatId ? [this.session.chatId] : [] }));
+      this.beautyRanks = []; this.beautyReplies = []; this.trendPosts = []; this.forumPosts = []; this.newsPapers = [];
+      this.merchantProducts = []; this.merchantQuotes = {}; this.earthSimulationState = null; this.xuantianSimulationState = null;
+      this.yujianContacts = []; this.preferences.lastApp = 'home'; this.lastWorldProjection = '';
+      try { await this.refreshPromptInjection(); }
+      catch (error) { console.warn('[道渊小手机] 数据已清空，但正文注入刷新失败', error); }
+      this.frame?.contentWindow?.postMessage(makeBridgeMessage('event', 'FACTORY_RESET_STATUS', { ok: true, reloadRequired: true }), '*');
+      this.sendContext();
+    } catch (error) {
+      this.frame?.contentWindow?.postMessage(makeBridgeMessage('event', 'FACTORY_RESET_STATUS', {
+        ok: false,
+        error: error instanceof Error ? error.message : String(error),
+      }), '*');
+    }
   }
 
   private saveBeautySettings(payload: Record<string, unknown>): void {
@@ -2141,12 +2337,13 @@ class FeatureShell {
       ? readMerchantTransactionFacts(this.hostWindow, this.session.chatId)
       : [];
     const simulationStore=this.earthVariableStore();
-    const storedEarth=simulationStore?.get(EARTH_SIMULATION_STATE_KEY),storedXuantian=simulationStore?.get(XUANTIAN_SIMULATION_STATE_KEY);
+    const storedEarth=simulationStore?.get(EARTH_SIMULATION_STATE_KEY),storedXuantian=simulationStore?.get(XUANTIAN_SIMULATION_STATE_KEY),storedStoryPlan=simulationStore?.get(STORY_DIRECTOR_STATE_KEY);
     const worldFeatures=readWorldSimulationFeatures(this.hostWindow);
     const earthSimulation = featureFlags.world && worldFeatures.earthEnabled && storedEarth ? initializeEarthSimulationState(storedEarth, this.session.chatId, new Date().toISOString().slice(0,10)) : null;
     const xuantianSimulation=featureFlags.world&&worldFeatures.xuantianEnabled&&storedXuantian?initializeXuantianSimulationState(storedXuantian,this.session.chatId):null;
+    let storyDirector:StoryDirectorPlan|null=null;try{storyDirector=StoryDirectorPlanSchema.parse(storedStoryPlan);}catch{storyDirector=null;}
     const activeSettings={yujian:featureFlags.yujian&&settings.yujian,trends:featureFlags.xianwang&&settings.trends,forum:featureFlags.xianwang&&settings.forum,news:featureFlags.xianwang&&settings.news};
-    if (!Object.values(activeSettings).some(Boolean) && !merchantTransactions.length && !earthSimulation && !xuantianSimulation) return false;
+    if (!Object.values(activeSettings).some(Boolean) && !merchantTransactions.length && !earthSimulation && !xuantianSimulation && !storyDirector) return false;
     const histories = await loadStandaloneYujianHistories(this.hostWindow, this.session.chatId);
     if (revision !== this.promptInjectionRevision) return false;
     const yujianMessages: YujianInjectionMessage[] = Object.entries(histories).flatMap(([contact, messages]) =>
@@ -2160,6 +2357,7 @@ class FeatureShell {
       merchantTransactions,
       earthSimulation,
       xuantianSimulation,
+      storyDirector,
     });
     const hostRuntime = this.hostWindow as Window & RuntimeGlobals;
     const injectPrompts = runtime.injectPrompts ?? hostRuntime.injectPrompts;
@@ -2249,7 +2447,7 @@ class FeatureShell {
     this.appData=this.repository.project();this.sendContext();
   }
 
-  private async submitForumComment(payload:Record<string,unknown>):Promise<void>{const id=typeof payload.id==='string'?payload.id:'',content=typeof payload.content==='string'?payload.content.trim().slice(0,3000):'';const post=this.forumPosts.find(item=>item.id===id);if(!post||!content)return;const settings=readXianwangApiSettings(this.hostWindow??window);const userComment={id:`forum-comment:${Date.now()}:user`,author:settings.playerAlias,content,storyTime:this.worldStatus.time};let comments=[...post.comments,userComment];try{this.forumPosts=this.forumPosts.map(item=>item.id===id?{...item,comments:comments.slice(-20)}:item);let data=parseForumData(this.repository.getData('daoyuan_forum_data'));await this.repository.write('daoyuan_forum_data',{...data,posts:this.forumPosts});this.sendContext();if(settings.autoAiReply){comments=[...comments,...await generateForumReplies(settings,{...post,comments},content)];this.forumPosts=this.forumPosts.map(item=>item.id===id?{...item,comments:comments.slice(-20)}:item);data=parseForumData(this.repository.getData('daoyuan_forum_data'));await this.repository.write('daoyuan_forum_data',{...data,posts:this.forumPosts});}this.appData=this.repository.project();this.frame?.contentWindow?.postMessage(makeBridgeMessage('event','FORUM_COMMENT_STATUS',{ok:true,id}),'*');this.sendContext();}catch(error){this.frame?.contentWindow?.postMessage(makeBridgeMessage('event','FORUM_COMMENT_STATUS',{ok:false,error:`评论已保存；AI 回复失败：${error instanceof Error?error.message:String(error)}`}),'*');}}
+  private async submitForumComment(payload:Record<string,unknown>):Promise<void>{const id=typeof payload.id==='string'?payload.id:'',content=typeof payload.content==='string'?payload.content.trim().slice(0,3000):'';const post=this.forumPosts.find(item=>item.id===id);if(!post||!content)return;const settings=readXianwangApiSettings(this.hostWindow??window);const userComment={id:`forum-comment:${Date.now()}:user`,author:settings.playerAlias,content,storyTime:this.worldStatus.time};let comments=[...post.comments,userComment];try{this.forumPosts=this.forumPosts.map(item=>item.id===id?{...item,comments:comments.slice(-20)}:item);let data=parseForumData(this.repository.getData('daoyuan_forum_data'));await this.repository.write('daoyuan_forum_data',{...data,posts:this.forumPosts});this.sendContext();if(settings.autoAiReply){comments=[...comments,...await generateForumReplies(settings,{...post,comments},content)];if(!this.featureEnabled('xianwang'))throw new Error('仙网论坛已关闭，本次 AI 回复未写入');this.forumPosts=this.forumPosts.map(item=>item.id===id?{...item,comments:comments.slice(-20)}:item);data=parseForumData(this.repository.getData('daoyuan_forum_data'));await this.repository.write('daoyuan_forum_data',{...data,posts:this.forumPosts});}this.appData=this.repository.project();this.frame?.contentWindow?.postMessage(makeBridgeMessage('event','FORUM_COMMENT_STATUS',{ok:true,id}),'*');this.sendContext();}catch(error){this.frame?.contentWindow?.postMessage(makeBridgeMessage('event','FORUM_COMMENT_STATUS',{ok:false,error:`评论已保存；AI 回复失败：${error instanceof Error?error.message:String(error)}`}),'*');}}
 
   private async xianwangGenerationInput(sourceMessageId?: string): Promise<{ worldTime:string; location:string; recentStory:string; worldFacts:string; lore:string; existingTitles:string[]; sourceMessageId?:string }> {
     if (!this.hostWindow) throw new Error('酒馆运行上下文不可用');
@@ -2319,6 +2517,7 @@ class FeatureShell {
       const entry = this.beautyRanks.find(row => row.name === name);
       if (!name || !content || !entry) throw new Error('回帖人物或内容无效');
       const reply = await generateBeautyRankReply(readBeautyApiSettings(this.hostWindow ?? window), name, entry.xianzi, entry.qunfangpu, content, Array.isArray(payload.history) ? payload.history.map(String) : []);
+      if (!this.featureEnabled('beauty')) throw new Error('绝色榜已关闭，本次回复未写入');
       const userFloor = this.beautyReplies.filter(row => row.name === name).length + 1;
       const now = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
       const userEntry = { id: `reply:${Date.now()}:user`, name, content, floor: userFloor, time: now, likes: 0, liked: false };
@@ -2424,14 +2623,15 @@ class FeatureShell {
   }
 
   private async parseStoryYujian(messageId: string, story: string): Promise<void> {
-    if (!this.hostWindow || !this.session.chatId) return;
-    if (this.yujianStoryParseInFlight) { this.pendingYujianStoryParse = { messageId, story }; return; }
+    if (!this.canParseYujianStory()) return;
+    const revision = this.yujianStoryParseRevision;
+    if (this.yujianStoryParseInFlight) { this.pendingYujianStoryParse = { messageId, story, revision }; return; }
     this.yujianStoryParseInFlight = true;
-    let next: { messageId: string; story: string } | null = { messageId, story };
+    let next: { messageId: string; story: string; revision: number } | null = { messageId, story, revision };
     try {
       while (next) {
         this.pendingYujianStoryParse = null;
-        await this.parseStoryYujianFloor(next.messageId, next.story);
+        if (this.canParseYujianStory(next.revision)) await this.parseStoryYujianFloor(next.messageId, next.story, next.revision);
         next = this.pendingYujianStoryParse;
       }
     } finally {
@@ -2439,20 +2639,55 @@ class FeatureShell {
     }
   }
 
-  private async parseStoryYujianFloor(messageId: string, story: string): Promise<void> {
-    if (!this.hostWindow || !this.session.chatId) return;
+  private canParseYujianStory(revision = this.yujianStoryParseRevision): boolean {
+    return Boolean(
+      this.hostWindow
+      && this.session.chatId
+      && revision === this.yujianStoryParseRevision
+      && this.featureEnabled('yujian')
+      && readYujianSettings(this.hostWindow).storyParseEnabled === true
+    );
+  }
+
+  private stopYujianStoryParsing(): void {
+    this.yujianStoryParseRevision += 1;
+    this.pendingYujianStoryParse = null;
+    this.yujianStoryParseAbortController?.abort();
+    this.yujianStoryParseAbortController = null;
+  }
+
+  private stopYujianOperations(): void {
+    this.stopYujianStoryParsing();
+    this.yujianSendAbortController?.abort();
+    this.yujianSendAbortController = null;
+    this.yujianModelsAbortController?.abort();
+    this.yujianModelsAbortController = null;
+  }
+
+  private async parseStoryYujianFloor(messageId: string, story: string, revision: number): Promise<void> {
+    if (!this.hostWindow || !this.session.chatId || !this.canParseYujianStory(revision)) return;
     const chatId = this.session.chatId;
     const processed = await readProcessedYujianStories(this.hostWindow, chatId);
+    if (!this.canParseYujianStory(revision)) return;
     const fingerprint = storyFingerprint(story);
     const swipeKey = `${messageId}:${fingerprint}`;
     if (processed.includes(swipeKey)) return;
+    const controller = new AbortController();
+    this.yujianStoryParseAbortController = controller;
     try {
-      const events = await extractStoryYujianEvents(this.hostWindow, story);
+      const events = await extractStoryYujianEvents(this.hostWindow, story, {
+        signal: controller.signal,
+        isEnabled: () => this.canParseYujianStory(revision),
+      });
+      if (!this.canParseYujianStory(revision)) return;
       const mvuWindow = runtime.Mvu ? runtime as unknown as Window : this.hostWindow;
       const floorStoryTime = await readYujianStoryTime(mvuWindow, messageId);
+      if (!this.canParseYujianStory(revision)) return;
       await removeAutoYujianRecordsForFloor(this.hostWindow, chatId, messageId);
+      if (!this.canParseYujianStory(revision)) return;
       const remembered = new Map((await loadStandaloneKnownContacts(this.hostWindow, chatId)).map(contact => [contact.name, contact]));
       for (const event of events) {
+        if (!this.canParseYujianStory(revision)) return;
         await appendStandaloneYujianRecord(this.hostWindow, chatId, event.contact, event.direction === 'to_player' ? 'them' : 'me', event.content, floorStoryTime, {
           sourceMessageId: messageId,
           sourceFingerprint: fingerprint,
@@ -2470,11 +2705,16 @@ class FeatureShell {
           unread: (previous?.unread ?? 0) + (event.direction === 'to_player' ? 1 : 0),
         });
       }
+      if (!this.canParseYujianStory(revision)) return;
       await rememberStandaloneKnownContacts(this.hostWindow, chatId, [...remembered.values()]);
+      if (!this.canParseYujianStory(revision)) return;
       await writeProcessedYujianStories(this.hostWindow, chatId, [...processed, swipeKey]);
       if (events.length) this.scheduleWorldDataRefresh(0);
     } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') return;
       console.warn('[道渊玉简] 正文玉简解析失败', error);
+    } finally {
+      if (this.yujianStoryParseAbortController === controller) this.yujianStoryParseAbortController = null;
     }
   }
 
@@ -2493,25 +2733,31 @@ class FeatureShell {
     const executionWindow = runtime.Mvu
       ? runtime as unknown as Window
       : this.hostWindow;
+    const controller = new AbortController();
+    this.yujianSendAbortController = controller;
     try {
       const result = await sendYujianMessageWithProgress(executionWindow, this.session.chatId, charName, text, phase => {
         if (phase === 'user-written') {
           this.scheduleWorldDataRefresh(0);
           frame?.contentWindow?.postMessage(makeBridgeMessage('event', 'YUJIAN_SEND_STATUS', { phase }), '*');
         }
-      }, this.session.messageId);
+      }, this.session.messageId, { signal: controller.signal, isEnabled: () => this.featureEnabled('yujian') });
+      if (controller.signal.aborted || !this.featureEnabled('yujian')) return;
       await this.refreshPromptInjection();
       this.scheduleWorldDataRefresh(120);
       frame?.contentWindow?.postMessage(makeBridgeMessage('event', 'YUJIAN_SEND_STATUS', { ok: true, storageWarning: result.storageWarning ?? '' }), '*');
     } catch (error) {
+      if (controller.signal.aborted) return;
       const message = error instanceof Error ? error.message : String(error);
       console.warn('[道渊玉简] 玉简传讯失败', error);
       frame?.contentWindow?.postMessage(makeBridgeMessage('event', 'YUJIAN_SEND_STATUS', { ok: false, error: message }), '*');
-    }
+    } finally { if (this.yujianSendAbortController === controller) this.yujianSendAbortController = null; }
   }
 
   open(): void {
     if (!this.host || !this.orb || this.session.phase === 'destroyed') return;
+    if (this.drawerHideTimer !== null && this.hostWindow) this.hostWindow.clearTimeout(this.drawerHideTimer);
+    this.drawerHideTimer = null;
     this.session.visible = true;
     this.host.hidden = false;
     this.orb.disabled = false;
@@ -2519,12 +2765,17 @@ class FeatureShell {
     this.ensureFrame();
     if (frameAlreadyMounted && this.contextDirtyWhileHidden) this.sendContext(true);
     this.resize();
+    void this.host.offsetWidth;
+    this.host.classList.add('is-open');
   }
 
   close(): void {
     if (!this.host || !this.orb) return;
     this.session.visible = false;
-    this.host.hidden = true;
+    this.host.classList.remove('is-open');
+    if (this.phoneDisplayMode === 'floating') this.host.hidden = true;
+    if (this.drawerHideTimer !== null && this.hostWindow) this.hostWindow.clearTimeout(this.drawerHideTimer);
+    this.drawerHideTimer = null;
     this.orb.hidden = false;
     this.orb.disabled = false;
     this.petController?.closePhone();
@@ -2571,6 +2822,8 @@ class FeatureShell {
     this.earthSimulationState = rawEarthState&&this.session.chatId ? initializeEarthSimulationState(rawEarthState,this.session.chatId,new Date().toISOString().slice(0,10)) : null;
     const storedXuantianState = rawXuantianState&&this.session.chatId ? initializeXuantianSimulationState(rawXuantianState,this.session.chatId) : null;
     if (storedXuantianState){const storyTime=this.worldStatus.time;const calibrated=storedXuantianState.calendarLabel.includes('未校准')&&storyTime&&storyTime!=='未接入'&&storyTime!=='未知'?XuantianSimulationStateSchema.parse({...storedXuantianState,calendarLabel:storyTime}) as XuantianSimulationState:storedXuantianState;this.xuantianSimulationState=calibrated;if(calibrated!==storedXuantianState)xuantianStore?.set(XUANTIAN_SIMULATION_STATE_KEY,calibrated);}else this.xuantianSimulationState=null;
+    try{this.storyDirectorPlan=StoryDirectorPlanSchema.parse(xuantianStore?.get(STORY_DIRECTOR_STATE_KEY));}catch{this.storyDirectorPlan=null;}
+    const rawFaultLogs=xuantianStore?.get(XUANTIAN_FAULT_LOG_KEY);this.xuantianFaultLogs=Array.isArray(rawFaultLogs)?rawFaultLogs.filter((item):item is XuantianFaultLog=>Boolean(item&&typeof item==='object'&&typeof (item as XuantianFaultLog).message==='string')).slice(-60):[];
     this.frame.contentWindow.postMessage(makeBridgeMessage('event', 'REQUEST_CONTEXT', {
       layout: this.layout,
       shellMode: this.shellMode,
@@ -2611,7 +2864,8 @@ class FeatureShell {
       promptInjectionSettings: this.hostWindow ? readPromptInjectionSettings(this.hostWindow) : DEFAULT_PROMPT_INJECTION_SETTINGS,
       petSize: this.hostWindow ? readPetSize(this.hostWindow) : 'large',
       petKind: this.hostWindow ? readPetKind(this.hostWindow) : 'whale',
-      contentBeautifierEnabled: this.hostWindow ? readContentBeautifierEnabled(this.hostWindow) : true,
+      phoneDisplayMode: this.phoneDisplayMode,
+      contentBeautifierEnabled: this.hostWindow ? readContentBeautifierEnabled(this.hostWindow) : false,
       configHelperEnabled: this.hostWindow ? readConfigHelperEnabled(this.hostWindow) : true,
       featureModuleFlags: this.hostWindow ? readFeatureModuleFlags(this.hostWindow) : DEFAULT_FEATURE_MODULE_FLAGS,
       worldSimulationFeatures: this.hostWindow ? readWorldSimulationFeatures(this.hostWindow) : DEFAULT_WORLD_SIMULATION_FEATURES,
@@ -2623,6 +2877,8 @@ class FeatureShell {
       earthSimulationState: this.earthSimulationState,
       xuantianApiSettings: this.hostWindow ? readXuantianApiSettings(this.hostWindow) : {},
       xuantianSimulationState: this.xuantianSimulationState,
+      storyDirectorPlan: this.storyDirectorPlan,
+      xuantianFaultLogs: this.xuantianFaultLogs,
     }, this.session.contextRevision), '*');
     this.refreshPromptInjection();
   }
@@ -2654,29 +2910,27 @@ class FeatureShell {
       }
     }
     if (!this.session.visible) return;
-    if (keyboardOpen && !this.keyboardViewportActive) this.shellPositionBeforeKeyboard = this.shellPosition;
-    if (!keyboardOpen && this.keyboardViewportActive) {
-      this.shellPosition = this.shellPositionBeforeKeyboard;
-      this.shellPositionBeforeKeyboard = null;
-    }
     this.keyboardViewportActive = keyboardOpen;
-    const width = keyboardOpen ? Math.min(420, viewportWidth) : Math.min(420, viewportWidth, viewportHeight * IPHONE_RATIO);
-    const height = keyboardOpen ? Math.min(width / IPHONE_RATIO, viewportHeight) : width / IPHONE_RATIO;
-    const left = keyboardOpen
-      ? viewportLeft + Math.max(0, (viewportWidth - width) / 2)
-      : this.shellPosition?.left ?? Math.max(viewportLeft, viewportLeft + viewportWidth - width - 24);
-    const top = keyboardOpen
-      ? viewportTop
-      : this.shellPosition?.top ?? Math.min(viewportTop + 24, Math.max(viewportTop, viewportTop + viewportHeight - height));
-    if (keyboardOpen) {
-      this.shellPosition = { left, top };
-    } else {
-      const clamped = this.clampPosition(left - viewportLeft, top - viewportTop, width, height, viewportWidth, viewportHeight);
-      this.shellPosition = { left: clamped.left + viewportLeft, top: clamped.top + viewportTop };
-    }
+    const compact = viewportWidth <= 600 || this.hostWindow.matchMedia('(pointer: coarse)').matches;
+    const verticalGap = compact ? 10 : 16;
+    const availableHeight = Math.max(0, viewportHeight - verticalGap * 2);
+    const width = Math.min(420, viewportWidth, availableHeight * IPHONE_RATIO);
+    const height = width / IPHONE_RATIO;
+    const drawerLeft = viewportLeft + viewportWidth - width;
+    const drawerTop = viewportTop + Math.max(verticalGap, (viewportHeight - height) / 2);
+    const floatingPosition = this.clampPosition(
+      (this.shellPosition?.left ?? viewportLeft + viewportWidth - width - 24) - viewportLeft,
+      (this.shellPosition?.top ?? viewportTop + Math.max(verticalGap, (viewportHeight - height) / 2)) - viewportTop,
+      width, height, viewportWidth, viewportHeight,
+    );
+    const left = this.phoneDisplayMode === 'floating' ? floatingPosition.left + viewportLeft : drawerLeft;
+    const top = this.phoneDisplayMode === 'floating' ? floatingPosition.top + viewportTop : drawerTop;
+    if (this.phoneDisplayMode === 'floating') this.shellPosition = { left, top };
     this.host.dataset.mode = 'phone';
+    this.host.dataset.presentation = compact ? 'compact-drawer' : 'drawer';
+    this.host.dataset.displayMode = this.phoneDisplayMode;
     this.host.dataset.keyboard = keyboardOpen ? 'open' : 'closed';
-    Object.assign(this.host.style, { left: `${this.shellPosition.left}px`, top: `${this.shellPosition.top}px`, width: `${width}px`, height: `${height}px`, right: 'auto', bottom: 'auto' });
+    Object.assign(this.host.style, { left: `${left}px`, top: `${top}px`, width: `${width}px`, height: `${height}px`, right: 'auto', bottom: 'auto' });
   }
 
   private positionOrb(): void {
@@ -2712,6 +2966,7 @@ class FeatureShell {
     if (!this.dragStrip || !this.host || !this.hostWindow) return;
     let drag: { pointerId: number; startX: number; startY: number; left: number; top: number; width: number; height: number; viewportWidth: number; viewportHeight: number } | null = null;
     const onPointerDown = (event: PointerEvent): void => {
+      if (this.phoneDisplayMode !== 'floating') return;
       if (event.button !== 0 || !this.host || drag) return;
       const rect = this.host.getBoundingClientRect();
       const viewportWidth = this.hostWindow?.visualViewport?.width ?? this.hostWindow?.innerWidth ?? 0;
@@ -2735,8 +2990,10 @@ class FeatureShell {
       this.host?.classList.remove('is-dragging');
       this.dragStrip?.classList.remove('is-dragging');
       if (this.dragStrip?.hasPointerCapture(event.pointerId)) this.dragStrip.releasePointerCapture(event.pointerId);
+      if (this.shellPosition && this.hostWindow) savePhoneFloatingPosition(this.hostWindow, this.shellPosition);
     };
     const onMouseDown = (event: MouseEvent): void => {
+      if (this.phoneDisplayMode !== 'floating') return;
       if (event.button !== 0 || drag || !this.host) return;
       const rect = this.host.getBoundingClientRect();
       const viewportWidth = this.hostWindow?.visualViewport?.width ?? this.hostWindow?.innerWidth ?? 0;
@@ -2758,6 +3015,7 @@ class FeatureShell {
       drag = null;
       this.host?.classList.remove('is-dragging');
       this.dragStrip?.classList.remove('is-dragging');
+      if (this.shellPosition && this.hostWindow) savePhoneFloatingPosition(this.hostWindow, this.shellPosition);
     };
     this.dragStrip.addEventListener('pointerdown', onPointerDown);
     this.dragStrip.addEventListener('pointerup', onPointerUp);
@@ -2894,6 +3152,8 @@ class FeatureShell {
     this.reconcileTimer = null;
     if (this.autoSchedulerTimer !== null) window.clearTimeout(this.autoSchedulerTimer);
     this.autoSchedulerTimer = null;
+    if (this.drawerHideTimer !== null) window.clearTimeout(this.drawerHideTimer);
+    this.drawerHideTimer = null;
   }
 }
 

@@ -9,7 +9,7 @@ const root = resolve(import.meta.dirname, '..', '..');
 const sourceBytes = await readFile(resolve(root, '灵力复苏地球附属世界书/灵力复苏地球附属世界书.json'));
 const source = JSON.parse(sourceBytes.toString('utf8')); const entries = earthWorldbookEntries();
 assert.equal(EARTH_WORLD_BOOK_SEED.sourceSha256, createHash('sha256').update(sourceBytes).digest('hex'));
-assert.equal(entries.length, Object.keys(source.entries).length); assert.equal(entries.length, 187);
+assert.equal(entries.length, Object.keys(source.entries).length); assert.equal(entries.length, 188);
 assert.equal(new Set(entries.map((entry) => entry.name)).size, entries.length, '种子条目名不得重复');
 const allEjsEntries = entries.filter((entry) => /^EJS/.test(entry.name));
 assert.equal(allEjsEntries.length, 10, 'EJS 特殊条目数量异常');

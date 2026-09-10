@@ -15,12 +15,14 @@ const CONFIG_HELPER_REMOTE_URL = 'https://testingcf.jsdelivr.net/gh/NLKASHEI/114
 const CONFIG_HELPER_FALLBACK_URL = 'https://testingcf.jsdelivr.net/gh/NLKASHEI/114514@master/%E9%81%93%E6%B8%8A%E9%85%8D%E7%BD%AE%E5%B0%8F%E5%8A%A9%E6%89%8B.min.js';
 const formal = process.argv.includes('--formal');
 const v11Test = process.argv.includes('--v11-test');
-const v12Test = process.argv.includes('--v12-test');
+const v12DisplayTest = process.argv.includes('--v12-display-test');
+const v12Test = process.argv.includes('--v12-test') || v12DisplayTest;
 const v11 = formal || v11Test;
 const packageVersion = v12Test ? '1.2.0' : v11 ? '1.1.0' : '1.0.0';
-const outputPath = new URL(v12Test ? './dist/道渊功能前端-V1.2测试候选.json' : v11 ? `./dist/道渊功能前端-V1.1${formal ? '正式' : '测试'}候选.json` : './dist/道渊功能前端-V1.0测试候选.json', projectRoot);
-const packageName = v12Test ? '道渊小手机V1.2测试' : v11 ? `道渊小手机V1.1${formal ? '' : '测试'}` : '道渊小手机V1.0测试';
-const importOutputPath = new URL(v12Test ? '../releases/candidates/道渊小手机V1.2测试.json' : formal ? '../releases/道渊小手机V1.1.json' : v11Test ? './dist/道渊小手机V1.1测试.json' : './dist/道渊小手机V1.0测试.json', projectRoot);
+const outputPath = new URL(v12DisplayTest ? './dist/道渊功能前端-V1.2显示模式测试候选.json' : v12Test ? './dist/道渊功能前端-V1.2测试候选.json' : v11 ? `./dist/道渊功能前端-V1.1${formal ? '正式' : '测试'}候选.json` : './dist/道渊功能前端-V1.0测试候选.json', projectRoot);
+const packageName = v12DisplayTest ? '道渊小手机V1.2-显示模式测试' : v12Test ? '道渊小手机V1.2测试' : v11 ? `道渊小手机V1.1${formal ? '' : '测试'}` : '道渊小手机V1.0测试';
+const importOutputPath = new URL(v12DisplayTest ? '../releases/candidates/道渊小手机V1.2-显示模式测试.json' : v12Test ? '../releases/candidates/道渊小手机V1.2测试.json' : formal ? '../releases/道渊小手机V1.1.json' : v11Test ? './dist/道渊小手机V1.1测试.json' : './dist/道渊小手机V1.0测试.json', projectRoot);
+const importScriptId = v12DisplayTest ? 'daoyuan-feature-frontend-hud-v12-display-test' : v12Test ? 'daoyuan-feature-frontend-hud-v12-embedded' : 'daoyuan-feature-frontend-hud-v09';
 const source = await readFile(artifactPath, 'utf8');
 const contentBeautifierBytes = await readFile(contentBeautifierPath);
 const contentBeautifierHash = createHash('sha256').update(contentBeautifierBytes).digest('hex');
@@ -196,7 +198,7 @@ const renderAllEndIndex = contentBeautifierSource.indexOf(renderAllEnd, renderAl
 if (renderAllStartIndex < 0 || renderAllEndIndex < 0) throw new Error('V26 阅读器渲染范围接入点不符合预期');
 contentBeautifierSource = `${contentBeautifierSource.slice(0, renderAllStartIndex)}${limitedRenderAll}${contentBeautifierSource.slice(renderAllEndIndex)}`;
 contentBeautifierSource = replaceChecked(contentBeautifierSource, originalObserver, limitedObserver, '阅读器增量观察');
-const contentBeautifierBootstrap = `\n;globalThis.${CONTENT_BEAUTIFIER_INSTALLER}=()=>{\n${contentBeautifierSource}\n};\n(()=>{let enabled=true;try{const storage=window.parent?.localStorage??localStorage;enabled=storage.getItem('${CONTENT_BEAUTIFIER_ENABLED_KEY}')!=='false';}catch{}if(enabled)globalThis.${CONTENT_BEAUTIFIER_INSTALLER}();})();\n`;
+const contentBeautifierBootstrap = `\n;globalThis.${CONTENT_BEAUTIFIER_INSTALLER}=()=>{\n${contentBeautifierSource}\n};\n(()=>{let enabled=false;try{const storage=window.parent?.localStorage??localStorage;enabled=storage.getItem('${CONTENT_BEAUTIFIER_ENABLED_KEY}')==='true';}catch{}if(enabled)globalThis.${CONTENT_BEAUTIFIER_INSTALLER}();})();\n`;
 const configHelperBootstrap = `\n;const __daoyuanConfigHelperRemoteUrl='${CONFIG_HELPER_REMOTE_URL}';const __daoyuanConfigHelperFallbackUrl='${CONFIG_HELPER_FALLBACK_URL}';\nlet __daoyuanConfigHelperLoadPromise=null;\nconst __daoyuanFindConfigHelperBubble=()=>{const host=window.parent??window;return host.document.getElementById('bp-switch-bubble')??host.document.getElementById('jmzq-bubble');};\nglobalThis.${CONFIG_HELPER_VISIBILITY_SETTER}=(visible)=>{try{const host=window.parent??window;const bubble=__daoyuanFindConfigHelperBubble();const panel=host.document.getElementById('bp-switch-panel')??host.document.getElementById('jmzq-panel');if(bubble)bubble.style.display=visible?'':'none';if(!visible&&panel)panel.style.display='none';}catch{}};\nglobalThis.${CONFIG_HELPER_INSTALLER}=async()=>{\ntry{const host=window.parent??window;if(!__daoyuanFindConfigHelperBubble()){if(!__daoyuanConfigHelperLoadPromise)__daoyuanConfigHelperLoadPromise=import(__daoyuanConfigHelperRemoteUrl).catch(()=>import(__daoyuanConfigHelperFallbackUrl)).catch(error=>{__daoyuanConfigHelperLoadPromise=null;throw error;});await __daoyuanConfigHelperLoadPromise;}let visible=true;try{const storage=host.localStorage??localStorage;visible=storage.getItem('${CONFIG_HELPER_ENABLED_KEY}')!=='false';}catch{}globalThis.${CONFIG_HELPER_VISIBILITY_SETTER}(visible);}catch(error){console.warn('[道渊配置小助手] 远程脚本加载失败',error);}\n};\nconst __daoyuanEnsureConfigHelperV133=()=>{try{if(!__daoyuanFindConfigHelperBubble())void globalThis.${CONFIG_HELPER_INSTALLER}();else globalThis.${CONFIG_HELPER_VISIBILITY_SETTER}(true);}catch{}};\nvoid globalThis.${CONFIG_HELPER_INSTALLER}();\nsetTimeout(__daoyuanEnsureConfigHelperV133,1200);\nsetTimeout(__daoyuanEnsureConfigHelperV133,3500);\n`;
 const baseBundledSource = v11 || v12Test ? `${source}${contentBeautifierBootstrap}` : source;
 const configHelperVisibilityGuard = `\n;(()=>{const previous=globalThis.${CONFIG_HELPER_VISIBILITY_SETTER};if(typeof previous==='function')globalThis.${CONFIG_HELPER_VISIBILITY_SETTER}=(requested)=>{let visible=requested;try{const host=window.parent??window;visible=(host.localStorage??localStorage).getItem('${CONFIG_HELPER_ENABLED_KEY}')!=='false';}catch{}previous(visible);};})();\n`;
@@ -211,7 +213,7 @@ const candidate = {
   formatVersion: 1,
   name: packageName,
   version: packageVersion,
-  scriptId: 'daoyuan-feature-frontend-hud-v09',
+  scriptId: importScriptId,
   enabled: true,
   runtimeStatus: v12Test ? 'V1.2 离线候选；地球附属世界书安装、挂载、复读、补缺及小手机交互待真实 SillyTavern 验收' : v11 ? 'Chrome/SillyTavern 已完成旧命中区根因测量；最终窄命中修正版仍需导入后人工点击验收' : '待目标 SillyTavern 环境执行回归',
   scope: v12Test ? 'V1.2 测试：完整保留 V1.1 功能；正文美化仅处理最近 5 条可见 AI 回复并支持删楼回退，小手机隐藏时暂停上下文同步；包含地球独立推演，以及基于原版主世界书的玄天界五域、势力与并行事件线推演。' : v11 ? 'V1.1：完整保留 V1.0 功能与 DSH 双 video 桌宠；内置带小手机总开关的 V26 正文美化阅读器，支持姓名大括号对白协议，并保留全局 content 兼容扫描、独立术语注解开关与原有持久化' : 'V1.0 测试候选',
@@ -240,7 +242,7 @@ const importableScript = {
   version: packageVersion,
   enabled: true,
   name: packageName,
-  id: 'daoyuan-feature-frontend-hud-v09',
+  id: importScriptId,
   content: bundledSource,
   info: v12Test ? '道渊小手机 V1.2 测试版：补齐玄天界独立推演执行器，读取原版主世界书与最近 5 条可见 AI 回复，多条事件线并行推进；地球与玄天界 API、状态账本完全隔离。配置助手保持 V1.3.3 原样。需在真实 SillyTavern 验收。' : v11 ? `道渊小手机 V1.1${formal ? '' : ' 测试版'}：完整保留 V1.0 功能与 DSH 双 video 桌宠；内置带小手机总开关的 V26 正文美化阅读器，支持 {角色标准姓名}“台词”协议，兼容旧对白格式，并保留全局 content 扫描、独立术语开关及设置持久化。` : '道渊小手机 V1.0 测试候选。',
   button: {
