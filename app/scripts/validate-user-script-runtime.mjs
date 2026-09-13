@@ -59,6 +59,7 @@ for (const obsoleteModule of ['expansionManager', 'detectScriptDlcId']) {
 }
 
 const packageSource = await (await import('node:fs/promises')).readFile(new URL('./package-candidate.mjs', import.meta.url), 'utf8');
+const bodyPromptSource = await (await import('node:fs/promises')).readFile(new URL('../vendor/正文边界与对白格式CoT-V0.8.txt', import.meta.url), 'utf8');
 assert.match(packageSource, /bodyPromptEnabled:false,ticketPromptEnabled:false,ticketRendererEnabled:false/, '正文与票据辅助开关必须默认关闭');
 assert.match(packageSource, /storage\(\)\?\.getItem\('\$\{CONTENT_BEAUTIFIER_ENABLED_KEY\}'\)==='true'/, '候选包中的正文美化必须仅在玩家明确开启后运行');
 assert.match(packageSource, /GENERATION_AFTER_COMMANDS/, '正文格式协议必须在生成命令完成后注入');
@@ -71,7 +72,8 @@ assert.match(packageSource, /find\(item=>typeof item\?\.injectPrompts==='functio
 assert.doesNotMatch(packageSource, /__DAOYUAN_WRITING_COT_LISTENER__/, '其他写作监听器不得阻断道渊独立的正文与票据协议注入');
 assert.match(packageSource, /removeApi\?\.\(ids\)/, '格式协议清理必须使用固定 ID 数组');
 assert.match(packageSource, /typeof off\?\.stop==='function'/, 'Tavern Helper EventOnReturn.stop 必须进入销毁链');
-assert.match(packageSource, /BODY_PROMPT_SHA256 = 'acf0ecd30388af176ad97beebdb52557db7bd149d3caa12181cbaab1e4046d51'/, '正文协议必须锁定 V0.8 原版快照');
+assert.match(packageSource, /BODY_PROMPT_SHA256 = '8c798381d668ef70ac540f05b113001c632226319042c599a13cf5880780aff6'/, '正文协议必须锁定包含 IMG_GEN 边界规则的 V0.8 快照');
+assert.match(bodyPromptSource, /小说正文与\[IMG_GEN\]必须完整写在<content>与<\/content>之间。/, '正文协议必须要求 IMG_GEN 位于唯一 content 容器内');
 assert.match(packageSource, /TICKET_PROMPT_SHA256 = '77db2b49f683a3b04c8015300a8f9ee3e99f03ac70700582bba0697ad0968dcf'/, '剧情票据协议必须锁定 V0.8 原版快照');
 assert.match(packageSource, /const bodyPrompt=\$\{bodyPromptLiteral\}/, '正文提示词必须由原版快照嵌入');
 assert.match(packageSource, /const ticketPrompt=\$\{ticketPromptLiteral\}/, '商店与任务提示词必须由原版快照嵌入');
