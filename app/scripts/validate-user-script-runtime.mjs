@@ -59,7 +59,22 @@ for (const obsoleteModule of ['expansionManager', 'detectScriptDlcId']) {
 }
 
 const packageSource = await (await import('node:fs/promises')).readFile(new URL('./package-candidate.mjs', import.meta.url), 'utf8');
-assert.match(packageSource, /let enabled=false;try\{const storage=window\.parent\?\.localStorage\?\?localStorage;enabled=storage\.getItem\('\$\{CONTENT_BEAUTIFIER_ENABLED_KEY\}'\)==='true'/, '候选包中的正文美化启动器必须默认关闭');
+assert.match(packageSource, /bodyPromptEnabled:false,ticketPromptEnabled:false,ticketRendererEnabled:false/, '正文与票据辅助开关必须默认关闭');
+assert.match(packageSource, /storage\(\)\?\.getItem\('\$\{CONTENT_BEAUTIFIER_ENABLED_KEY\}'\)==='true'/, '候选包中的正文美化必须仅在玩家明确开启后运行');
+assert.match(packageSource, /GENERATION_AFTER_COMMANDS/, '正文格式协议必须在生成命令完成后注入');
+assert.match(packageSource, /const subscribeFirst=typeof eventMakeFirst==='function'/, '生成协议必须优先注册，避免被后续监听器覆盖');
+assert.match(packageSource, /on\(events\.GENERATION_AFTER_COMMANDS,inject,subscribeFirst\)/, '生成注入必须使用优先监听器');
+assert.match(packageSource, /should_scan:true/, '正文与票据协议必须允许酒馆扫描处理');
+assert.match(packageSource, /position:'in_chat',depth:1,role:'system'/, '正文与票据协议必须保持 V0.8 原版的聊天内系统深度 1');
+assert.match(packageSource, /const runtimeScopes=\(\)=>\{const result=\[window\]/, '提示词注入必须同时探测脚本 iframe 与父页面');
+assert.match(packageSource, /find\(item=>typeof item\?\.injectPrompts==='function'\)/, '提示词注入必须选择实际提供 injectPrompts 的运行域');
+assert.doesNotMatch(packageSource, /__DAOYUAN_WRITING_COT_LISTENER__/, '其他写作监听器不得阻断道渊独立的正文与票据协议注入');
+assert.match(packageSource, /removeApi\?\.\(ids\)/, '格式协议清理必须使用固定 ID 数组');
+assert.match(packageSource, /typeof off\?\.stop==='function'/, 'Tavern Helper EventOnReturn.stop 必须进入销毁链');
+assert.match(packageSource, /BODY_PROMPT_SHA256 = 'acf0ecd30388af176ad97beebdb52557db7bd149d3caa12181cbaab1e4046d51'/, '正文协议必须锁定 V0.8 原版快照');
+assert.match(packageSource, /TICKET_PROMPT_SHA256 = '77db2b49f683a3b04c8015300a8f9ee3e99f03ac70700582bba0697ad0968dcf'/, '剧情票据协议必须锁定 V0.8 原版快照');
+assert.match(packageSource, /const bodyPrompt=\$\{bodyPromptLiteral\}/, '正文提示词必须由原版快照嵌入');
+assert.match(packageSource, /const ticketPrompt=\$\{ticketPromptLiteral\}/, '商店与任务提示词必须由原版快照嵌入');
 assert.match(packageSource, /data:image\\\\\/\(\?:png\|jpe\?g\|webp\|gif\);base64/, '正文美化必须允许状态栏本地导入后保存的 data:image 立绘');
 assert.match(packageSource, /url\.protocol === 'https:' \|\| url\.protocol === 'http:'/, '正文美化必须允许状态栏保存的自定义 HTTP(S) 立绘 URL');
 assert.match(packageSource, /\.replace\(originalPortraitUrlGuard, customPortraitUrlGuard\)/, '正文美化打包时必须接入自定义立绘协议白名单');
@@ -74,6 +89,29 @@ assert.match(packageSource, /getElementById\('bp-switch-bubble'\)/, '配置小�
 assert.match(packageSource, /__daoyuanConfigHelperLoadPromise=import\(__daoyuanConfigHelperRemoteUrl\)/, '配置小助手远程模块必须使用单例加载承诺');
 assert.match(packageSource, /setTimeout\(__daoyuanEnsureConfigHelperV133,1200\)/, '配置小助手应进行首轮延迟复查');
 assert.match(packageSource, /setTimeout\(__daoyuanEnsureConfigHelperV133,3500\)/, '配置小助手应覆盖慢速 CDN 加载');
+for (const marker of ['GENERATION_STARTED', 'GENERATION_STOPPED', 'GENERATION_ENDED', 'VARIABLE_UPDATE_STARTED', 'VARIABLE_UPDATE_ENDED']) {
+  assert.ok(packageSource.includes(marker), `正文美化缺少生成生命周期门控：${marker}`);
+}
+assert.match(packageSource, /generationActive \|\| waitingForVariableUpdate \|\| coordinationQueued/, '流式生成或变量更新期间 DOM 变化不得触发正文美化');
+assert.match(packageSource, /VARIABLE_UPDATE_STARTED[\s\S]{0,180}waitingForVariableUpdate = true/, 'MVU 开始时正文美化必须进入等待态');
+assert.match(packageSource, /VARIABLE_UPDATE_ENDED[\s\S]{0,180}renderAfterTickets\('变量更新完成'\)/, 'MVU 完成后必须先走票据前置扫描');
+assert.match(packageSource, /await ticketApi\.scan\(reason\)[\s\S]{0,260}renderOnce\(\)/, '正文美化必须等待票据扫描完成后再渲染');
+for (const staleTimerMarker of ['scheduleQuietFallback', 'variableFallbackTimer', 'quietTimer']) {
+  assert.ok(!packageSource.includes(staleTimerMarker), `正文/票据协调不得残留定时器：${staleTimerMarker}`);
+}
+assert.match(packageSource, /lifecycleDisposers\.splice\(0\)/, '正文美化销毁时必须解除生成生命周期监听');
+assert.match(packageSource, /const contentSignatureByMessage = new WeakMap\(\)/, '正文美化必须缓存楼层内容签名');
+assert.match(packageSource, /const dirtyMessages = new Set\(\)/, '正文美化必须使用脏楼层队列');
+assert.match(packageSource, /const hasPendingVisibleDialogue = \[\.\.\.message\.querySelectorAll\(PAPER_SELECTOR \+ ' \.dy-reader-v2__body > p'\)\]/, '票据插入后必须检查正文中遗留的显式角色对白');
+assert.match(packageSource, /contentSignatureByMessage\.get\(message\) === signature && !hasPendingVisibleDialogue/, '正文未变化且没有遗留对白时才可跳过结构解析');
+assert.match(packageSource, /function syncMessagePresentation\(message, moonlit\)/, '设置、主题与立绘同步必须从正文结构解析中拆分');
+assert.match(packageSource, /eligibleMessagesBefore\.forEach\(message => \{[\s\S]{0,260}!eligibleMessages\.has\(message\)[\s\S]{0,180}restoreReader/, '退出最近五层窗口的楼层必须恢复原文');
+assert.match(packageSource, /eligibleMessages\.forEach\(message => \{[\s\S]{0,180}!eligibleMessagesBefore\.has\(message\)[\s\S]{0,100}dirtyMessages\.add/, '删楼后重新进入最近五层窗口的旧楼层必须加入脏队列');
+assert.match(packageSource, /removedNodes[\s\S]{0,260}messageWindowDirty = true/, '删除楼层必须使最近五层窗口失效并重新计算');
+for (const marker of ['MESSAGE_DELETED', 'MESSAGE_SWIPED', 'MESSAGE_EDITED', 'MESSAGE_UPDATED', 'CHAT_CHANGED']) {
+  assert.ok(packageSource.includes(marker), `正文美化缺少楼层变化事件兜底：${marker}`);
+}
+assert.match(packageSource, /const invalidateMessageWindow = \(\) => \{[\s\S]{0,220}eligibleMessagesBefore\.forEach\(message => dirtyMessages\.add\(message\)\)/, '删楼、编辑和切换回复时必须重新核验当前美化窗口');
 
 const stylesSource = await (await import('node:fs/promises')).readFile(new URL('../src/styles.css', import.meta.url), 'utf8');
 assert.match(stylesSource, /\.content-package-panel\s*\{[^}]*margin-top:\s*18px;/, 'DLC 操作按钮与导入面板之间必须保留稳定间距');

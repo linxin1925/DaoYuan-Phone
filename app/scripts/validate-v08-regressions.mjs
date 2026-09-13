@@ -129,6 +129,9 @@ assert.match(indexSource, /SAVE_FEATURE_MODULE_FLAGS[\s\S]{0,800}refreshPromptIn
 assert.match(indexSource, /SAVE_WORLD_SIMULATION_FEATURES[\s\S]{0,900}refreshPromptInjection\(\)/, 'world switches must immediately refresh prompt injection');
 assert.match(indexSource, /featureFlags\.world && worldFeatures\.earthEnabled && storedEarth/, 'earth injection must honor its realm switch');
 assert.match(indexSource, /featureFlags\.world&&worldFeatures\.xuantianEnabled&&storedXuantian/, 'xuantian injection must honor its realm switch');
+assert.match(indexSource, /if\(xuantianSimulation\)\{try\{const parsed=StoryDirectorPlanSchema\.parse\(storedStoryPlan\)/, 'story director injection must require an active xuantian ledger');
+assert.match(indexSource, /store\.set\(XUANTIAN_SIMULATION_STATE_KEY,null\);store\.set\(STORY_DIRECTOR_STATE_KEY,null\)/, 'clearing xuantian simulation must also clear its story director plan');
+assert.match(renderUiSource, /xuantianSimulationState=null;storyDirectorPlan=null/, 'clearing xuantian simulation must clear both UI projections');
 assert.match(renderUiSource, /sendAction\('SAVE_WORLD_SIMULATION_FEATURES', worldSimulationFeatures\)/, 'iframe must bridge world simulation switch persistence');
 assert.doesNotMatch(renderUiSource, /storage\.setItem\('daoyuan_world_simulation_features_v1'/, 'iframe must not write world simulation switches directly');
 assert.match(renderUiSource, /WORLD_SIMULATION_FEATURES_STATUS/, 'iframe must wait for host persistence acknowledgement');

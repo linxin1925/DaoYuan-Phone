@@ -48,7 +48,7 @@ const loaderPackage = {
   type: 'script',
   version: '1.2.0-cdn',
   enabled: true,
-  name: '道渊小手机V1.2-CDN外链版',
+  name: '道渊小手机V1.2',
   id: 'daoyuan-feature-frontend-hud-v12-cdn',
   content: loaderSource,
   info: `酒馆助手外链加载版；启动时读取 main 版本清单并加载固定提交运行时，清单不可用时回退至 ${gitRef}。`,

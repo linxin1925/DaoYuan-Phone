@@ -16,7 +16,7 @@
     "test:wanbao-pricing": "node scripts/validate-wanbao-pricing.mjs",
     "test:prompt-injection": "node --experimental-strip-types scripts/validate-prompt-injection.mjs",
     "test:content-package": "node --experimental-strip-types scripts/validate-content-package.mjs",
-    "test:user-scripts": "node --experimental-strip-types scripts/validate-user-script-runtime.mjs",
+    "test:user-scripts": "node --experimental-strip-types scripts/validate-user-script-runtime.mjs && node scripts/validate-content-injection.mjs",
     "build:earth-worldbook": "node scripts/build-earth-worldbook-seed.mjs",
     "build:xuantian-worldbook": "node ../玄天界推演规则书/生成世界书.mjs",
     "test:earth-worldbook": "node --experimental-strip-types scripts/validate-earth-worldbook.mjs",

@@ -16,4 +16,8 @@ assert.equal(routedA[0].name, '蜀山剑门运行规则');
 assert.ok(routedA.length <= 8);
 assert.ok(routedA.reduce((sum, entry) => sum + entry.name.length + entry.content.length + 8, 0) <= 6000);
 
+const oversized = routeSimulationWorldbook([{ name:'世界规则总览', content:'甲'.repeat(100000) }, { name:'地域', content:'乙'.repeat(1000) }], { requiredTerms:['世界'], preferredTerms:[], seed:'oversized', maxEntries:8, maxChars:34000 });
+assert.ok(oversized.length > 0, '超长首条应保留受控摘要');
+assert.ok(oversized.reduce((sum, entry) => sum + entry.name.length + entry.content.length + 8, 0) <= 34000, '首条世界书也不得突破字符预算');
+
 console.log('world simulation core validated: clock delta, rollback guard and bounded deterministic lore routing');

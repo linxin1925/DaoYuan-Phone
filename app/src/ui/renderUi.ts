@@ -507,6 +507,7 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
   let xuantianFaultLogs: XuantianFaultLog[] = [];
   let xuantianSimulationRunning = false;
   let contentBeautifierEnabled = false;
+  let contentAssistSettings = { bodyPromptEnabled: false, ticketPromptEnabled: false, ticketRendererEnabled: false };
   let configHelperEnabled = true;
   let petSize: PetSize = 'large';
   let phoneDisplayMode: PhoneDisplayMode = 'drawer';
@@ -1255,11 +1256,24 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
     }
     if (settingsSection === 'content-beautifier') {
       content.append(button(doc, 'settings-back-button', '← 返回设置', 'settings-home'));
-      appendPageHeading(doc, content, '正文美化 V26', '独立控制正文阅读器是否扫描并美化 `<content>`。', '阅读显示');
-      const panel = appendPanel(doc, content, '正文美化开关', '阅读器内部的字体、字号和术语注解仍由“阅”按钮独立管理。');
-      const toggle = element(doc, 'label', 'settings-auto-toggle'); const input = doc.createElement('input'); input.type = 'checkbox'; input.checked = contentBeautifierEnabled; input.dataset.contentBeautifierEnabled = 'true';
-      const copy = element(doc, 'span', 'settings-auto-toggle-copy'); copy.append(element(doc, 'strong', undefined, '启用正文美化'), element(doc, 'small', undefined, '关闭后立即停止处理新正文；刷新酒馆页面后，已美化的旧正文恢复为原始显示。'));
-      toggle.append(input, copy); panel.append(toggle, button(doc, 'primary-button settings-panel-save', '保存正文美化开关', 'content-beautifier-save')); return;
+      appendPageHeading(doc, content, '正文呈现', '分别管理正文美化与商店、任务票据的提示词和渲染。', '阅读显示');
+      const bodyPanel = appendPanel(doc, content, '正文美化', '正常使用需要同时开启本组两个开关：提示词负责让模型输出可识别格式，渲染脚本负责显示美化结果。时间信息不强制生成。');
+      for (const [key, title, note, checked] of [
+        ['body-prompt', '提示词注入脚本', '要求正文使用唯一 <content> 边界，并用标准角色姓名标记对白。', contentAssistSettings.bodyPromptEnabled],
+        ['body-renderer', '渲染脚本', '将 <content> 正文、角色对白与已有时间信息渲染为阅读界面。', contentBeautifierEnabled],
+      ] as const) {
+        const item = element(doc, 'label', 'settings-auto-toggle'); const control = doc.createElement('input'); control.type = 'checkbox'; control.checked = checked; control.dataset.contentAssist = key;
+        const itemCopy = element(doc, 'span', 'settings-auto-toggle-copy'); itemCopy.append(element(doc, 'strong', undefined, title), element(doc, 'small', undefined, note)); item.append(control, itemCopy); bodyPanel.append(item);
+      }
+      const ticketPanel = appendPanel(doc, content, '商店 + 任务', '正常使用需要同时开启本组两个开关：提示词负责生成 ShopReceipt / QuestBoard，渲染脚本负责显示票据。不包含战斗系统。');
+      for (const [key, title, note, checked] of [
+        ['ticket-prompt', '提示词注入脚本', '出现可购买商品或可接任务时，要求模型输出对应结构化票据。', contentAssistSettings.ticketPromptEnabled],
+        ['ticket-renderer', '渲染脚本', '渲染商店与任务票据；按钮只把购买或接取意图写入输入框。', contentAssistSettings.ticketRendererEnabled],
+      ] as const) {
+        const item = element(doc, 'label', 'settings-auto-toggle'); const control = doc.createElement('input'); control.type = 'checkbox'; control.checked = checked; control.dataset.contentAssist = key;
+        const itemCopy = element(doc, 'span', 'settings-auto-toggle-copy'); itemCopy.append(element(doc, 'strong', undefined, title), element(doc, 'small', undefined, note)); item.append(control, itemCopy); ticketPanel.append(item);
+      }
+      ticketPanel.append(button(doc, 'primary-button settings-panel-save', '保存正文呈现设置', 'content-beautifier-save')); return;
     }
     if (settingsSection === 'config-helper') {
       content.append(button(doc, 'settings-back-button', '← 返回设置', 'settings-home'));
@@ -2448,9 +2462,14 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
       sendAction('SAVE_WORLD_SIMULATION_FEATURES', worldSimulationFeatures);
       announcement = '正在保存世界推演开关…'; render();
     } else if (action === 'content-beautifier-save') {
-      contentBeautifierEnabled = root.querySelector<HTMLInputElement>('[data-content-beautifier-enabled]')?.checked !== false;
-      sendAction('SAVE_CONTENT_BEAUTIFIER_SETTINGS', { enabled: contentBeautifierEnabled });
-      announcement = '正在保存正文美化开关…'; render();
+      contentBeautifierEnabled = root.querySelector<HTMLInputElement>('[data-content-assist="body-renderer"]')?.checked === true;
+      contentAssistSettings = {
+        bodyPromptEnabled: root.querySelector<HTMLInputElement>('[data-content-assist="body-prompt"]')?.checked === true,
+        ticketPromptEnabled: root.querySelector<HTMLInputElement>('[data-content-assist="ticket-prompt"]')?.checked === true,
+        ticketRendererEnabled: root.querySelector<HTMLInputElement>('[data-content-assist="ticket-renderer"]')?.checked === true,
+      };
+      sendAction('SAVE_CONTENT_BEAUTIFIER_SETTINGS', { enabled: contentBeautifierEnabled, ...contentAssistSettings });
+      announcement = '正在保存正文呈现设置…'; render();
     } else if (action === 'config-helper-save') {
       configHelperEnabled = root.querySelector<HTMLInputElement>('[data-config-helper-enabled]')?.checked === true;
       sendAction('SAVE_CONFIG_HELPER_SETTINGS', { enabled: configHelperEnabled });
@@ -3148,6 +3167,7 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
         ? Object.values(message.payload.capabilities).includes('mvu-ready')
         : false;
       contentBeautifierEnabled = message.payload.contentBeautifierEnabled !== false;
+      if (message.payload.contentAssistSettings && typeof message.payload.contentAssistSettings === 'object') contentAssistSettings = { ...contentAssistSettings, ...message.payload.contentAssistSettings as Partial<typeof contentAssistSettings> };
       configHelperEnabled = message.payload.configHelperEnabled === true;
       render();
     }
@@ -3163,15 +3183,20 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
     }
     if(message.action==='WORLD_SIMULATION_CLEAR_STATUS'){
       const world=message.payload.world==='earth'?'地球':'玄天界';
-      if(message.payload.ok===true){if(message.payload.world==='earth')earthSimulationState=null;else xuantianSimulationState=null;announcement=`当前对话的${world}推演已清空，对应正文注入已撤销。`;}
+      if(message.payload.ok===true){if(message.payload.world==='earth')earthSimulationState=null;else{xuantianSimulationState=null;storyDirectorPlan=null;}announcement=`当前对话的${world}推演已清空，对应正文注入已撤销。`;}
       else announcement=`${world}推演清空失败：${typeof message.payload.error==='string'?message.payload.error:'未知错误'}`;
       render();
     }
     if (message.action === 'YUJIAN_LORE_DATA') { loreEntries = Array.isArray(message.payload.entries) ? message.payload.entries as YujianLoreEntry[] : []; render(); }
     if (message.action === 'CONTENT_BEAUTIFIER_SETTINGS_STATUS') {
       contentBeautifierEnabled = message.payload.enabled !== false;
+      contentAssistSettings = {
+        bodyPromptEnabled: message.payload.bodyPromptEnabled === true,
+        ticketPromptEnabled: message.payload.ticketPromptEnabled === true,
+        ticketRendererEnabled: message.payload.ticketRendererEnabled === true,
+      };
       announcement = message.payload.ok === true
-        ? (contentBeautifierEnabled ? '正文美化已开启。' : '正文美化已关闭；刷新酒馆页面后旧正文恢复原始显示。')
+        ? '正文呈现的四项开关已保存。'
         : `正文美化设置失败：${typeof message.payload.error === 'string' ? message.payload.error : '未知错误'}`;
       render();
     }

@@ -34,7 +34,14 @@ export function routeSimulationWorldbook(entries: readonly RoutedWorldbookEntry[
   for (const item of scored) {
     if (selected.length >= maxEntries) break;
     const cost = item.entry.name.length + item.entry.content.length + 8;
-    if (selected.length && chars + cost > maxChars) continue;
+    if (chars + cost > maxChars) {
+      if (selected.length) continue;
+      const contentBudget = maxChars - item.entry.name.length - 8;
+      if (contentBudget <= 0) continue;
+      selected.push({ ...item.entry, content: item.entry.content.slice(0, contentBudget) });
+      chars = maxChars;
+      continue;
+    }
     selected.push(item.entry);
     chars += cost;
   }

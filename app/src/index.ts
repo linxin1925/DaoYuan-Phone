@@ -57,6 +57,9 @@ const PET_KIND_KEY = 'daoyuan_pet_kind_v1';
 const PHONE_DISPLAY_MODE_KEY = 'daoyuan_phone_display_mode_v1';
 const PHONE_FLOATING_POSITION_KEY = 'daoyuan_phone_floating_position_v1';
 const CONTENT_BEAUTIFIER_ENABLED_KEY = 'daoyuan_content_beautifier_enabled_v1';
+const CONTENT_ASSIST_SETTINGS_KEY = 'daoyuan_content_assist_settings_v1';
+type ContentAssistSettings = { bodyPromptEnabled: boolean; ticketPromptEnabled: boolean; ticketRendererEnabled: boolean };
+const DEFAULT_CONTENT_ASSIST_SETTINGS: ContentAssistSettings = { bodyPromptEnabled: false, ticketPromptEnabled: false, ticketRendererEnabled: false };
 const FEATURE_MODULE_FLAGS_KEY = 'daoyuan_feature_module_flags_v1';
 const WORLD_SIMULATION_FEATURES_KEY = 'daoyuan_world_simulation_features_v1';
 type FeatureModuleKey = 'yujian' | 'beauty' | 'xianwang' | 'wanbao' | 'world';
@@ -96,7 +99,7 @@ const USER_SCRIPT_PACKAGES_KEY = 'daoyuan_user_script_packages_v1';
 const USER_DLC_REGISTRY_KEY = 'daoyuan_user_dlc_registry_v1';
 const FACTORY_RESET_STATE_KEY = 'daoyuan_phone_factory_reset_v1';
 const PHONE_LOCAL_STORAGE_KEYS = [
-  PET_SIZE_KEY, PET_KIND_KEY, PHONE_DISPLAY_MODE_KEY, PHONE_FLOATING_POSITION_KEY, CONTENT_BEAUTIFIER_ENABLED_KEY, FEATURE_MODULE_FLAGS_KEY,
+  PET_SIZE_KEY, PET_KIND_KEY, PHONE_DISPLAY_MODE_KEY, PHONE_FLOATING_POSITION_KEY, CONTENT_BEAUTIFIER_ENABLED_KEY, CONTENT_ASSIST_SETTINGS_KEY, FEATURE_MODULE_FLAGS_KEY,
   WORLD_SIMULATION_FEATURES_KEY, CONFIG_HELPER_ENABLED_KEY, EARTH_API_SETTINGS_KEY,
   XUANTIAN_API_SETTINGS_KEY, USER_SCRIPT_PACKAGES_KEY, USER_DLC_REGISTRY_KEY,
   'daoyuan_feature_frontend_ui_v1', 'daoyuan_wx_settings', 'daoyuan_wx_lore_selected',
@@ -163,6 +166,21 @@ function readContentBeautifierEnabled(hostWindow: Window): boolean {
 
 function saveContentBeautifierEnabled(hostWindow: Window, enabled: boolean): void {
   try { hostWindow.localStorage.setItem(CONTENT_BEAUTIFIER_ENABLED_KEY, String(enabled)); } catch { /* optional preference */ }
+}
+
+function readContentAssistSettings(hostWindow: Window): ContentAssistSettings {
+  try {
+    const value = JSON.parse(hostWindow.localStorage.getItem(CONTENT_ASSIST_SETTINGS_KEY) || '{}') as Partial<ContentAssistSettings>;
+    return {
+      bodyPromptEnabled: value.bodyPromptEnabled === true,
+      ticketPromptEnabled: value.ticketPromptEnabled === true,
+      ticketRendererEnabled: value.ticketRendererEnabled === true,
+    };
+  } catch { return { ...DEFAULT_CONTENT_ASSIST_SETTINGS }; }
+}
+
+function saveContentAssistSettings(hostWindow: Window, settings: ContentAssistSettings): void {
+  try { hostWindow.localStorage.setItem(CONTENT_ASSIST_SETTINGS_KEY, JSON.stringify(settings)); } catch { /* optional preference */ }
 }
 
 function readConfigHelperEnabled(hostWindow: Window): boolean {
@@ -309,6 +327,7 @@ interface RuntimeGlobals {
   rebindCharWorldbooks?: TavernWorldbookRuntime['rebindCharWorldbooks'];
   __daoyuanInstallContentBeautifierV26?: () => void;
   __daoyuanCultivationReaderV2?: { destroy?: () => void };
+  __daoyuanConfigureContentPresentationV12?: () => void;
   __daoyuanSetConfigHelperLauncherVisibleV133?: (visible: boolean) => void;
 }
 
@@ -1544,14 +1563,21 @@ class FeatureShell {
   private saveContentBeautifierSettings(payload: Record<string, unknown>): void {
     if (!this.hostWindow) return;
     const enabled = payload.enabled === true;
+    const assistSettings: ContentAssistSettings = {
+      bodyPromptEnabled: payload.bodyPromptEnabled === true,
+      ticketPromptEnabled: payload.ticketPromptEnabled === true,
+      ticketRendererEnabled: payload.ticketRendererEnabled === true,
+    };
     saveContentBeautifierEnabled(this.hostWindow, enabled);
+    saveContentAssistSettings(this.hostWindow, assistSettings);
     try {
-      if (enabled) runtime.__daoyuanInstallContentBeautifierV26?.();
+      if (runtime.__daoyuanConfigureContentPresentationV12) runtime.__daoyuanConfigureContentPresentationV12();
+      else if (enabled) runtime.__daoyuanInstallContentBeautifierV26?.();
       else runtime.__daoyuanCultivationReaderV2?.destroy?.();
-      this.frame?.contentWindow?.postMessage(makeBridgeMessage('event', 'CONTENT_BEAUTIFIER_SETTINGS_STATUS', { ok: true, enabled }), '*');
+      this.frame?.contentWindow?.postMessage(makeBridgeMessage('event', 'CONTENT_BEAUTIFIER_SETTINGS_STATUS', { ok: true, enabled, ...assistSettings }), '*');
       this.sendContext();
     } catch (error) {
-      this.frame?.contentWindow?.postMessage(makeBridgeMessage('event', 'CONTENT_BEAUTIFIER_SETTINGS_STATUS', { ok: false, enabled, error: error instanceof Error ? error.message : String(error) }), '*');
+      this.frame?.contentWindow?.postMessage(makeBridgeMessage('event', 'CONTENT_BEAUTIFIER_SETTINGS_STATUS', { ok: false, enabled, ...assistSettings, error: error instanceof Error ? error.message : String(error) }), '*');
     }
   }
 
@@ -2052,7 +2078,7 @@ class FeatureShell {
       const chatId=this.session.chatId;if(!chatId)throw new Error('当前聊天上下文不可用');
       const store=this.earthVariableStore();if(!store)throw new Error('当前酒馆不支持聊天本地变量写回');
       if(world==='earth'){store.set(EARTH_SIMULATION_STATE_KEY,null);this.earthSimulationState=null;}
-      else{store.set(XUANTIAN_SIMULATION_STATE_KEY,null);this.xuantianSimulationState=null;}
+      else{store.set(XUANTIAN_SIMULATION_STATE_KEY,null);store.set(STORY_DIRECTOR_STATE_KEY,null);this.xuantianSimulationState=null;this.storyDirectorPlan=null;}
       await this.refreshPromptInjection();
       notify({ok:true,world,chatId});this.sendContext();
     }catch(error){notify({ok:false,world,error:error instanceof Error?error.message:String(error)});}
@@ -2341,7 +2367,7 @@ class FeatureShell {
     const worldFeatures=readWorldSimulationFeatures(this.hostWindow);
     const earthSimulation = featureFlags.world && worldFeatures.earthEnabled && storedEarth ? initializeEarthSimulationState(storedEarth, this.session.chatId, new Date().toISOString().slice(0,10)) : null;
     const xuantianSimulation=featureFlags.world&&worldFeatures.xuantianEnabled&&storedXuantian?initializeXuantianSimulationState(storedXuantian,this.session.chatId):null;
-    let storyDirector:StoryDirectorPlan|null=null;try{storyDirector=StoryDirectorPlanSchema.parse(storedStoryPlan);}catch{storyDirector=null;}
+    let storyDirector:StoryDirectorPlan|null=null;if(xuantianSimulation){try{const parsed=StoryDirectorPlanSchema.parse(storedStoryPlan);storyDirector=parsed.chatId===this.session.chatId&&parsed.sequence===xuantianSimulation.sequence?parsed:null;}catch{storyDirector=null;}}
     const activeSettings={yujian:featureFlags.yujian&&settings.yujian,trends:featureFlags.xianwang&&settings.trends,forum:featureFlags.xianwang&&settings.forum,news:featureFlags.xianwang&&settings.news};
     if (!Object.values(activeSettings).some(Boolean) && !merchantTransactions.length && !earthSimulation && !xuantianSimulation && !storyDirector) return false;
     const histories = await loadStandaloneYujianHistories(this.hostWindow, this.session.chatId);
@@ -2822,7 +2848,8 @@ class FeatureShell {
     this.earthSimulationState = rawEarthState&&this.session.chatId ? initializeEarthSimulationState(rawEarthState,this.session.chatId,new Date().toISOString().slice(0,10)) : null;
     const storedXuantianState = rawXuantianState&&this.session.chatId ? initializeXuantianSimulationState(rawXuantianState,this.session.chatId) : null;
     if (storedXuantianState){const storyTime=this.worldStatus.time;const calibrated=storedXuantianState.calendarLabel.includes('未校准')&&storyTime&&storyTime!=='未接入'&&storyTime!=='未知'?XuantianSimulationStateSchema.parse({...storedXuantianState,calendarLabel:storyTime}) as XuantianSimulationState:storedXuantianState;this.xuantianSimulationState=calibrated;if(calibrated!==storedXuantianState)xuantianStore?.set(XUANTIAN_SIMULATION_STATE_KEY,calibrated);}else this.xuantianSimulationState=null;
-    try{this.storyDirectorPlan=StoryDirectorPlanSchema.parse(xuantianStore?.get(STORY_DIRECTOR_STATE_KEY));}catch{this.storyDirectorPlan=null;}
+    const worldFeatures=this.hostWindow?readWorldSimulationFeatures(this.hostWindow):DEFAULT_WORLD_SIMULATION_FEATURES;
+    if(this.featureEnabled('world')&&worldFeatures.xuantianEnabled&&this.xuantianSimulationState){try{const parsed=StoryDirectorPlanSchema.parse(xuantianStore?.get(STORY_DIRECTOR_STATE_KEY));this.storyDirectorPlan=parsed.chatId===this.session.chatId&&parsed.sequence===this.xuantianSimulationState.sequence?parsed:null;}catch{this.storyDirectorPlan=null;}}else this.storyDirectorPlan=null;
     const rawFaultLogs=xuantianStore?.get(XUANTIAN_FAULT_LOG_KEY);this.xuantianFaultLogs=Array.isArray(rawFaultLogs)?rawFaultLogs.filter((item):item is XuantianFaultLog=>Boolean(item&&typeof item==='object'&&typeof (item as XuantianFaultLog).message==='string')).slice(-60):[];
     this.frame.contentWindow.postMessage(makeBridgeMessage('event', 'REQUEST_CONTEXT', {
       layout: this.layout,
@@ -2866,6 +2893,7 @@ class FeatureShell {
       petKind: this.hostWindow ? readPetKind(this.hostWindow) : 'whale',
       phoneDisplayMode: this.phoneDisplayMode,
       contentBeautifierEnabled: this.hostWindow ? readContentBeautifierEnabled(this.hostWindow) : false,
+      contentAssistSettings: this.hostWindow ? readContentAssistSettings(this.hostWindow) : DEFAULT_CONTENT_ASSIST_SETTINGS,
       configHelperEnabled: this.hostWindow ? readConfigHelperEnabled(this.hostWindow) : true,
       featureModuleFlags: this.hostWindow ? readFeatureModuleFlags(this.hostWindow) : DEFAULT_FEATURE_MODULE_FLAGS,
       worldSimulationFeatures: this.hostWindow ? readWorldSimulationFeatures(this.hostWindow) : DEFAULT_WORLD_SIMULATION_FEATURES,
