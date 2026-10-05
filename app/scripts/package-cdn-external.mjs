@@ -8,7 +8,7 @@ const projectRoot = new URL('../..', import.meta.url);
 const embeddedPackagePath = new URL('./releases/candidates/道渊小手机V1.3数据库版.json', projectRoot);
 const runtimeOutputPath = new URL('./releases/cdn/道渊小手机V1.2外链运行时.js', projectRoot);
 const manifestOutputPath = new URL('./releases/cdn/道渊小手机V1.2版本清单.json', projectRoot);
-const loaderOutputPath = new URL('./releases/candidates/道渊小手机V1.2-CDN外链版.json', projectRoot);
+const loaderOutputPath = new URL('./releases/candidates/道渊小手机V1.3-CDN外链版.json', projectRoot);
 const runtimeOnly = process.argv.includes('--runtime-only');
 const refIndex = process.argv.indexOf('--ref');
 const gitRef = refIndex >= 0 ? process.argv[refIndex + 1] : '';
