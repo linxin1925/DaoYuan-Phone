@@ -1,8 +1,11 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
+import { execFileSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 
 const projectRoot = new URL('../..', import.meta.url);
-const embeddedPackagePath = new URL('./releases/candidates/道渊小手机V1.2测试.json', projectRoot);
+// Keep the existing v1.2 endpoints: installed manifest-aware loaders use them.
+const embeddedPackagePath = new URL('./releases/candidates/道渊小手机V1.3数据库版.json', projectRoot);
 const runtimeOutputPath = new URL('./releases/cdn/道渊小手机V1.2外链运行时.js', projectRoot);
 const manifestOutputPath = new URL('./releases/cdn/道渊小手机V1.2版本清单.json', projectRoot);
 const loaderOutputPath = new URL('./releases/candidates/道渊小手机V1.2-CDN外链版.json', projectRoot);
@@ -12,7 +15,14 @@ const gitRef = refIndex >= 0 ? process.argv[refIndex + 1] : '';
 
 const embeddedPackage = JSON.parse(await readFile(embeddedPackagePath, 'utf8'));
 if (embeddedPackage?.type !== 'script' || typeof embeddedPackage?.content !== 'string' || !embeddedPackage.content.trim()) {
-  throw new Error('道渊小手机 V1.2 内嵌测试包结构无效');
+  throw new Error('道渊小手机 V1.3 数据库包结构无效');
+}
+if (embeddedPackage.version !== '1.3.0' || embeddedPackage.id !== 'daoyuan-feature-frontend-hud-v12-database') throw new Error('CDN 输入必须是 V1.3 数据库版');
+const runtimeSha256 = createHash('sha256').update(embeddedPackage.content).digest('hex');
+if (!runtimeOnly) {
+  if (!/^[0-9a-f]{7,40}$/i.test(gitRef)) throw new Error('请通过 --ref 传入已包含 CDN 运行时的 Git 提交号');
+  const committedRuntime = execFileSync('git', ['show', `${gitRef}:releases/cdn/道渊小手机V1.2外链运行时.js`], { cwd: fileURLToPath(projectRoot), maxBuffer: 32 * 1024 * 1024 });
+  if (createHash('sha256').update(committedRuntime).digest('hex') !== runtimeSha256) throw new Error('固定提交中的运行时与 V1.3 输入不一致；拒绝更新版本清单');
 }
 
 await mkdir(new URL('./releases/cdn/', projectRoot), { recursive: true });
@@ -20,7 +30,6 @@ await writeFile(runtimeOutputPath, embeddedPackage.content);
 console.log(`CDN runtime written: ${runtimeOutputPath.pathname}`);
 
 if (runtimeOnly) process.exit(0);
-if (!/^[0-9a-f]{7,40}$/i.test(gitRef)) throw new Error('请通过 --ref 传入已包含 CDN 运行时的 Git 提交号');
 
 const encodedRuntimePath = '%E9%81%93%E6%B8%8A%E5%B0%8F%E6%89%8B%E6%9C%BAV1.2%E5%A4%96%E9%93%BE%E8%BF%90%E8%A1%8C%E6%97%B6.js';
 const encodedManifestPath = '%E9%81%93%E6%B8%8A%E5%B0%8F%E6%89%8B%E6%9C%BAV1.2%E7%89%88%E6%9C%AC%E6%B8%85%E5%8D%95.json';
@@ -29,10 +38,10 @@ const fallbackUrl = `https://testingcf.jsdelivr.net/gh/linxin1925/DaoYuan-Phone@
 const manifest = {
   schemaVersion: 1,
   channel: 'v1.2-main',
-  version: embeddedPackage.version ?? '1.2.0',
+  version: embeddedPackage.version,
   commit: gitRef,
   runtimePath: 'releases/cdn/道渊小手机V1.2外链运行时.js',
-  runtimeSha256: createHash('sha256').update(embeddedPackage.content).digest('hex'),
+  runtimeSha256,
   publishedAt: new Date().toISOString(),
 };
 await writeFile(manifestOutputPath, `${JSON.stringify(manifest, null, 2)}\n`);
@@ -46,9 +55,9 @@ const loaderSource = `(()=>{const manifests=${JSON.stringify(manifestUrls)},fall
 
 const loaderPackage = {
   type: 'script',
-  version: '1.2.0-cdn',
+  version: `${embeddedPackage.version}-cdn`,
   enabled: true,
-  name: '道渊小手机V1.2',
+  name: '道渊小手机V1.3',
   id: 'daoyuan-feature-frontend-hud-v12-cdn',
   content: loaderSource,
   info: `酒馆助手外链加载版；启动时读取 main 版本清单并加载固定提交运行时，清单不可用时回退至 ${gitRef}。`,
