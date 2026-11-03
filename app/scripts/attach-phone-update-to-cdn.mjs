@@ -33,7 +33,7 @@ return
 }`;
 const edits = [
   ['if(ot==="config-helper"){', updatePage + 'if(ot==="config-helper"){'],
-  ['scope:"显示设置"}],E=new Set', 'scope:"显示设置"},{key:"phone-update",icon:"更",title:"小手机更新",note:"检查并重新加载外链脚本",scope:globalThis.__daoyuanPhoneUpdate.state().available?"有更新":"外链版本"}],E=new Set'],
+  ['scope:"显示设置"}],E=new Set', 'scope:"显示设置"},{key:"phone-update",icon:"更",title:"小手机更新",note:"当前版本 V1.3.0 · "+globalThis.__daoyuanPhoneUpdate.state().current,scope:globalThis.__daoyuanPhoneUpdate.state().available?"有更新":"外链版本"}],E=new Set'],
   ['"app-card-title",v.label)', '"app-card-title",v.key==="settings"&&globalThis.__daoyuanPhoneUpdate.state().available?"设置 · 有更新":v.label)'],
   ['else if(E==="settings-open")', 'else if(E==="phone-update-check")void globalThis.__daoyuanPhoneUpdate.check();else if(E==="phone-update-apply")void globalThis.__daoyuanPhoneUpdate.apply();else if(E==="settings-open")'],
   ['return C(),o("APP_READY"),{destroy:()=>{Ha?.(),qE(),', 'const unsubscribePhoneUpdate=globalThis.__daoyuanPhoneUpdate.subscribe(()=>{if(A==="home"||A==="settings"&&(ot==="home"||ot==="phone-update"))C()});return C(),o("APP_READY"),{destroy:()=>{Ha?.(),qE(),unsubscribePhoneUpdate(),'],

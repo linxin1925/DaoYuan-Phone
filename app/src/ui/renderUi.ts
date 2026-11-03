@@ -1479,7 +1479,7 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
       { key: 'config-helper', icon: '助', title: '道渊配置小助手', note: '悬浮球显示设置', scope: '显示设置' },
     ];
     if (phoneUpdate) entries.push({ key: 'phone-update', icon: '更', title: '小手机更新',
-      note: '检查并重新加载外链脚本', scope: phoneUpdate.state().available ? '有更新' : '外链版本' });
+      note: `当前版本 V1.3.0 · ${phoneUpdate.state().current}`, scope: phoneUpdate.state().available ? '有更新' : '外链版本' });
     const switchable = new Set<SettingsSection>(['yujian','beauty','xianwang','wanbao','world']);
     for (const entry of entries) {
       const card = element(doc, 'article', `settings-api-card${switchable.has(entry.key) && !featureModuleFlags[entry.key as FeatureModuleKey] ? ' module-disabled' : ''}`);
