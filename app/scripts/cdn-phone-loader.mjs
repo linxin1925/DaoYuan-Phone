@@ -1,5 +1,5 @@
 // Serialized into the Tavern Helper import package. Keep all runtime dependencies inside.
-export async function loadCdnPhone({ manifests, api, fallback, fallbackRef, path, manifestPath, embeddedBaseline }, bootLocal) {
+export async function loadCdnPhone({ manifests, api, fallback, fallbackRef, path, manifestPath, embeddedBaseline, bundledLabel = '本地内置版' }, bootLocal) {
   const storageKey = 'daoyuan-phone-cdn-selection-v1';
   const runtimeUrls = (ref) => ['gcore', 'testingcf'].map(
     (node) => `https://${node}.jsdelivr.net/gh/linxin1925/DaoYuan-Phone@${ref}/releases/cdn/${path}`,
@@ -68,7 +68,7 @@ export async function loadCdnPhone({ manifests, api, fallback, fallbackRef, path
     notify();
   };
   globalThis.__daoyuanPhoneUpdate = {
-    state: () => ({ current: current?.commit.slice(0, 7) ?? (bootLocal ? '本地内置版' : fallbackRef.slice(0, 7)),
+    state: () => ({ current: current?.commit.slice(0, 7) ?? (bootLocal ? bundledLabel : fallbackRef.slice(0, 7)),
       available: latest?.commit.slice(0, 7), busy, status, failed }),
     subscribe(listener) { listeners.add(listener); return () => listeners.delete(listener); },
     check,
