@@ -1222,7 +1222,7 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
 
   function renderConfigHelperSettings(content: HTMLElement): void {
     const helperPanel = element(doc, 'section', 'panel-card config-helper-settings-panel');
-    helperPanel.append(element(doc, 'h3', undefined, '道渊配置小助手 V1.3.4'));
+    helperPanel.append(element(doc, 'h3', undefined, '悬浮球显示'));
     const helperToggle = element(doc, 'label', 'settings-auto-toggle');
     const helperInput = doc.createElement('input'); helperInput.type = 'checkbox'; helperInput.checked = configHelperEnabled; helperInput.dataset.configHelperEnabled = 'true';
     const helperCopy = element(doc, 'span', 'settings-auto-toggle-copy');
@@ -1277,7 +1277,7 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
     }
     if (settingsSection === 'config-helper') {
       content.append(button(doc, 'settings-back-button', '← 返回设置', 'settings-home'));
-      appendPageHeading(doc, content, '道渊配置小助手', '独立管理配置小助手悬浮球的显示状态。', 'V1.3.4');
+      appendPageHeading(doc, content, '道渊配置小助手', '管理悬浮球的显示状态。实际版本可在配置小助手面板底部查看。');
       renderConfigHelperSettings(content); return;
     }
     if (settingsSection === 'world') {
@@ -1448,7 +1448,7 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
       { key: 'world', icon: '界', title: '世界推演设置', note: '双界启停、玄天界 API 与地球 API', scope: '统一入口' },
       { key: 'pet', icon: '宠', title: '小手机与鲸鱼娘', note: '侧边抽屉或自由浮窗，及鲸鱼娘尺寸', scope: '本地偏好' },
       { key: 'content-beautifier', icon: '阅', title: '正文美化', note: '正文阅读器扫描开关', scope: 'V26' },
-      { key: 'config-helper', icon: '助', title: '道渊配置小助手', note: '悬浮球显示设置', scope: 'V1.3.4' },
+      { key: 'config-helper', icon: '助', title: '道渊配置小助手', note: '悬浮球显示设置', scope: '显示设置' },
     ];
     const switchable = new Set<SettingsSection>(['yujian','beauty','xianwang','wanbao','world']);
     for (const entry of entries) {
