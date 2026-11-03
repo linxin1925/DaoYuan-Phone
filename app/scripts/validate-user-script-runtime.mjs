@@ -86,9 +86,9 @@ assert.match(packageSource, /source\.slice\(cursor, match\.index\)/, '显式角�
 assert.match(packageSource, /source\.slice\(cursor\)/, '显式角色对白后的叙述必须保留');
 assert.match(packageSource, /createDocumentFragment\(\)/, '同段对白与叙述必须按原顺序拆分');
 assert.match(packageSource, /const __daoyuanEnsureConfigHelperV133=/, '配置小助手应在旧脚本清理后复查入口');
-assert.match(packageSource, /CONFIG_HELPER_REMOTE_URL = 'https:\/\/testingcf\.jsdelivr\.net\/gh\/NLKASHEI\/114514@main\//, '配置小助手必须使用更正后的远程入口，不再嵌入源码');
+assert.match(packageSource, /CONFIG_HELPER_REMOTE_URL = 'https:\/\/cdn\.jsdelivr\.net\/gh\/NLKASHEI\/114514@open\//, '配置小助手必须使用更正后的远程入口，不再嵌入源码');
 assert.match(packageSource, /getElementById\('bp-switch-bubble'\)/, '配置小助手复查应以远程真实悬浮球入口为准');
-assert.match(packageSource, /__daoyuanConfigHelperLoadPromise=import\(__daoyuanConfigHelperRemoteUrl\)/, '配置小助手远程模块必须使用单例加载承诺');
+assert.match(packageSource, /__daoyuanConfigHelperLoadPromise=import\(__daoyuanConfigHelperRemoteUrl\+'\?t='\+Date\.now\(\)\)/, '配置小助手远程模块必须使用单例加载承诺');
 assert.match(packageSource, /setTimeout\(__daoyuanEnsureConfigHelperV133,1200\)/, '配置小助手应进行首轮延迟复查');
 assert.match(packageSource, /setTimeout\(__daoyuanEnsureConfigHelperV133,3500\)/, '配置小助手应覆盖慢速 CDN 加载');
 for (const marker of ['GENERATION_STARTED', 'GENERATION_STOPPED', 'GENERATION_ENDED', 'VARIABLE_UPDATE_STARTED', 'VARIABLE_UPDATE_ENDED']) {

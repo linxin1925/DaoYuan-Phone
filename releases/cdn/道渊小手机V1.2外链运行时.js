@@ -4287,12 +4287,12 @@ function repairReaderBoundary(article) {
   globalThis.__daoyuanConfigureContentPresentationV12();
 })();
 
-;const __daoyuanConfigHelperRemoteUrl='https://testingcf.jsdelivr.net/gh/NLKASHEI/114514@main/%E9%81%93%E6%B8%8A%E9%85%8D%E7%BD%AE%E5%B0%8F%E5%8A%A9%E6%89%8B.min.js';const __daoyuanConfigHelperFallbackUrl='https://testingcf.jsdelivr.net/gh/NLKASHEI/114514@master/%E9%81%93%E6%B8%8A%E9%85%8D%E7%BD%AE%E5%B0%8F%E5%8A%A9%E6%89%8B.min.js';
+;const __daoyuanConfigHelperRemoteUrl='https://cdn.jsdelivr.net/gh/NLKASHEI/114514@open/%E9%81%93%E6%B8%8A%E9%85%8D%E7%BD%AE%E5%B0%8F%E5%8A%A9%E6%89%8B.min.js';const __daoyuanConfigHelperFallbackUrl='https://testingcf.jsdelivr.net/gh/NLKASHEI/114514@master/%E9%81%93%E6%B8%8A%E9%85%8D%E7%BD%AE%E5%B0%8F%E5%8A%A9%E6%89%8B.min.js';
 let __daoyuanConfigHelperLoadPromise=null;
 const __daoyuanFindConfigHelperBubble=()=>{const host=window.parent??window;return host.document.getElementById('bp-switch-bubble')??host.document.getElementById('jmzq-bubble');};
 globalThis.__daoyuanSetConfigHelperLauncherVisibleV133=(visible)=>{try{const host=window.parent??window;const bubble=__daoyuanFindConfigHelperBubble();const panel=host.document.getElementById('bp-switch-panel')??host.document.getElementById('jmzq-panel');if(bubble)bubble.style.display=visible?'':'none';if(!visible&&panel)panel.style.display='none';}catch{}};
 globalThis.__daoyuanInstallConfigHelperV133=async()=>{
-try{const host=window.parent??window;if(!__daoyuanFindConfigHelperBubble()){if(!__daoyuanConfigHelperLoadPromise)__daoyuanConfigHelperLoadPromise=import(__daoyuanConfigHelperRemoteUrl).catch(()=>import(__daoyuanConfigHelperFallbackUrl)).catch(error=>{__daoyuanConfigHelperLoadPromise=null;throw error;});await __daoyuanConfigHelperLoadPromise;}let visible=true;try{const storage=host.localStorage??localStorage;visible=storage.getItem('daoyuan_config_helper_launcher_visible_v1')!=='false';}catch{}globalThis.__daoyuanSetConfigHelperLauncherVisibleV133(visible);}catch(error){console.warn('[道渊配置小助手] 远程脚本加载失败',error);}
+try{const host=window.parent??window;if(!__daoyuanFindConfigHelperBubble()){if(!__daoyuanConfigHelperLoadPromise)__daoyuanConfigHelperLoadPromise=import(__daoyuanConfigHelperRemoteUrl+'?t='+Date.now()).catch(()=>import(__daoyuanConfigHelperFallbackUrl)).catch(error=>{__daoyuanConfigHelperLoadPromise=null;throw error;});await __daoyuanConfigHelperLoadPromise;}let visible=true;try{const storage=host.localStorage??localStorage;visible=storage.getItem('daoyuan_config_helper_launcher_visible_v1')!=='false';}catch{}globalThis.__daoyuanSetConfigHelperLauncherVisibleV133(visible);}catch(error){console.warn('[道渊配置小助手] 远程脚本加载失败',error);}
 };
 const __daoyuanEnsureConfigHelperV133=()=>{try{if(!__daoyuanFindConfigHelperBubble())void globalThis.__daoyuanInstallConfigHelperV133();else globalThis.__daoyuanSetConfigHelperLauncherVisibleV133(true);}catch{}};
 void globalThis.__daoyuanInstallConfigHelperV133();
