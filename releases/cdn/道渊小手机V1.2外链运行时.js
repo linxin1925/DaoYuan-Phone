@@ -111,7 +111,7 @@ ${Z.content}`.toLocaleLowerCase().includes(Oo.toLocaleLowerCase())).forEach(Z=>{
 const update=globalThis.__daoyuanPhoneUpdate;
 const state=update.state();
 b.append(G(e,"settings-back-button","← 返回设置","settings-home"));
-it(e,b,"小手机更新","更新会刷新酒馆，并保留现有设置。");
+it(e,b,"小手机更新","一键更新会自动刷新酒馆。请先保存正在编辑的聊天和输入框草稿，并等待当前回复生成结束。小手机设置会保留。");
 const panel=ze(e,b,"当前运行 · "+state.current,state.available?"可更新到 · "+state.available:"手动检查小手机外链版本");
 const status=c(e,"p","notice",state.failed?"上次更新未能启动，已回退。 "+state.status:state.status);
 status.setAttribute("role","status");
@@ -4322,10 +4322,10 @@ setTimeout(__daoyuanEnsureConfigHelperV133,3500);
 };
 if(globalThis.__daoyuanPhoneUpdate) await bootDaoyuanPhone();
 else {
-const options={"manifests":[],"api":"https://api.github.com/repos/linxin1925/DaoYuan-Phone/contents/releases/cdn/%E9%81%93%E6%B8%8A%E5%B0%8F%E6%89%8B%E6%9C%BAV1.2%E7%89%88%E6%9C%AC%E6%B8%85%E5%8D%95.json?ref=main","fallback":[],"fallbackRef":"9c59658a0d55732e54c053539f281bf55e0aebbd","path":"%E9%81%93%E6%B8%8A%E5%B0%8F%E6%89%8B%E6%9C%BAV1.2%E5%A4%96%E9%93%BE%E8%BF%90%E8%A1%8C%E6%97%B6.js","manifestPath":"releases/cdn/道渊小手机V1.2外链运行时.js","embeddedBaseline":"2026-11-03T12:56:04Z","bundledLabel":"外链随包版本"};
+const options={"manifests":[],"api":"https://api.github.com/repos/linxin1925/DaoYuan-Phone/contents/releases/cdn/%E9%81%93%E6%B8%8A%E5%B0%8F%E6%89%8B%E6%9C%BAV1.2%E7%89%88%E6%9C%AC%E6%B8%85%E5%8D%95.json?ref=main","fallback":[],"fallbackRef":"9c59658a0d55732e54c053539f281bf55e0aebbd","path":"%E9%81%93%E6%B8%8A%E5%B0%8F%E6%89%8B%E6%9C%BAV1.2%E5%A4%96%E9%93%BE%E8%BF%90%E8%A1%8C%E6%97%B6.js","manifestPath":"releases/cdn/道渊小手机V1.2外链运行时.js","embeddedBaseline":"2026-11-03T13:14:57Z","bundledLabel":"外链随包版本"};
 const loadedRef=new URL(import.meta.url).pathname.match(/@([a-f0-9]{40})\//i)?.[1];
-if(loadedRef){options.fallbackRef=loadedRef;options.bundledLabel=loadedRef.slice(0,7)}
-await (async function loadCdnPhone({ manifests, api, fallback, fallbackRef, path, manifestPath, embeddedBaseline, bundledLabel = '本地内置版' }, bootLocal) {
+if(loadedRef){options.loadedRef=loadedRef;options.fallbackRef=loadedRef;options.bundledLabel=loadedRef.slice(0,7)}
+await (async function loadCdnPhone({ manifests, api, fallback, fallbackRef, path, manifestPath, loadedRef, embeddedBaseline, bundledLabel = '本地内置版' }, bootLocal) {
   const storageKey = 'daoyuan-phone-cdn-selection-v1';
   const runtimeUrls = (ref) => ['gcore', 'testingcf'].map(
     (node) => `https://${node}.jsdelivr.net/gh/linxin1925/DaoYuan-Phone@${ref}/releases/cdn/${path}`,
@@ -4408,7 +4408,9 @@ await (async function loadCdnPhone({ manifests, api, fallback, fallbackRef, path
     }
   }
   for (const manifest of [...[pending, selected, published].filter(Boolean), null]) {
-    for (const url of manifest ? runtimeUrls(manifest.commit) : bootLocal ? [null] : fallback) {
+    const isLoadedModule = bootLocal && manifest?.commit === loadedRef;
+    const urls = isLoadedModule ? [null] : manifest ? runtimeUrls(manifest.commit) : bootLocal ? [null] : fallback;
+    for (const url of urls) {
       try {
         if (url === null) await bootLocal();
         else await import(url);

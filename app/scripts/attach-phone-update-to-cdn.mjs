@@ -17,7 +17,7 @@ const updatePage = `if(ot==="phone-update"){
 const update=globalThis.__daoyuanPhoneUpdate;
 const state=update.state();
 b.append(G(e,"settings-back-button","← 返回设置","settings-home"));
-it(e,b,"小手机更新","更新会刷新酒馆，并保留现有设置。");
+it(e,b,"小手机更新","一键更新会自动刷新酒馆。请先保存正在编辑的聊天和输入框草稿，并等待当前回复生成结束。小手机设置会保留。");
 const panel=ze(e,b,"当前运行 · "+state.current,state.available?"可更新到 · "+state.available:"手动检查小手机外链版本");
 const status=c(e,"p","notice",state.failed?"上次更新未能启动，已回退。 "+state.status:state.status);
 status.setAttribute("role","status");
@@ -63,7 +63,7 @@ const content = `const bootDaoyuanPhone=async()=>{\n${runtime}\n};\n`
   + `if(globalThis.__daoyuanPhoneUpdate) await bootDaoyuanPhone();\n`
   + `else {\nconst options=${JSON.stringify(options)};\n`
   + `const loadedRef=new URL(import.meta.url).pathname.match(/@([a-f0-9]{40})\\//i)?.[1];\n`
-  + `if(loadedRef){options.fallbackRef=loadedRef;options.bundledLabel=loadedRef.slice(0,7)}\n`
+  + `if(loadedRef){options.loadedRef=loadedRef;options.fallbackRef=loadedRef;options.bundledLabel=loadedRef.slice(0,7)}\n`
   + `await (${loadCdnPhone.toString()})(options,bootDaoyuanPhone);\n}\n`;
 await writeFile(output, content);
 console.log(sha256(content));

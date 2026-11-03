@@ -1246,7 +1246,7 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
     if (settingsSection === 'phone-update' && phoneUpdate) {
       const state = phoneUpdate.state();
       content.append(button(doc, 'settings-back-button', '← 返回设置', 'settings-home'));
-      appendPageHeading(doc, content, '小手机更新', '更新会刷新酒馆，并保留现有设置。');
+      appendPageHeading(doc, content, '小手机更新', '一键更新会自动刷新酒馆。请先保存正在编辑的聊天和输入框草稿，并等待当前回复生成结束。小手机设置会保留。');
       const panel = appendPanel(doc, content, `当前运行 · ${state.current}`,
         state.available ? `可更新到 · ${state.available}` : '手动检查小手机外链版本');
       const status = element(doc, 'p', 'notice', state.failed ? `上次更新未能启动，已回退。 ${state.status}` : state.status);
