@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "channel": "v1.2-main",
   "version": "1.3.0",
-  "commit": "7d053678cf5111330dd76662e16b5df0afba16c6",
+  "commit": "b2a10be9586d9137c20a5e434aa7531e2479fa6e",
   "runtimePath": "releases/cdn/道渊小手机V1.2外链运行时.js",
-  "runtimeSha256": "5a3918148ebfe58020f9b4c219c18601827cfb9f49f03ea8affd58c23c38501d",
-  "publishedAt": "2026-10-05T19:06:37.578Z"
+  "runtimeSha256": "de41e292fa85da15b8ab3c92447e59f9413d3fd4042238cac0726e06a71e38e8",
+  "publishedAt": "2026-11-03T12:13:09.694Z"
 }
