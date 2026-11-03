@@ -1,3 +1,4 @@
+import { loadCdnPhone } from './cdn-phone-loader.mjs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 
@@ -24,13 +25,14 @@ const CONFIG_HELPER_FALLBACK_URL = 'https://testingcf.jsdelivr.net/gh/NLKASHEI/1
 const formal = process.argv.includes('--formal');
 const v11Test = process.argv.includes('--v11-test');
 const v12DisplayTest = process.argv.includes('--v12-display-test');
-const v12Test = process.argv.includes('--v12-test') || v12DisplayTest;
+const v13Database = process.argv.includes('--v13-database');
+const v12Test = process.argv.includes('--v12-test') || v12DisplayTest || v13Database;
 const v11 = formal || v11Test;
-const packageVersion = v12Test ? '1.2.0' : v11 ? '1.1.0' : '1.0.0';
-const outputPath = new URL(v12DisplayTest ? './dist/道渊功能前端-V1.2显示模式测试候选.json' : v12Test ? './dist/道渊功能前端-V1.2测试候选.json' : v11 ? `./dist/道渊功能前端-V1.1${formal ? '正式' : '测试'}候选.json` : './dist/道渊功能前端-V1.0测试候选.json', projectRoot);
-const packageName = v12DisplayTest ? '道渊小手机V1.2-显示模式测试' : v12Test ? '道渊小手机V1.2测试' : v11 ? `道渊小手机V1.1${formal ? '' : '测试'}` : '道渊小手机V1.0测试';
-const importOutputPath = new URL(v12DisplayTest ? '../releases/candidates/道渊小手机V1.2-显示模式测试.json' : v12Test ? '../releases/candidates/道渊小手机V1.2测试.json' : formal ? '../releases/道渊小手机V1.1.json' : v11Test ? './dist/道渊小手机V1.1测试.json' : './dist/道渊小手机V1.0测试.json', projectRoot);
-const importScriptId = v12DisplayTest ? 'daoyuan-feature-frontend-hud-v12-display-test' : v12Test ? 'daoyuan-feature-frontend-hud-v12-embedded' : 'daoyuan-feature-frontend-hud-v09';
+const packageVersion = v13Database ? '1.3.0' : v12Test ? '1.2.0' : v11 ? '1.1.0' : '1.0.0';
+const outputPath = new URL(v13Database ? './dist/道渊功能前端-V1.3数据库版候选.json' : v12DisplayTest ? './dist/道渊功能前端-V1.2显示模式测试候选.json' : v12Test ? './dist/道渊功能前端-V1.2测试候选.json' : v11 ? `./dist/道渊功能前端-V1.1${formal ? '正式' : '测试'}候选.json` : './dist/道渊功能前端-V1.0测试候选.json', projectRoot);
+const packageName = v13Database ? '道渊小手机V1.3数据库版' : v12DisplayTest ? '道渊小手机V1.2-显示模式测试' : v12Test ? '道渊小手机V1.2测试' : v11 ? `道渊小手机V1.1${formal ? '' : '测试'}` : '道渊小手机V1.0测试';
+const importOutputPath = new URL(v13Database ? '../releases/candidates/道渊小手机V1.3数据库版.json' : v12DisplayTest ? '../releases/candidates/道渊小手机V1.2-显示模式测试.json' : v12Test ? '../releases/candidates/道渊小手机V1.2测试.json' : formal ? '../releases/道渊小手机V1.1.json' : v11Test ? './dist/道渊小手机V1.1测试.json' : './dist/道渊小手机V1.0测试.json', projectRoot);
+const importScriptId = v13Database ? 'daoyuan-feature-frontend-hud-v12-database' : v12DisplayTest ? 'daoyuan-feature-frontend-hud-v12-display-test' : v12Test ? 'daoyuan-feature-frontend-hud-v12-embedded' : 'daoyuan-feature-frontend-hud-v09';
 const source = await readFile(artifactPath, 'utf8');
 const readVerifiedSnapshot = async (path, expectedHash, label) => {
   const bytes = await readFile(path);
@@ -527,6 +529,24 @@ const baseBundledSource = v11 || v12Test ? `${source}${contentPresentationBootst
 const configHelperVisibilityGuard = `\n;(()=>{const previous=globalThis.${CONFIG_HELPER_VISIBILITY_SETTER};if(typeof previous==='function')globalThis.${CONFIG_HELPER_VISIBILITY_SETTER}=(requested)=>{let visible=requested;try{const host=window.parent??window;visible=(host.localStorage??localStorage).getItem('${CONFIG_HELPER_ENABLED_KEY}')!=='false';}catch{}previous(visible);};})();\n`;
 const bundledSource = v12Test ? `${baseBundledSource}${configHelperBootstrap}${configHelperVisibilityGuard}` : baseBundledSource;
 
+let importSource = bundledSource;
+if (v13Database) {
+  const manifestName = '道渊小手机V1.2版本清单.json';
+  const baseline = JSON.parse(await readFile(new URL(`../releases/cdn/${manifestName}`, projectRoot), 'utf8'));
+  const options = {
+    manifests: [],
+    api: `https://api.github.com/repos/linxin1925/DaoYuan-Phone/contents/releases/cdn/${encodeURIComponent(manifestName)}?ref=main`,
+    fallback: [],
+    fallbackRef: baseline.commit,
+    path: encodeURIComponent(baseline.runtimePath.split('/').pop()),
+    manifestPath: baseline.runtimePath,
+    embeddedBaseline: new Date().toISOString(),
+  };
+  importSource = `const bootDaoyuanPhone = async () => {\n${bundledSource}\n};\n`
+    + `if (globalThis.__daoyuanPhoneUpdate) void bootDaoyuanPhone();\n`
+    + `else void (${loadCdnPhone.toString()})(${JSON.stringify(options)}, bootDaoyuanPhone);\n`;
+}
+
 if (importOutputPath.pathname.endsWith('/道渊小手机V0.9.json') || importOutputPath.pathname.endsWith('/道渊小手机V1.0.json')) {
   throw new Error('V1.1 打包护栏：禁止覆盖 V0.9/V1.0 正式文件');
 }
@@ -548,8 +568,8 @@ const candidate = {
   },
   artifact: {
     file: '道渊功能前端.js',
-    bytes: Buffer.byteLength(bundledSource),
-    content: bundledSource,
+    bytes: Buffer.byteLength(importSource),
+    content: importSource,
   },
 };
 
@@ -566,7 +586,7 @@ const importableScript = {
   enabled: true,
   name: packageName,
   id: importScriptId,
-  content: bundledSource,
+  content: importSource,
   info: v12Test ? '道渊小手机 V1.2 测试版：补齐玄天界独立推演执行器，读取原版主世界书与最近 5 条可见 AI 回复，多条事件线并行推进；地球与玄天界 API、状态账本完全隔离。配置助手保持 V1.3.3 原样。需在真实 SillyTavern 验收。' : v11 ? `道渊小手机 V1.1${formal ? '' : ' 测试版'}：完整保留 V1.0 功能与 DSH 双 video 桌宠；内置带小手机总开关的 V26 正文美化阅读器，支持 {角色标准姓名}“台词”协议，兼容旧对白格式，并保留全局 content 扫描、独立术语开关及设置持久化。` : '道渊小手机 V1.0 测试候选。',
   button: {
     enabled: false,

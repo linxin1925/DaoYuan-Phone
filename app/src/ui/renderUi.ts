@@ -69,7 +69,7 @@ type FeatureModuleFlags = Record<FeatureModuleKey, boolean>;
 interface UserScriptView { id: string; name: string; enabled: boolean; dlcId: string | null; active: boolean; }
 interface UserDlcStatusView { id: string; name: string; worldbookName: string; scriptId: string | null; scriptName: string | null; importedAt: string; worldbookExists: boolean; mounted: boolean; scriptStored: boolean; scriptEnabled: boolean; scriptActive: boolean; }
 interface EarthWorldbookStatusView { status: 'not-installed' | 'installed-unmounted' | 'mounted' | 'missing-entries' | 'duplicate-entries' | 'conflict' | 'empty-snapshot' | 'user-modified'; mounted: boolean; entryCount: number; missingEntries: string[]; duplicateEntries: string[]; userModified: boolean; canCreate: boolean; canRepairMissing: boolean; canAttach: boolean; reason: string; }
-type SettingsSection = 'home' | 'yujian' | 'beauty' | 'xianwang' | 'wanbao' | 'injection' | 'dlc' | 'earth' | 'xuantian' | 'world' | 'pet' | 'content-beautifier' | 'config-helper';
+type SettingsSection = 'home' | 'yujian' | 'beauty' | 'xianwang' | 'wanbao' | 'injection' | 'dlc' | 'earth' | 'xuantian' | 'world' | 'pet' | 'content-beautifier' | 'config-helper' | 'phone-update';
 type EarthSettingsTab = 'overview' | 'regions' | 'forces' | 'events';
 type XuantianSettingsTab = 'overview' | 'regions' | 'forces' | 'events';
 type PetSize = 'small' | 'medium' | 'large';
@@ -212,11 +212,12 @@ function appendListItem(doc: Document, list: HTMLElement, title: string, meta: s
   list.append(item);
 }
 
-function appendPageHeading(doc: Document, parent: HTMLElement, title: string, description: string, tag: string, rumor = false): void {
+function appendPageHeading(doc: Document, parent: HTMLElement, title: string, description: string, tag?: string, rumor = false): void {
   const heading = element(doc, 'div', 'page-heading');
   const copy = element(doc, 'div');
   copy.append(element(doc, 'h1', undefined, title), element(doc, 'p', undefined, description));
-  heading.append(copy, element(doc, 'span', `source-tag${rumor ? ' rumor' : ''}`, tag));
+  heading.append(copy);
+  if (tag) heading.append(element(doc, 'span', `source-tag${rumor ? ' rumor' : ''}`, tag));
   parent.append(heading);
 }
 
@@ -411,6 +412,13 @@ function appendReaderLetter(doc: Document, list: HTMLElement, letter: ReaderLett
   head.append(element(doc, 'strong', 'reader-letter-author', letter.author), element(doc, 'span', 'reader-letter-time', letter.time));
   card.append(head, element(doc, 'p', 'reader-letter-body', letter.body));
   list.append(card);
+}
+
+interface PhoneUpdate {
+  state(): { current: string; available?: string; busy: boolean; status: string; failed: boolean };
+  subscribe(listener: () => void): () => void;
+  check(): Promise<void>;
+  apply(): Promise<void>;
 }
 
 export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payload?: Record<string, unknown>) => void): UiMount {
@@ -1232,7 +1240,27 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
     content.append(helperPanel);
   }
 
+  const phoneUpdate = (globalThis as typeof globalThis & { __daoyuanPhoneUpdate?: PhoneUpdate }).__daoyuanPhoneUpdate;
+
   function renderSettings(content: HTMLElement): void {
+    if (settingsSection === 'phone-update' && phoneUpdate) {
+      const state = phoneUpdate.state();
+      content.append(button(doc, 'settings-back-button', '← 返回设置', 'settings-home'));
+      appendPageHeading(doc, content, '小手机更新', '更新会刷新酒馆，并保留现有设置。');
+      const panel = appendPanel(doc, content, `当前运行 · ${state.current}`,
+        state.available ? `可更新到 · ${state.available}` : '手动检查小手机外链版本');
+      const status = element(doc, 'p', 'notice', state.failed ? `上次更新未能启动，已回退。 ${state.status}` : state.status);
+      status.setAttribute('role', 'status');
+      const check = button(doc, 'secondary-button settings-panel-save', '检查更新', 'phone-update-check');
+      check.disabled = state.busy;
+      panel.append(status, check);
+      if (state.available) {
+        const apply = button(doc, 'primary-button settings-panel-save', '一键更新', 'phone-update-apply');
+        apply.disabled = state.busy;
+        panel.append(apply);
+      }
+      return;
+    }
     if (settingsSection === 'pet') {
       content.append(button(doc, 'settings-back-button', '← 返回设置', 'settings-home'));
       appendPageHeading(doc, content, '小手机与鲸鱼娘', '调整小手机的收纳方式和鲸鱼娘尺寸，设置仅保存在当前浏览器。', '本地偏好');
@@ -1450,6 +1478,8 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
       { key: 'content-beautifier', icon: '阅', title: '正文美化', note: '正文阅读器扫描开关', scope: 'V26' },
       { key: 'config-helper', icon: '助', title: '道渊配置小助手', note: '悬浮球显示设置', scope: '显示设置' },
     ];
+    if (phoneUpdate) entries.push({ key: 'phone-update', icon: '更', title: '小手机更新',
+      note: '检查并重新加载外链脚本', scope: phoneUpdate.state().available ? '有更新' : '外链版本' });
     const switchable = new Set<SettingsSection>(['yujian','beauty','xianwang','wanbao','world']);
     for (const entry of entries) {
       const card = element(doc, 'article', `settings-api-card${switchable.has(entry.key) && !featureModuleFlags[entry.key as FeatureModuleKey] ? ' module-disabled' : ''}`);
@@ -1709,7 +1739,7 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
       const moduleKey = featureModuleForApp[item.key];
       if (moduleKey && !featureModuleFlags[moduleKey]) continue;
       const card = button(doc, 'app-card', '', 'app', item.key);
-      card.append(element(doc, 'span', 'app-card-icon', item.icon), element(doc, 'div', 'app-card-title', item.label), element(doc, 'div', 'app-card-note', item.note));
+      card.append(element(doc, 'span', 'app-card-icon', item.icon), element(doc, 'div', 'app-card-title', item.key === 'settings' && phoneUpdate?.state().available ? '设置 · 有更新' : item.label), element(doc, 'div', 'app-card-note', item.note));
       const badge=unreadBadge(item.key); if (badge > 0) card.append(element(doc, 'span', 'app-card-badge', String(badge)));
       grid.append(card);
     }
@@ -2408,6 +2438,10 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
       zoomMapImage = true; render(); root.querySelector<HTMLButtonElement>('.map-image-close')?.focus();
     } else if (action === 'map-image-close') {
       zoomMapImage = false; render();
+    } else if (action === 'phone-update-check') {
+      void phoneUpdate?.check();
+    } else if (action === 'phone-update-apply') {
+      void phoneUpdate?.apply();
     } else if (action === 'settings-open') {
       const next = actionNode.dataset.key as SettingsSection | undefined;
       if (next && next !== 'home') { active = 'settings'; settingsSection = next; announcement = ''; if (next === 'dlc') sendAction('REQUEST_USER_DLC_STATUS'); render(); }
@@ -3443,6 +3477,9 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
   root.addEventListener('change', onChange);
   view.addEventListener('message', onMessage);
   view.addEventListener('keydown', onKeydown);
+  const unsubscribePhoneUpdate = phoneUpdate?.subscribe(() => {
+    if (active === 'home' || (active === 'settings' && (settingsSection === 'home' || settingsSection === 'phone-update'))) render();
+  });
   const unsubscribePortraits = onPortraitsUpdated(() => render());
   const realTimeTimer = uiView.setInterval(() => {
     const clock = root.querySelector<HTMLTimeElement>('.spirit-real-time');
@@ -3450,5 +3487,5 @@ export function mountUi(doc: Document, sendToHost: (action: BridgeAction, payloa
   }, 30000);
   render();
   sendAction('APP_READY');
-  return { destroy: () => { closeParentMapFactionPortrait?.(); unsubscribePortraits(); uiView.clearInterval(realTimeTimer); root.removeEventListener('pointerdown', onPointerDown, true); root.removeEventListener('wheel', onWheelIntent, true); root.removeEventListener('touchstart', onManualScrollIntent, true); root.removeEventListener('focusout', onFocusOut, true); root.removeEventListener('scroll', onContentScroll, true); root.removeEventListener('click', onPointerClick); root.remove(); root.removeEventListener('click', onClick); root.removeEventListener('input', onInput); root.removeEventListener('change', onChange); view.removeEventListener('message', onMessage); view.removeEventListener('keydown', onKeydown); } };
+  return { destroy: () => { closeParentMapFactionPortrait?.(); unsubscribePortraits(); unsubscribePhoneUpdate?.(); uiView.clearInterval(realTimeTimer); root.removeEventListener('pointerdown', onPointerDown, true); root.removeEventListener('wheel', onWheelIntent, true); root.removeEventListener('touchstart', onManualScrollIntent, true); root.removeEventListener('focusout', onFocusOut, true); root.removeEventListener('scroll', onContentScroll, true); root.removeEventListener('click', onPointerClick); root.remove(); root.removeEventListener('click', onClick); root.removeEventListener('input', onInput); root.removeEventListener('change', onChange); view.removeEventListener('message', onMessage); view.removeEventListener('keydown', onKeydown); } };
 }
