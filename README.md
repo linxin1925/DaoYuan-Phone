@@ -18,7 +18,7 @@
 
 ## 使用
 
-正式使用下载 [`releases/道渊小手机V1.1.json`](./releases/道渊小手机V1.1.json)。V1.2 测试候选位于 [`releases/candidates/道渊小手机V1.2测试.json`](./releases/candidates/道渊小手机V1.2测试.json)，仅供当前开发验收；稳定脚本 ID 会覆盖升级旧版本。V1.1 说明见 [V1.1 使用与发布说明](./docs/V1.1使用与发布说明.md)，后续开发先读 [NEXT](./NEXT.md)。
+当前分发提供 [V1.3 数据库版](./releases/candidates/道渊小手机V1.3数据库版.json)和 [V1.3 CDN 外链版](./releases/candidates/道渊小手机V1.3-CDN外链版.json)。在酒馆助手的「脚本」页选择其中一份导入。外链版通过版本清单获取更新，旧包见 [历史归档](./releases/archive)。后续开发先读 [NEXT](./NEXT.md)。
 
 ## 本地开发
 

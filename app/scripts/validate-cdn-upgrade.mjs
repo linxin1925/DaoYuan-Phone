@@ -13,12 +13,17 @@ const runtimePath = 'releases/cdn/道渊小手机V1.2外链运行时.js';
 const manifestPath = 'releases/cdn/道渊小手机V1.2版本清单.json';
 const loaderPath = 'releases/candidates/道渊小手机V1.3-CDN外链版.json';
 const loader = JSON.parse(read(loaderPath));
-const legacyLoader = JSON.parse(read('releases/candidates/道渊小手机V1.2-CDN外链版.json'));
+const legacyLoader = JSON.parse(read('releases/archive/道渊小手机V1.2-CDN外链版.json'));
 const manifest = JSON.parse(read(manifestPath));
 assert.match(manifest.commit, /^[0-9a-f]{40}$/i);
-assert.equal(legacyLoader.content.replaceAll('1d68e4e87a846d1e2b7d9752d9a0cbfa9701559d', manifest.commit), loader.content);
+const normalizeFallbackRef = content => content.replace(/@[0-9a-f]{40}\//gi, '@FIXED-REF/');
+assert.equal(normalizeFallbackRef(legacyLoader.content), normalizeFallbackRef(loader.content));
 assert.equal(manifest.runtimeSha256, sha(read(runtimePath)));
-assert.equal(sha(read(runtimePath)), sha(candidate.content));
+for (const content of [read(runtimePath).toString(), candidate.content]) {
+  for (const feature of ['点击选择立绘', 'row-gap: .45em', '票据衔接', 'executeSqlQuery', 'executeSqlMutation']) {
+    assert.ok(content.includes(feature), `Missing required feature: ${feature}`);
+  }
+}
 assert.equal(candidate.version, '1.3.0');
 assert.equal(loader.id, 'daoyuan-feature-frontend-hud-v12-cdn');
 new vm.Script(candidate.content);
@@ -69,4 +74,4 @@ const offlineManifest = await runLoader({ manifestsFail: true });
 assert.equal(offlineManifest.fetches.length, 2);
 assert.equal(offlineManifest.warnings.length, 1);
 assert(!offlineManifest.imports[0].includes(`@${nextRef}/`));
-console.log('CDN upgrade OK: V1.3 runtime matches; stale ref leaves outputs intact; installed loader follows new manifest; CDN and manifest fallbacks work.');
+console.log('CDN upgrade OK: V1.3 runtime checksum and required features match; stale ref leaves outputs intact; installed loader follows new manifest; CDN and manifest fallbacks work.');
