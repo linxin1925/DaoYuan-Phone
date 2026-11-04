@@ -1,6 +1,6 @@
 # 道渊小手机
 
-面向 SillyTavern 的道渊世界观内嵌手机前端。当前正式发行版为 **V1.3.0**。下载见 [GitHub Release](https://github.com/linxin1925/DaoYuan-Phone/releases/tag/v1.3.0)，开发交接见 [NEXT.md](./NEXT.md)。
+面向 SillyTavern 的道渊世界观内嵌手机前端。当前正式发行版为 **V1.3.0**。下载见 [GitHub Release](https://github.com/linxin1925/DaoYuan-Phone/releases/tag/v1.3.0)。
 
 ## 功能
 
@@ -18,7 +18,7 @@
 
 ## 使用
 
-当前分发提供 [V1.3 数据库版](./releases/candidates/道渊小手机V1.3数据库版.json)和 [V1.3 CDN 外链版](./releases/candidates/道渊小手机V1.3-CDN外链版.json)。在酒馆助手的「脚本」页选择其中一份导入。外链版可在「小手机 → 设置 → 小手机更新」检查并安装新版。一键更新会刷新酒馆，请先保存聊天编辑和草稿，并等待生成结束。旧包见 [历史归档](./releases/archive)。后续开发先读 [NEXT](./NEXT.md)。
+当前分发提供 [V1.3 数据库版](./releases/candidates/道渊小手机V1.3数据库版.json)和 [V1.3 CDN 外链版](./releases/candidates/道渊小手机V1.3-CDN外链版.json)。在酒馆助手的「脚本」页选择其中一份导入。外链版可在「小手机 → 设置 → 小手机更新」检查并安装新版。一键更新会刷新酒馆，请先保存聊天编辑和草稿，并等待生成结束。旧包见 [历史归档](./releases/archive)。协作开发见下方说明，发布前请阅读 [开发与发布护栏](./docs/道渊小手机开发与发布护栏.md)。
 
 ## 本地开发
 
