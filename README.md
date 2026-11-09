@@ -1,9 +1,10 @@
 # 道渊小手机
 
-面向 SillyTavern 的道渊世界观内嵌手机前端。当前正式发行版为 **V1.3.1 R8**。下载见 [GitHub Release](https://github.com/linxin1925/DaoYuan-Phone/releases/tag/v1.3.1)。
+面向 SillyTavern 的道渊世界观内嵌手机前端。当前正式发行版为 **V1.3.2 R8.1**。下载见 [GitHub Release](https://github.com/linxin1925/DaoYuan-Phone/releases/tag/v1.3.2)。
 
 ## 功能
 
+- R8.1 修复正文重排后酒馆助手状态栏与选项面板退回 HTML 原始码的问题；保留既有渲染容器，必要时仅请求受影响楼层重新渲染。
 - DSH 透明 WebM 桌宠、五动作玉简开合状态机与手机比例悬浮界面
 - 正文美化支持新旧阅读模式、对白与叙述拆分、窄栏标题换行和任务票据。R8 支持最高 48px 正文字号、独立对白缩放，以及「翼、烛、洄、沄」和「尘」两组专属标签提示词开关。
 - 正文立绘读取小手机数据库，支持选图、自定义立绘及本地缓存；配套同步版状态栏可共用选图设置。R8 减少未变正文的重复指纹计算及相同联系人资料的重复存档。
@@ -19,27 +20,28 @@
 
 ## 使用
 
-当前 R8 发行提供两份附件：
+当前 R8.1 发行提供：
 
-- [V1.3.1-R8.json — 完整数据库安装版](https://github.com/linxin1925/DaoYuan-Phone/releases/download/v1.3.1/V1.3.1-R8.json)：使用者下载后，在酒馆助手的「脚本」页导入。先停用旧的小手机脚本，避免同时运行两份。
-- [V1.3.1-R8-source.zip — 完整原始码](https://github.com/linxin1925/DaoYuan-Phone/releases/download/v1.3.1/V1.3.1-R8-source.zip)：供开发和协作使用，无需导入酒馆助手。
+- [V1.3.2-R8.1.json — 完整数据库安装版](https://github.com/linxin1925/DaoYuan-Phone/releases/download/v1.3.2/V1.3.2-R8.1.json)：脚本完整内置，下载后在酒馆助手的「脚本」页导入。
+- [V1.3.2-R8.1-CDN.json — CDN 外链安装版](https://github.com/linxin1925/DaoYuan-Phone/releases/download/v1.3.2/V1.3.2-R8.1-CDN.json)：从版本清单加载线上运行时，后续可在小手机设置检查更新。
+- [V1.3.2-R8.1-source.zip — 完整原始码](https://github.com/linxin1925/DaoYuan-Phone/releases/download/v1.3.2/V1.3.2-R8.1-source.zip)：供开发和协作使用，无需导入酒馆助手。
 
-**CDN 外链入口目前仍为 V1.3.0，尚未同步 R8。** 本次发布 Release 附件不会自动切换旧外链入口；需要 R8 的使用者请下载上面的完整数据库安装版。旧发行版见 [Releases 历史](https://github.com/linxin1925/DaoYuan-Phone/releases)，旧包源码归档见 [历史归档](./releases/archive)。
+完整数据库版与 CDN 外链版选择一份启用；导入前先停用旧的小手机脚本，保持酒馆助手的「渲染」功能开启。更新前请保存正在编辑的聊天与输入框草稿，并等待生成结束；一键更新会刷新酒馆。
 
-协作开发与更新前请阅读 [开发与发布护栏](./docs/道渊小手机开发与发布护栏.md)。
+已安装支持版本清单的 CDN 外链版，可在「小手机 → 设置 → 小手机更新」检查并安装 R8.1。旧发行版见 [Releases 历史](https://github.com/linxin1925/DaoYuan-Phone/releases)。协作开发与更新前请阅读 [开发与发布护栏](./docs/道渊小手机开发与发布护栏.md)。
 
 ## 本地开发
 
-R8 的完整原始码以本次 Release 附件 `V1.3.1-R8-source.zip` 为准，要求 Node.js 24.14 或以上、pnpm 10.28.2。主分支的应用源码与 CDN 运行时尚未同步 R8；下方命令用于现有主分支开发流程，不能将其构建结果直接替代 R8 发行包。发布前应按发布护栏核对源码构建与线上运行包的功能差异。
+R8.1 的完整原始码以本次 Release 附件 `V1.3.2-R8.1-source.zip` 为准，要求 Node.js 24.14 或以上、pnpm 10.28.2。当前仓库 main 的历史 TypeScript 预览源码尚未整体同步发行快照；开发 R8.1 请解压本次完整原始码包。正式构建采用带哈希校验的 R8 快照与共享后台逻辑，不能将历史 Vite 预览结果直接替代发行包。
 
 ```bash
 cd app
-pnpm install
+pnpm install --frozen-lockfile
 pnpm check
-node scripts/package-candidate.mjs --v13-database
+pnpm test:r8-browser
 ```
 
-`pnpm check` 会执行类型检查、数据样例校验、界面契约校验、生产构建和候选包生成。
+在 R8.1 完整原始码包中，`pnpm check` 会执行类型与既有回归检查、源码预览构建、正式包生成及来源校验；`pnpm test:r8-browser` 另验证完整脚本、正文设置、立绘与酒馆助手渲染协作。浏览器测试需要本机 Chrome/Chromium。
 
 ## 发布说明
 
