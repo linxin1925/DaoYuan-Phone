@@ -1,8 +1,11 @@
 # 道渊小手机
 
-面向 SillyTavern 的道渊世界观内嵌手机前端。当前正式发行版为 **V1.3.3 R8.2**。下载见 [GitHub Release](https://github.com/linxin1925/DaoYuan-Phone/releases/tag/v1.3.3)。
+面向 SillyTavern 的道渊世界观内嵌手机前端。当前正式发行版为 **V1.3.4 R8.3**。下载见 [GitHub Release](https://github.com/linxin1925/DaoYuan-Phone/releases/tag/v1.3.4)。
 
 ## 功能
+
+- R8.3 保持已完成的正文楼层稳定：玩家发言不重排历史正文，AI 生成结束后只处理变动楼层。点铅笔进入原生编辑时保留原文编辑框、草稿及光标，保存／取消完成后才恢复显示。
+- 同角色支持多张自定义立绘：本地图片可多选，原始大小所有角色合计 100MB；图床网址不设张数上限。立绘表、对白小图与底图共用清单，支持单张锁定、单张删除、容量显示，保留原有图片与选图。
 
 - R8.2 新增正文提示词简繁模式开关：简体模式要求正文、对白与姓名全部使用简体；繁体模式要求正文与对白使用繁体、姓名保持简体（默认）。两项互斥、自动保存，从下一次生成生效。
 
@@ -22,19 +25,19 @@
 
 ## 使用
 
-当前 R8.2 发行提供：
+当前 R8.3 发行提供：
 
-- [V1.3.3-R8.2.json — 完整数据库安装版](https://github.com/linxin1925/DaoYuan-Phone/releases/download/v1.3.3/V1.3.3-R8.2.json)：脚本完整内置，下载后在酒馆助手的「脚本」页导入。
-- [V1.3.3-R8.2-CDN.json — CDN 外链安装版](https://github.com/linxin1925/DaoYuan-Phone/releases/download/v1.3.3/V1.3.3-R8.2-CDN.json)：从版本清单加载线上运行时，后续可在小手机设置检查更新。
-- [V1.3.3-R8.2-source.zip — 完整原始码](https://github.com/linxin1925/DaoYuan-Phone/releases/download/v1.3.3/V1.3.3-R8.2-source.zip)：供开发和协作使用，无需导入酒馆助手。
+- [V1.3.4-R8.3.json — 完整数据库安装版](https://github.com/linxin1925/DaoYuan-Phone/releases/download/v1.3.4/V1.3.4-R8.3.json)：脚本完整内置，下载后在酒馆助手的「脚本」页导入。
+- [V1.3.4-R8.3-CDN.json — CDN 外链安装版](https://github.com/linxin1925/DaoYuan-Phone/releases/download/v1.3.4/V1.3.4-R8.3-CDN.json)：从版本清单加载线上运行时，后续可在小手机设置检查更新。
+- [V1.3.4-R8.3-source.zip — 完整原始码](https://github.com/linxin1925/DaoYuan-Phone/releases/download/v1.3.4/V1.3.4-R8.3-source.zip)：供开发和协作使用，无需导入酒馆助手。
 
 完整数据库版与 CDN 外链版选择一份启用；导入前先停用旧的小手机脚本，保持酒馆助手的「渲染」功能开启。更新前请保存正在编辑的聊天与输入框草稿，并等待生成结束；一键更新会刷新酒馆。
 
-已安装支持版本清单的 CDN 外链版，可在「小手机 → 设置 → 小手机更新」检查并安装 R8.2。旧发行版见 [Releases 历史](https://github.com/linxin1925/DaoYuan-Phone/releases)。协作开发与更新前请阅读 [开发与发布护栏](./docs/道渊小手机开发与发布护栏.md)。
+已安装支持版本清单的 CDN 外链版，可在「小手机 → 设置 → 小手机更新」检查并安装 R8.3。旧发行版见 [Releases 历史](https://github.com/linxin1925/DaoYuan-Phone/releases)。协作开发与更新前请阅读 [开发与发布护栏](./docs/道渊小手机开发与发布护栏.md)。
 
 ## 本地开发
 
-R8.2 的完整原始码以本次 Release 附件 `V1.3.3-R8.2-source.zip` 为准，要求 Node.js 24.14 或以上、pnpm 10.28.2。当前仓库 main 的历史 TypeScript 预览源码尚未整体同步发行快照；开发 R8.2 请解压本次完整原始码包。正式构建采用带哈希校验的 R8 快照与共享后台逻辑，不能将历史 Vite 预览结果直接替代发行包。
+R8.3 的完整原始码以本次 Release 附件 `V1.3.4-R8.3-source.zip` 为准，要求 Node.js 24.14 或以上、pnpm 10.28.2。当前仓库 main 的历史 TypeScript 预览源码尚未整体同步发行快照；开发 R8.3 请解压本次完整原始码包。正式构建采用带哈希校验的 R8 快照与共享后台逻辑，不能将历史 Vite 预览结果直接替代发行包。
 
 ```bash
 cd app
@@ -43,7 +46,7 @@ pnpm check
 pnpm test:r8-browser
 ```
 
-在 R8.2 完整原始码包中，`pnpm check` 会执行类型与既有回归检查、源码预览构建、正式包生成及来源校验；`pnpm test:r8-browser` 另验证完整脚本、正文设置、立绘与酒馆助手渲染协作。浏览器测试需要本机 Chrome/Chromium。固定提交比对还需要 Git 仓库及版本清单引用的提交对象；只解压源码 ZIP 时，应先把源码放进仓库检出目录，并取得清单对应的提交，再运行完整发布校验。
+在 R8.3 完整原始码包中，`pnpm check` 会执行类型与既有回归检查、源码预览构建、正式包生成及来源校验；`pnpm test:r8-browser` 另验证完整脚本、正文设置、立绘与酒馆助手渲染协作。浏览器测试需要本机 Chrome/Chromium。固定提交比对还需要 Git 仓库及版本清单引用的提交对象；只解压源码 ZIP 时，应先把源码放进仓库检出目录，并取得清单对应的提交，再运行完整发布校验。
 
 ## 发布说明
 
