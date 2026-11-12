@@ -1,5 +1,5 @@
 const bootDaoyuanPhone=()=>{
-const key='__daoyuanR8RuntimeBoot',buildId="4ba77149da4c9f5b3741ac011d4be51cd6752ab4e7431bb404022f23bedd73bd";
+const key='__daoyuanR8RuntimeBoot',buildId="430f6cd2952a8ed09b276ef67a9b73fd395457e215446b9a3fce3749364ab46e";
 const previous=globalThis[key];if(previous?.buildId===buildId)return previous.promise;
 const promise=Promise.resolve().then(async()=>{
 function collectDerivedFingerprints(
@@ -215,7 +215,7 @@ apply.disabled=state.busy;
 panel.append(apply);
 }
 return
-}if(ot==="config-helper"){b.append(G(e,"settings-back-button","← 返回设置","settings-home")),it(e,b,"道渊配置小助手","管理悬浮球的显示状态。实际版本可在配置小助手面板底部查看。"),YE(b);return}if(ot==="world"){b.append(G(e,"settings-back-button","← 返回设置","settings-home")),it(e,b,"世界推演设置","在同一页面管理双界入口与两套独立 API；数据和接口不会互相混用。","统一入口");const h=ze(e,b,"推演功能开关","关闭后对应入口将不可进入，重新开启即可继续使用原有数据。");h.classList.add("world-settings-section");for(const[J,V,me,$]of[["xuantian","启用玄天界推演","原版五域、势力与事件线。",Oe.xuantianEnabled],["earth","启用地球推演","地球附属世界书与独立推演服务。",Oe.earthEnabled]]){const ve=c(e,"label","settings-auto-toggle"),ee=e.createElement("input");ee.type="checkbox",ee.checked=$,ee.dataset.worldSimulationFeature=J;const we=c(e,"span","settings-auto-toggle-copy");we.append(c(e,"strong",void 0,V),c(e,"small",void 0,me)),ve.append(ee,we),h.append(ve)}h.append(G(e,"primary-button settings-panel-save","保存推演开关","world-simulation-settings-save"));const x=(J,V,me)=>{for(const[ve,ee,we,De]of[["基础 URL","apiBaseUrl","url","https://api.example.com/v1"],["API 密钥","apiKey","password","仅保存在宿主本地设置"],["模型名称","apiModel","text","例如：推演专用模型"]]){const Ve=c(e,"label","settings-field");Ve.append(c(e,"span","settings-label",ve));const Ze=e.createElement("input");Ze.type=we,Ze.placeholder=De,Ze.value=String(me[ee]),V==="xuantian"?Ze.dataset.xuantianApiSetting=ee:Ze.dataset.earthApiSetting=ee,ee==="apiBaseUrl"&&da(Ze),Ve.append(Ze),J.append(Ve)}Yl(J,V);const $=c(e,"div","earth-sim-form-grid");for(const[ve,ee]of[["温度","temperature"],["超时（秒）","timeoutSeconds"],["自动推进间隔（轮）","replyInterval"],["失败后重试次数","retryCount"],["单次最大世界日","maxWorldDays"]]){const we=c(e,"label","settings-field");we.append(c(e,"span","settings-label",ve));const De=e.createElement("input");De.type="number",De.min=ee==="retryCount"?"0":"",De.max=ee==="retryCount"?"2":"",De.value=String(me[ee]),V==="xuantian"?De.dataset.xuantianApiSetting=ee:De.dataset.earthApiSetting=ee,we.append(De),$.append(we)}J.append($,c(e,"p","earth-sim-disabled-note",`每次通常请求 1 次；当前设置下单次${V==="xuantian"?"玄天界":"地球"}推演最多请求 ${me.retryCount+1} 次。鉴权、配置、世界书前置条件或越权状态变更不会重试。`))},v=ze(e,b,"玄天界推演 API","服务原版五域、势力与并行事件线；读取主世界书，状态写入当前聊天独立账本。");v.classList.add("earth-sim-api-form","world-settings-section");const R=c(e,"label","settings-auto-toggle"),P=e.createElement("input");P.type="checkbox",P.checked=Le.enabled,P.dataset.xuantianApiSetting="enabled";const W=c(e,"span","settings-auto-toggle-copy");W.append(c(e,"strong",void 0,"启用玄天界推演 API"),c(e,"small",void 0,"仅控制玄天界接口调用。")),R.append(P,W),v.append(R);const M=c(e,"label","settings-auto-toggle"),j=e.createElement("input");j.type="checkbox",j.checked=Le.npcSimulationEnabled,j.dataset.xuantianApiSetting="npcSimulationEnabled";const I=c(e,"span","settings-auto-toggle-copy");I.append(c(e,"strong",void 0,"启用 NPC 后台生活推演"),c(e,"small",void 0,"独立开关，默认关闭；开启时检查重要角色表并提醒，不阻止保存。与玄天界同轮同请求。")),M.append(j,I),v.append(M),x(v,"xuantian",Le),v.append(G(e,"primary-button","保存玄天界 API","xuantian-api-save"),c(e,"p","world-clear-note","危险操作：只清空当前对话的玄天界势力、事件线、时间和正文注入。"),G(e,"earth-reset-button","清空当前对话的玄天界推演","xuantian-simulation-clear"));const Y=ze(e,b,"玄天界推演故障日志",`当前聊天共 ${Vt.length} 条；记录请求、重试、结构校验与提交结果，仅用于测试排障。`);Y.classList.add("world-settings-section");const L=c(e,"div","xuantian-log-actions"),T=G(e,"danger-button","清空日志","xuantian-clear-logs");T.disabled=!Vt.length,L.append(G(e,"secondary-button","复制全部日志","xuantian-copy-logs"),T),Y.append(L);const U=c(e,"div","xuantian-event-list");for(const J of[...Vt].reverse()){const V=c(e,"article","xuantian-event-summary");V.append(c(e,"span","xuantian-event-kind",J.level),c(e,"strong",void 0,J.message),c(e,"small",void 0,`${J.at} · 序列 ${J.sequence} · 请求 ${J.requestCount}${J.detail?` · ${J.detail}`:""}`)),U.append(V)}Vt.length||U.append(c(e,"p","xuantian-empty","暂无日志。完成一次推演后会记录结果；失败与重试会保留详细原因。")),Y.append(U);const F=ze(e,b,"地球推演 API","服务地球附属世界书与独立演化，不读取玄天界 API 配置。");F.classList.add("earth-sim-api-form","world-settings-section");const z=c(e,"label","settings-auto-toggle"),q=e.createElement("input");q.type="checkbox",q.checked=Ce.enabled,q.dataset.earthApiSetting="enabled";const _=c(e,"span","settings-auto-toggle-copy");_.append(c(e,"strong",void 0,"启用地球推演 API"),c(e,"small",void 0,"AI 提出变化并通过检查后才保存。")),z.append(q,_),F.append(z),x(F,"earth",Ce);const te=c(e,"label","settings-field");te.append(c(e,"span","settings-label","双界时间流速（地球 : 玄天界）"));const Z=e.createElement("select");Z.className="earth-time-ratio-select",Z.dataset.earthApiSetting="timeRatio";for(const J of Ca){const V=c(e,"option",void 0,J.label);V.value=J.value,V.selected=J.value===Ce.timeRatio,Z.append(V)}te.append(Z,c(e,"small","earth-time-ratio-note",Jr(Ce.timeRatio))),F.append(te,G(e,"primary-button","保存地球 API","earth-api-save"),c(e,"p","world-clear-note","危险操作：只清空当前对话的地球区域、势力、事件、时间和正文注入。"),G(e,"earth-reset-button","清空当前对话的地球推演","earth-simulation-clear"));return}if(ot==="earth"){zE(b);return}if(ot==="yujian"){WE(b);return}if(ot==="beauty"){b.append(G(e,"settings-back-button","← 返回 API 设置","settings-home")),it(e,b,"绝色榜 API","只服务榜单生成与群芳谱回帖，不与仙网内容混用。","独立接口"),jE(b);return}if(ot==="xianwang"){b.append(G(e,"settings-back-button","← 返回 API 设置","settings-home")),it(e,b,"仙网内容 API","供仙网风闻、仙网论坛与天机日报共同使用。","三应用共用"),JE(b);return}if(ot==="wanbao"){b.append(G(e,"settings-back-button","← 返回 API 设置","settings-home")),it(e,b,"万宝商行设置","设置独立生成 API、货单容量与灵石结构；交易仅写入允许字段。","V0.9 测试");const h=ze(e,b,"万宝商行独立 API","启用后使用这里的接口生成货单；关闭后使用酒馆当前生成模型。");h.classList.add("wanbao-api-settings-panel");const x=c(e,"label","settings-auto-toggle"),v=e.createElement("input");v.type="checkbox",v.checked=p.enabled,v.dataset.wanbaoApiEnabled="true";const R=c(e,"span","settings-auto-toggle-copy");R.append(c(e,"strong",void 0,"启用独立 API"),c(e,"small",void 0,"关闭时无需填写以下配置。")),x.append(v,R),h.append(x);for(const[Z,J,V]of[["基础 URL（Endpoint）","apiBaseUrl","url"],["API 密钥（API Key）","apiKey","password"],["模型（Model）","apiModel","text"]]){const me=c(e,"label","settings-field");me.append(c(e,"span","settings-label",Z));const $=e.createElement("input");$.type=V,$.value=p[J],$.dataset.wanbaoApiSetting=J,J==="apiBaseUrl"&&da($),me.append($),h.append(me)}const P=c(e,"div","settings-control-group"),W=G(e,"secondary-button",Va?"获取中…":"获取模型列表","wanbao-models-fetch");if(W.disabled=Va,P.append(W),Aa.length){const Z=e.createElement("select");Z.dataset.wanbaoModelSelect="true",Z.append(c(e,"option",void 0,`请选择模型（共 ${Aa.length} 个）`));for(const J of Aa){const V=c(e,"option",void 0,J);V.value=J,V.selected=J===p.apiModel,Z.append(V)}P.append(Z)}h.append(P,G(e,"primary-button","保存独立 API 设置","wanbao-api-save"));const M=ze(e,b,"正文交易联动","独立控制是否把最近的万宝楼成交事实注入后续正文；关闭不影响生成、估价或交易。");M.classList.add("wanbao-injection-settings-panel");const j=c(e,"label","settings-auto-toggle"),I=e.createElement("input");I.type="checkbox",I.checked=p.transactionInjectionEnabled,I.dataset.wanbaoInjectionEnabled="true";const Y=c(e,"span","settings-auto-toggle-copy");Y.append(c(e,"strong",void 0,"注入万宝楼交易事实"),c(e,"small",void 0,"默认开启；每个聊天只注入最近成交记录。")),j.append(I,Y),M.append(j,G(e,"primary-button","保存正文注入设置","wanbao-injection-save"));const L=ze(e,b,"货单更新规则","后续 AI 货单接入会使用这些限制，避免一次生成过多或无限累积。");L.classList.add("wanbao-rules-settings-panel");const T=(Z,J,V,me,$)=>{const ve=c(e,"label","settings-field");ve.append(c(e,"span","settings-label",Z));const ee=e.createElement("input");ee.type="number",ee.min=String(V),ee.max=String(me),ee.value=String(u[J]),ee.dataset.wanbaoSetting=J,ve.append(ee,c(e,"small","settings-section-note",$)),L.append(ve)},U=u.itemDataMode==="combat";T("每轮新增货品数量","batchSize",U?4:10,U?4:10,U?"战斗版分两次各4件，合计8件，八境界各一件。":"原版固定 10 件，覆盖炼气至大乘八个玄天界境界。"),T("最多保留售卖货品","maxItems",1,60,"超过上限时只保留最新货品，不触碰玩家物品。"),T("自动更新间隔（0 关闭）","refreshInterval",0,99,"按完成的 AI 正文楼层计数；达到间隔后自动生成新货单。");const F=c(e,"label","settings-field");F.append(c(e,"span","settings-label","灵石结构"));const z=e.createElement("select");z.dataset.wanbaoCurrencyMode="true";for(const[Z,J]of[["auto","自动识别"],["legacy-bag","原版卡（储物袋同级）"],["combat-separate","战斗版（独立字段）"]]){const V=e.createElement("option");V.value=Z,V.textContent=J,V.selected=u.currencyMode===Z,z.append(V)}F.append(z,c(e,"small","settings-section-note","自动识别优先使用战斗版独立字段；识别不确定时可手动切换。")),L.append(F);const q=c(e,"label","settings-field");q.append(c(e,"span","settings-label","物品/功法结构"));const _=e.createElement("select");_.dataset.wanbaoItemMode="true";for(const[Z,J]of[["legacy","原版卡（描述+数量）"],["combat","战斗版（世界书定性字段）"]]){const V=e.createElement("option");V.value=Z,V.textContent=J,V.selected=u.itemDataMode===Z,_.append(V)}q.append(_,c(e,"small","settings-section-note","生成货品与购买写回均按此模式，只触碰储物袋和器物。")),L.append(q),L.append(c(e,"p","notice muted","购买区与出售区使用不同数据源：购买读取 AI 货单，出售读取 stat_data.主角.储物袋 与 stat_data.主角.器物。")),L.append(G(e,"primary-button","保存万宝商行设置","wanbao-settings-save"));const te=ze(e,b,"万宝商行诊断日志","仅保留最近 40 条，单条原始响应也会截断；可随时清空，不影响货单、交易或设置。");te.classList.add("wanbao-debug-settings-panel"),te.append(G(e,"secondary-button","清空诊断日志","wanbao-debug-clear")),b.append(c(e,"p","notice muted","设置保存在当前浏览器本地，不会写入角色卡、聊天变量或 V0.8 正式文件。"));return}if(ot==="injection"){b.append(G(e,"settings-back-button","← 返回设置","settings-home")),it(e,b,"主线注入","选择哪些道渊信息可被后续剧情感知。所有模块默认关闭。","按需启用"),LE(b);return}if(ot==="dlc"){b.append(G(e,"settings-back-button","← 返回设置","settings-home")),it(e,b,"DLC 剧情拓展","手动导入世界书与对应脚本；小手机不再内置或自动管理 DLC。","手动导入");const h=ze(e,b,"添加或更新 DLC","填写 DLC 名称并选择世界书；脚本可不选。提交前会先校验两个文件。");h.classList.add("content-package-panel");const x=c(e,"div","settings-field");x.append(c(e,"span","settings-label","操作目标"));const v=c(e,"div","user-dlc-choice-group"),R=G(e,`user-dlc-choice${St===null?" selected":""}`,"新建 DLC（生成新 ID）","user-dlc-target","");R.setAttribute("aria-pressed",String(St===null)),v.append(R);for(const T of la){const U=St===T.id,F=G(e,`user-dlc-choice${U?" selected":""}`,`更新：${T.name}`,"user-dlc-target",T.id);F.setAttribute("aria-pressed",String(U)),v.append(F)}x.append(v),h.append(x);const P=c(e,"label","settings-field");P.append(c(e,"span","settings-label","DLC 名称（必填）"));const W=e.createElement("input");W.type="text",W.value=Xt,W.placeholder="例如：万年仇怨",W.dataset.userDlcName="true",P.append(W),h.append(P);const M=(T,U,F,z)=>{const q=c(e,"label","settings-field content-package-file");q.append(c(e,"span","settings-label",`${T}${F?"（必选）":"（可选）"}`));const _=e.createElement("input");_.type="file",_.accept="application/json,.json",_.dataset.userDlcFile=U,_.className="content-package-file-native";const te=c(e,"span","content-package-file-status",z?"已选择 1 个文件":"未选择任何文件");te.dataset.userDlcFileStatus=U;const Z=c(e,"span","content-package-file-picker");Z.append(c(e,"span","content-package-file-button","选择文件"),te),q.append(_,Z),h.append(q)};if(M("世界书 JSON","worldbook",!0,!!lt),lt){const T=c(e,"p","notice",`世界书：${lt.name} · ${lt.count} 条`);T.dataset.userDlcFileSummary="worldbook",h.append(T)}if(M("脚本 JSON","script",!1,!!Qt),Qt){const T=c(e,"p","notice muted",`脚本：${Qt.name}`);T.dataset.userDlcFileSummary="script",h.append(T)}const j=c(e,"div","settings-field");j.append(c(e,"span","settings-label","同名世界书处理"));const I=c(e,"div","user-dlc-choice-group");for(const[T,U]of[["replace-matching","更新同名条目并补新增条目"],["safe-merge","只补新增条目（保留同名正文）"]]){const F=$o===T,z=G(e,`user-dlc-choice${F?" selected":""}`,U,"user-dlc-mode",T);z.setAttribute("aria-pressed",String(F)),I.append(z)}j.append(I),h.append(j);const Y=G(e,"primary-button",St?"更新所选 DLC":"导入并新建 DLC","user-dlc-import");Y.disabled=!Xt.trim()||!lt,h.append(Y);const L=ze(e,b,"已导入 DLC",la.length?"检测世界书存在与当前角色挂载状态；可修复挂载或移除登记。":"尚未登记 DLC。");L.classList.add("user-dlc-manager-panel");for(const T of la){const U=c(e,"article","user-dlc-card"),F=T.worldbookExists?T.mounted?"世界书已挂载":"世界书存在但未挂载":"世界书不存在";U.append(c(e,"strong",void 0,T.name),c(e,"small","user-dlc-id",`ID：${T.id}`),c(e,"small",void 0,`${T.worldbookName} · ${F}`),c(e,"small",void 0,T.scriptStored?`脚本：${T.scriptName??"已导入"}${T.scriptActive?" · 本轮运行中":T.scriptEnabled?" · 等待运行":" · 已关闭"}`:"未配置脚本"));const z=c(e,"div","user-dlc-actions");z.append(G(e,"secondary-button","更新世界书/脚本","user-dlc-select-update",T.id));const q=G(e,"secondary-button",T.mounted?"重新检测挂载":"修复挂载","user-dlc-repair",T.id);q.disabled=!T.worldbookExists,z.append(q),T.scriptStored&&z.append(G(e,"secondary-button","移除脚本","user-dlc-remove-script",T.id)),z.append(G(e,"danger-button","移除 DLC","user-dlc-remove",T.id)),U.append(z),L.append(U)}return}b.append(G(e,"top-parent-back-button","← 返回上一级","app","home")),it(e,b,"设置","生成服务彼此隔离；主线注入可按模块独立启用。","独立配置");const l=c(e,"div","settings-api-grid"),B=[{key:"yujian",icon:"⌁",title:"玉简传讯 API",note:"联系人传讯与角色回复",scope:"独立配置"},{key:"beauty",icon:"✦",title:"绝色榜 API",note:"榜单生成与群芳谱回帖",scope:"独立配置"},{key:"xianwang",icon:"◌",title:"仙网内容 API",note:"风闻、论坛与天机日报",scope:"三应用共用"},{key:"wanbao",icon:"♢",title:"万宝商行设置",note:"货单数量与保留上限",scope:"本地偏好"},{key:"injection",icon:"◇",title:"主线注入",note:"选择可影响后续剧情的模块",scope:"默认关闭"},{key:"dlc",icon:"卷",title:"DLC 剧情拓展",note:"成组导入、挂载检测与修复",scope:"用户管理"},{key:"world",icon:"界",title:"世界推演设置",note:"双界启停、玄天界 API 与地球 API",scope:"统一入口"},{key:"pet",icon:"宠",title:"小手机与鲸鱼娘",note:"侧边抽屉或自由浮窗，及鲸鱼娘尺寸",scope:"本地偏好"},{key:"reader-portraits",icon:"绘",title:"阅读与立绘",note:"立绘布局与轮播设置",scope:"本地偏好"},{key:"content-beautifier",icon:"阅",title:"正文美化",note:"正文阅读器扫描开关",scope:"V26"},{key:"config-helper",icon:"助",title:"道渊配置小助手",note:"悬浮球显示设置",scope:"显示设置"},{key:"phone-update",icon:"更",title:"小手机更新",note:"当前版本 V1.3.3 R8.2 · "+globalThis.__daoyuanPhoneUpdate.state().current,scope:globalThis.__daoyuanPhoneUpdate.state().available?"有更新":"外链版本"}],E=new Set(["yujian","beauty","xianwang","wanbao","world"]);for(const h of B){const x=c(e,"article",`settings-api-card${E.has(h.key)&&!nt[h.key]?" module-disabled":""}`),v=G(e,"settings-api-card-open","","settings-open",h.key);if(v.append(c(e,"span","settings-api-icon",h.icon),c(e,"span","settings-api-title",h.title),c(e,"span","settings-api-note",h.note),c(e,"span","settings-api-scope",h.scope)),x.append(v),E.has(h.key)){const R=h.key,P=c(e,"label","module-master-toggle"),W=e.createElement("input");W.type="checkbox",W.checked=nt[R],W.dataset.featureModule=R,W.setAttribute("aria-label",`${h.title}总开关`),P.append(W,c(e,"span","module-master-toggle-track"),c(e,"span","module-master-toggle-copy",W.checked?"功能已开启":"功能已关闭")),x.append(P)}l.append(x)}b.append(l),b.append(c(e,"p","notice muted","API 密钥仅保存在当前浏览器本地设置中，不写入聊天变量或模型提示词。"));const f=ze(e,b,"恢复出厂设置","清空小手机全部配置和记录，包括各模块数据、联系人、聊天记录、推演账本、预设、自定义立绘及导入配置。不会删除酒馆角色卡、原始世界书或 MVU 世界数据。");f.classList.add("phone-factory-reset-panel"),f.append(G(e,"earth-reset-button","清空小手机所有配置与记录","phone-factory-reset"))}function LE(b){const l=ze(e,b,"可感知信息","开启后，仅把当前聊天内最近的相关内容提供给剧情模型；关闭后该模块不会影响正文。");l.classList.add("prompt-injection-settings-panel");const B=[{key:"yujian",title:"玉简传讯",note:"作为主角与联系人的私下通信记录。"},{key:"trends",title:"仙网风闻",note:"只作为未经证实的消息，不会直接认定为事实。"},{key:"forum",title:"仙网论坛",note:"只作为修士观点与舆论，不代表客观事实。"},{key:"news",title:"天机日报",note:"作为媒体报道与叙事，仍需由剧情核验。"}];for(const E of B){const f=c(e,"label","injection-toggle-row"),h=e.createElement("input");h.type="checkbox",h.checked=La[E.key],h.dataset.injectionSetting=E.key;const x=c(e,"span","injection-toggle-copy");x.append(c(e,"strong",void 0,E.title),c(e,"small",void 0,E.note)),f.append(h,x),l.append(f)}l.append(c(e,"p","notice muted","系统会自动限制注入内容，只取近期信息；模块内的命令或提示文字不会被执行。"),G(e,"primary-button","保存主线注入设置","prompt-injection-save"))}function jE(b){const l=ze(e,b,"绝色榜 API 配置","这里的配置只用于绝色榜生成，与玉简 API、MVU 变量和玉简预设相互独立。");l.classList.add("beauty-api-settings-panel");const B=(W,M,j="text")=>{const I=c(e,"label","settings-field");I.append(c(e,"span","settings-label",W));const Y=e.createElement("input");Y.type=M==="apiBaseUrl"?"url":j,Y.value=et[M],Y.dataset.beautySetting=M,M==="apiBaseUrl"&&da(Y),I.append(Y),l.append(I)};B("基础 URL（Endpoint）","apiBaseUrl"),B("API 密钥（API Key）","apiKey","password"),B("模型（Model）","apiModel");const E=c(e,"label","settings-auto-toggle"),f=e.createElement("input");f.type="checkbox",f.checked=et.autoEnabled,f.dataset.beautyAutoEnabled="true";const h=c(e,"span","settings-auto-toggle-copy");h.append(c(e,"strong",void 0,"启用绝色榜自动推演"),c(e,"small",void 0,"关闭后不再随 AI 正文层自动请求；手动推演仍可使用。")),E.append(f,h),l.append(E);const x=c(e,"label","settings-field");x.append(c(e,"span","settings-label","自动更新间隔（0关闭，1为每层）"));const v=e.createElement("input");v.type="number",v.min="0",v.max="999",v.value=String(et.autoInterval),v.dataset.beautyInterval="true",x.append(v),l.append(x);const R=c(e,"div","settings-control-group"),P=G(e,"secondary-button",Za?"获取中…":"获取模型列表","beauty-models-fetch");if(P.disabled=Za,R.append(P),sa.length){const W=e.createElement("select");W.className="beauty-model-select",W.dataset.beautyModelSelect="true",W.setAttribute("aria-label","绝色榜模型列表"),W.append(c(e,"option",void 0,`请选择模型（共 ${sa.length} 个）`)),sa.forEach(M=>{const j=c(e,"option",void 0,M);j.value=M,j.selected=M===et.apiModel,W.append(j)}),R.append(W)}l.append(R),l.append(G(e,"primary-button","保存绝色榜 API 设置","beauty-settings-save"))}function JE(b){const l=ze(e,b,"仙网内容 API 配置","这套配置只用于仙网风闻、仙网论坛和天机日报，与玉简传讯、绝色榜相互独立。");l.classList.add("xianwang-api-settings-panel");const B=(R,P,W="text")=>{const M=c(e,"label","settings-field");M.append(c(e,"span","settings-label",R));const j=e.createElement("input");j.type=P==="apiBaseUrl"?"url":W,j.value=Pe[P],j.dataset.xianwangSetting=P,P==="apiBaseUrl"&&da(j),P==="playerAlias"&&(j.maxLength=24,j.placeholder="我",j.setAttribute("autocomplete","nickname")),M.append(j),l.append(M)};B("玩家网名（论坛发言显示）","playerAlias"),l.append(c(e,"p","settings-section-note","默认为“我”。修改后只影响新评论；旧评论保留发布时的网名。AI 会把该名称识别为玩家而非 NPC。")),B("基础 URL（Endpoint）","apiBaseUrl"),B("API 密钥（API Key）","apiKey","password"),B("模型（Model）","apiModel");const E=(R,P,W,M)=>{const j=c(e,"label","settings-field");j.append(c(e,"span","settings-label",R));const I=e.createElement("input");I.type="number",I.min=String(W),I.max=String(M),I.value=String(Pe[P]),I.dataset.xianwangNumberSetting=P,j.append(I),l.append(j)},f=(R,P,W)=>{const M=c(e,"label","settings-auto-toggle"),j=e.createElement("input");j.type="checkbox",j.checked=Pe[W],j.dataset.xianwangAutoSetting=W;const I=c(e,"span","settings-auto-toggle-copy");I.append(c(e,"strong",void 0,R),c(e,"small",void 0,P)),M.append(j,I),l.append(M)},h=(R,P,W)=>{const M=c(e,"label","settings-auto-toggle"),j=e.createElement("input");j.type="checkbox",j.checked=Pe[W],j.dataset.xianwangFeatureSetting=W;const I=c(e,"span","settings-auto-toggle-copy");I.append(c(e,"strong",void 0,R),c(e,"small",void 0,P)),M.append(j,I),l.append(M)};l.append(c(e,"h3","settings-subtitle","仙网互动与生成")),E("每帖生成评论数（0 为不生成）","generatedCommentCount",0,10),h("去中心化模式","开启后提示 AI 不要围绕主角生成内容。","decentralizedMode"),h("自动 AI 回复","用户发表评论后，自动生成仙网道友回复。","autoAiReply"),h("显示点赞数（热度）","显示 AI 生成的热度，并允许用户手动点赞。","showHeat"),h("列表中显示评论预览","开启后帖子列表默认展开评论。","showCommentPreview"),h("启用破甲提示词","在系统提示词末尾附加创作完整性指令。","jailbreakPrompt"),l.append(c(e,"h3","settings-subtitle","仙网风闻"),c(e,"p","settings-section-note","按 AI 正文层计数触发；每次生成数量会在设定的最少与最多条数之间随机取值。")),f("启用仙网风闻自动推演","关闭后停止自动请求；手动推演仍可使用。","trendsAutoEnabled"),E("自动生成间隔（0关闭，1为每层）","autoInterval",0,999),E("每批最少生成条数","batchMin",1,8),E("每批最多生成条数","batchMax",1,8),E("最多保留 AI 风闻","maxPosts",1,500),l.append(c(e,"h3","settings-subtitle","仙网论坛")),f("启用仙网论坛自动推演","关闭后停止自动请求；手动推演仍可使用。","forumAutoEnabled"),E("论坛自动生成间隔（0关闭，1为每层）","forumAutoInterval",0,999),E("论坛每次生成帖子数","forumBatchSize",1,6),E("论坛最多保留帖子","forumMaxPosts",1,500),l.append(c(e,"h3","settings-subtitle","天机日报")),f("启用天机日报自动推演","关闭后停止自动请求；手动推演仍可使用。","newsAutoEnabled"),E("日报自动生成间隔（0关闭，1为每层）","newsAutoInterval",0,999),E("日报每次生成期数","newsBatchSize",1,3),E("日报最多保留期数","newsMaxPapers",1,200);const x=c(e,"div","settings-control-group"),v=G(e,"secondary-button",qa?"获取中…":"获取模型列表","xianwang-models-fetch");if(v.disabled=qa,x.append(v),ia.length){const R=e.createElement("select");R.className="beauty-model-select",R.dataset.xianwangModelSelect="true",R.setAttribute("aria-label","仙网内容模型列表"),R.append(c(e,"option",void 0,`请选择模型（共 ${ia.length} 个）`)),ia.forEach(P=>{const W=c(e,"option",void 0,P);W.value=P,W.selected=P===Pe.apiModel,R.append(W)}),x.append(R)}l.append(x,G(e,"primary-button","保存仙网内容 API 设置","xianwang-settings-save"))}function KE(b){if(!rt)return;const l=rt,B=c(e,"div","beauty-portrait-overlay");B.dataset.action="beauty-portrait-close";const E=c(e,"section","beauty-portrait-modal");E.setAttribute("role","dialog"),E.setAttribute("aria-modal","true"),E.setAttribute("aria-label",`${l}的立绘`);const f=c(e,"header","beauty-portrait-head");f.append(c(e,"h2",void 0,`${l}的立绘`),G(e,"beauty-portrait-close","×","beauty-portrait-close")),E.append(f);const h=c(e,"div","beauty-portrait-display");let x="";if(Yn(l)?x=En(l,"女"):It?x=lm(l)||En(l,"女"):mn(l)?x=TA(l)||En(l,"女"):x=En(l,"女"),x){const L=e.createElement("img");L.src=x,L.alt=`${l}大图`,L.referrerPolicy="no-referrer",L.addEventListener("error",()=>{h.replaceChildren(c(e,"span","beauty-portrait-error","立绘加载失败"))}),h.append(L)}else h.append(c(e,"span","beauty-portrait-error","暂无立绘，可选择本地图片或粘贴图片 URL。"));E.append(h);const v=c(e,"p","beauty-portrait-source",Yn(l)?"自定义立绘":x?It?"特殊立绘":mn(l)?"女版立绘":"立绘库":"未找到立绘");E.append(v);const R=Ea(l);if(!Yn(l)&&R.length>1){const L=c(e,"div","beauty-portrait-set-row");R.forEach((T,U)=>{const F=G(e,`beauty-portrait-set${!It&&!mn(l)&&U===im(l)?" active":""}`,"","beauty-portrait-set",`${U}`);F.dataset.portraitName=l;const z=e.createElement("img");z.src=T,z.alt=`立绘${U+1}`,z.loading="lazy",z.referrerPolicy="no-referrer",F.append(z),L.append(F)}),E.append(L)}const P=c(e,"div","beauty-portrait-toggles");!Yn(l)&&cm(l)&&P.append(G(e,`secondary-button${It?" active":""}`,It?"当前：特殊立绘（点击切回）":"查看特殊立绘","beauty-portrait-special")),!Yn(l)&&NA(l)&&TA(l)!==rm(l)&&P.append(G(e,`secondary-button${mn(l)?" active":""}`,mn(l)?"当前：女版立绘（点击切回）":"切换到女版立绘","beauty-portrait-female")),P.childElementCount&&E.append(P);const W=c(e,"div","beauty-portrait-custom"),M=c(e,"label","secondary-button","选择本地图片"),j=e.createElement("input");j.type="file",j.accept="image/*",j.hidden=!0,j.dataset.beautyPortraitFile=l,M.append(j),W.append(M);const I=c(e,"div","beauty-portrait-url-row"),Y=e.createElement("input");Y.placeholder="或粘贴图片 URL",Y.dataset.beautyPortraitUrl=l,I.append(Y,G(e,"secondary-button","应用","beauty-portrait-url")),W.append(I),Yn(l)&&W.append(G(e,"secondary-button","删除自定义立绘","beauty-portrait-remove")),E.append(W),B.append(E),b.append(B)}const OE=b=>{const l=c(e,"section","hero"),B=c(e,"div");B.append(c(e,"h2","xianxia-title","天机阁")),l.append(B,c(e,"div","hero-seal",`天
+}if(ot==="config-helper"){b.append(G(e,"settings-back-button","← 返回设置","settings-home")),it(e,b,"道渊配置小助手","管理悬浮球的显示状态。实际版本可在配置小助手面板底部查看。"),YE(b);return}if(ot==="world"){b.append(G(e,"settings-back-button","← 返回设置","settings-home")),it(e,b,"世界推演设置","在同一页面管理双界入口与两套独立 API；数据和接口不会互相混用。","统一入口");const h=ze(e,b,"推演功能开关","关闭后对应入口将不可进入，重新开启即可继续使用原有数据。");h.classList.add("world-settings-section");for(const[J,V,me,$]of[["xuantian","启用玄天界推演","原版五域、势力与事件线。",Oe.xuantianEnabled],["earth","启用地球推演","地球附属世界书与独立推演服务。",Oe.earthEnabled]]){const ve=c(e,"label","settings-auto-toggle"),ee=e.createElement("input");ee.type="checkbox",ee.checked=$,ee.dataset.worldSimulationFeature=J;const we=c(e,"span","settings-auto-toggle-copy");we.append(c(e,"strong",void 0,V),c(e,"small",void 0,me)),ve.append(ee,we),h.append(ve)}h.append(G(e,"primary-button settings-panel-save","保存推演开关","world-simulation-settings-save"));const x=(J,V,me)=>{for(const[ve,ee,we,De]of[["基础 URL","apiBaseUrl","url","https://api.example.com/v1"],["API 密钥","apiKey","password","仅保存在宿主本地设置"],["模型名称","apiModel","text","例如：推演专用模型"]]){const Ve=c(e,"label","settings-field");Ve.append(c(e,"span","settings-label",ve));const Ze=e.createElement("input");Ze.type=we,Ze.placeholder=De,Ze.value=String(me[ee]),V==="xuantian"?Ze.dataset.xuantianApiSetting=ee:Ze.dataset.earthApiSetting=ee,ee==="apiBaseUrl"&&da(Ze),Ve.append(Ze),J.append(Ve)}Yl(J,V);const $=c(e,"div","earth-sim-form-grid");for(const[ve,ee]of[["温度","temperature"],["超时（秒）","timeoutSeconds"],["自动推进间隔（轮）","replyInterval"],["失败后重试次数","retryCount"],["单次最大世界日","maxWorldDays"]]){const we=c(e,"label","settings-field");we.append(c(e,"span","settings-label",ve));const De=e.createElement("input");De.type="number",De.min=ee==="retryCount"?"0":"",De.max=ee==="retryCount"?"2":"",De.value=String(me[ee]),V==="xuantian"?De.dataset.xuantianApiSetting=ee:De.dataset.earthApiSetting=ee,we.append(De),$.append(we)}J.append($,c(e,"p","earth-sim-disabled-note",`每次通常请求 1 次；当前设置下单次${V==="xuantian"?"玄天界":"地球"}推演最多请求 ${me.retryCount+1} 次。鉴权、配置、世界书前置条件或越权状态变更不会重试。`))},v=ze(e,b,"玄天界推演 API","服务原版五域、势力与并行事件线；读取主世界书，状态写入当前聊天独立账本。");v.classList.add("earth-sim-api-form","world-settings-section");const R=c(e,"label","settings-auto-toggle"),P=e.createElement("input");P.type="checkbox",P.checked=Le.enabled,P.dataset.xuantianApiSetting="enabled";const W=c(e,"span","settings-auto-toggle-copy");W.append(c(e,"strong",void 0,"启用玄天界推演 API"),c(e,"small",void 0,"仅控制玄天界接口调用。")),R.append(P,W),v.append(R);const M=c(e,"label","settings-auto-toggle"),j=e.createElement("input");j.type="checkbox",j.checked=Le.npcSimulationEnabled,j.dataset.xuantianApiSetting="npcSimulationEnabled";const I=c(e,"span","settings-auto-toggle-copy");I.append(c(e,"strong",void 0,"启用 NPC 后台生活推演"),c(e,"small",void 0,"独立开关，默认关闭；开启时检查重要角色表并提醒，不阻止保存。与玄天界同轮同请求。")),M.append(j,I),v.append(M),x(v,"xuantian",Le),v.append(G(e,"primary-button","保存玄天界 API","xuantian-api-save"),c(e,"p","world-clear-note","危险操作：只清空当前对话的玄天界势力、事件线、时间和正文注入。"),G(e,"earth-reset-button","清空当前对话的玄天界推演","xuantian-simulation-clear"));const Y=ze(e,b,"玄天界推演故障日志",`当前聊天共 ${Vt.length} 条；记录请求、重试、结构校验与提交结果，仅用于测试排障。`);Y.classList.add("world-settings-section");const L=c(e,"div","xuantian-log-actions"),T=G(e,"danger-button","清空日志","xuantian-clear-logs");T.disabled=!Vt.length,L.append(G(e,"secondary-button","复制全部日志","xuantian-copy-logs"),T),Y.append(L);const U=c(e,"div","xuantian-event-list");for(const J of[...Vt].reverse()){const V=c(e,"article","xuantian-event-summary");V.append(c(e,"span","xuantian-event-kind",J.level),c(e,"strong",void 0,J.message),c(e,"small",void 0,`${J.at} · 序列 ${J.sequence} · 请求 ${J.requestCount}${J.detail?` · ${J.detail}`:""}`)),U.append(V)}Vt.length||U.append(c(e,"p","xuantian-empty","暂无日志。完成一次推演后会记录结果；失败与重试会保留详细原因。")),Y.append(U);const F=ze(e,b,"地球推演 API","服务地球附属世界书与独立演化，不读取玄天界 API 配置。");F.classList.add("earth-sim-api-form","world-settings-section");const z=c(e,"label","settings-auto-toggle"),q=e.createElement("input");q.type="checkbox",q.checked=Ce.enabled,q.dataset.earthApiSetting="enabled";const _=c(e,"span","settings-auto-toggle-copy");_.append(c(e,"strong",void 0,"启用地球推演 API"),c(e,"small",void 0,"AI 提出变化并通过检查后才保存。")),z.append(q,_),F.append(z),x(F,"earth",Ce);const te=c(e,"label","settings-field");te.append(c(e,"span","settings-label","双界时间流速（地球 : 玄天界）"));const Z=e.createElement("select");Z.className="earth-time-ratio-select",Z.dataset.earthApiSetting="timeRatio";for(const J of Ca){const V=c(e,"option",void 0,J.label);V.value=J.value,V.selected=J.value===Ce.timeRatio,Z.append(V)}te.append(Z,c(e,"small","earth-time-ratio-note",Jr(Ce.timeRatio))),F.append(te,G(e,"primary-button","保存地球 API","earth-api-save"),c(e,"p","world-clear-note","危险操作：只清空当前对话的地球区域、势力、事件、时间和正文注入。"),G(e,"earth-reset-button","清空当前对话的地球推演","earth-simulation-clear"));return}if(ot==="earth"){zE(b);return}if(ot==="yujian"){WE(b);return}if(ot==="beauty"){b.append(G(e,"settings-back-button","← 返回 API 设置","settings-home")),it(e,b,"绝色榜 API","只服务榜单生成与群芳谱回帖，不与仙网内容混用。","独立接口"),jE(b);return}if(ot==="xianwang"){b.append(G(e,"settings-back-button","← 返回 API 设置","settings-home")),it(e,b,"仙网内容 API","供仙网风闻、仙网论坛与天机日报共同使用。","三应用共用"),JE(b);return}if(ot==="wanbao"){b.append(G(e,"settings-back-button","← 返回 API 设置","settings-home")),it(e,b,"万宝商行设置","设置独立生成 API、货单容量与灵石结构；交易仅写入允许字段。","V0.9 测试");const h=ze(e,b,"万宝商行独立 API","启用后使用这里的接口生成货单；关闭后使用酒馆当前生成模型。");h.classList.add("wanbao-api-settings-panel");const x=c(e,"label","settings-auto-toggle"),v=e.createElement("input");v.type="checkbox",v.checked=p.enabled,v.dataset.wanbaoApiEnabled="true";const R=c(e,"span","settings-auto-toggle-copy");R.append(c(e,"strong",void 0,"启用独立 API"),c(e,"small",void 0,"关闭时无需填写以下配置。")),x.append(v,R),h.append(x);for(const[Z,J,V]of[["基础 URL（Endpoint）","apiBaseUrl","url"],["API 密钥（API Key）","apiKey","password"],["模型（Model）","apiModel","text"]]){const me=c(e,"label","settings-field");me.append(c(e,"span","settings-label",Z));const $=e.createElement("input");$.type=V,$.value=p[J],$.dataset.wanbaoApiSetting=J,J==="apiBaseUrl"&&da($),me.append($),h.append(me)}const P=c(e,"div","settings-control-group"),W=G(e,"secondary-button",Va?"获取中…":"获取模型列表","wanbao-models-fetch");if(W.disabled=Va,P.append(W),Aa.length){const Z=e.createElement("select");Z.dataset.wanbaoModelSelect="true",Z.append(c(e,"option",void 0,`请选择模型（共 ${Aa.length} 个）`));for(const J of Aa){const V=c(e,"option",void 0,J);V.value=J,V.selected=J===p.apiModel,Z.append(V)}P.append(Z)}h.append(P,G(e,"primary-button","保存独立 API 设置","wanbao-api-save"));const M=ze(e,b,"正文交易联动","独立控制是否把最近的万宝楼成交事实注入后续正文；关闭不影响生成、估价或交易。");M.classList.add("wanbao-injection-settings-panel");const j=c(e,"label","settings-auto-toggle"),I=e.createElement("input");I.type="checkbox",I.checked=p.transactionInjectionEnabled,I.dataset.wanbaoInjectionEnabled="true";const Y=c(e,"span","settings-auto-toggle-copy");Y.append(c(e,"strong",void 0,"注入万宝楼交易事实"),c(e,"small",void 0,"默认开启；每个聊天只注入最近成交记录。")),j.append(I,Y),M.append(j,G(e,"primary-button","保存正文注入设置","wanbao-injection-save"));const L=ze(e,b,"货单更新规则","后续 AI 货单接入会使用这些限制，避免一次生成过多或无限累积。");L.classList.add("wanbao-rules-settings-panel");const T=(Z,J,V,me,$)=>{const ve=c(e,"label","settings-field");ve.append(c(e,"span","settings-label",Z));const ee=e.createElement("input");ee.type="number",ee.min=String(V),ee.max=String(me),ee.value=String(u[J]),ee.dataset.wanbaoSetting=J,ve.append(ee,c(e,"small","settings-section-note",$)),L.append(ve)},U=u.itemDataMode==="combat";T("每轮新增货品数量","batchSize",U?4:10,U?4:10,U?"战斗版分两次各4件，合计8件，八境界各一件。":"原版固定 10 件，覆盖炼气至大乘八个玄天界境界。"),T("最多保留售卖货品","maxItems",1,60,"超过上限时只保留最新货品，不触碰玩家物品。"),T("自动更新间隔（0 关闭）","refreshInterval",0,99,"按完成的 AI 正文楼层计数；达到间隔后自动生成新货单。");const F=c(e,"label","settings-field");F.append(c(e,"span","settings-label","灵石结构"));const z=e.createElement("select");z.dataset.wanbaoCurrencyMode="true";for(const[Z,J]of[["auto","自动识别"],["legacy-bag","原版卡（储物袋同级）"],["combat-separate","战斗版（独立字段）"]]){const V=e.createElement("option");V.value=Z,V.textContent=J,V.selected=u.currencyMode===Z,z.append(V)}F.append(z,c(e,"small","settings-section-note","自动识别优先使用战斗版独立字段；识别不确定时可手动切换。")),L.append(F);const q=c(e,"label","settings-field");q.append(c(e,"span","settings-label","物品/功法结构"));const _=e.createElement("select");_.dataset.wanbaoItemMode="true";for(const[Z,J]of[["legacy","原版卡（描述+数量）"],["combat","战斗版（世界书定性字段）"]]){const V=e.createElement("option");V.value=Z,V.textContent=J,V.selected=u.itemDataMode===Z,_.append(V)}q.append(_,c(e,"small","settings-section-note","生成货品与购买写回均按此模式，只触碰储物袋和器物。")),L.append(q),L.append(c(e,"p","notice muted","购买区与出售区使用不同数据源：购买读取 AI 货单，出售读取 stat_data.主角.储物袋 与 stat_data.主角.器物。")),L.append(G(e,"primary-button","保存万宝商行设置","wanbao-settings-save"));const te=ze(e,b,"万宝商行诊断日志","仅保留最近 40 条，单条原始响应也会截断；可随时清空，不影响货单、交易或设置。");te.classList.add("wanbao-debug-settings-panel"),te.append(G(e,"secondary-button","清空诊断日志","wanbao-debug-clear")),b.append(c(e,"p","notice muted","设置保存在当前浏览器本地，不会写入角色卡、聊天变量或 V0.8 正式文件。"));return}if(ot==="injection"){b.append(G(e,"settings-back-button","← 返回设置","settings-home")),it(e,b,"主线注入","选择哪些道渊信息可被后续剧情感知。所有模块默认关闭。","按需启用"),LE(b);return}if(ot==="dlc"){b.append(G(e,"settings-back-button","← 返回设置","settings-home")),it(e,b,"DLC 剧情拓展","手动导入世界书与对应脚本；小手机不再内置或自动管理 DLC。","手动导入");const h=ze(e,b,"添加或更新 DLC","填写 DLC 名称并选择世界书；脚本可不选。提交前会先校验两个文件。");h.classList.add("content-package-panel");const x=c(e,"div","settings-field");x.append(c(e,"span","settings-label","操作目标"));const v=c(e,"div","user-dlc-choice-group"),R=G(e,`user-dlc-choice${St===null?" selected":""}`,"新建 DLC（生成新 ID）","user-dlc-target","");R.setAttribute("aria-pressed",String(St===null)),v.append(R);for(const T of la){const U=St===T.id,F=G(e,`user-dlc-choice${U?" selected":""}`,`更新：${T.name}`,"user-dlc-target",T.id);F.setAttribute("aria-pressed",String(U)),v.append(F)}x.append(v),h.append(x);const P=c(e,"label","settings-field");P.append(c(e,"span","settings-label","DLC 名称（必填）"));const W=e.createElement("input");W.type="text",W.value=Xt,W.placeholder="例如：万年仇怨",W.dataset.userDlcName="true",P.append(W),h.append(P);const M=(T,U,F,z)=>{const q=c(e,"label","settings-field content-package-file");q.append(c(e,"span","settings-label",`${T}${F?"（必选）":"（可选）"}`));const _=e.createElement("input");_.type="file",_.accept="application/json,.json",_.dataset.userDlcFile=U,_.className="content-package-file-native";const te=c(e,"span","content-package-file-status",z?"已选择 1 个文件":"未选择任何文件");te.dataset.userDlcFileStatus=U;const Z=c(e,"span","content-package-file-picker");Z.append(c(e,"span","content-package-file-button","选择文件"),te),q.append(_,Z),h.append(q)};if(M("世界书 JSON","worldbook",!0,!!lt),lt){const T=c(e,"p","notice",`世界书：${lt.name} · ${lt.count} 条`);T.dataset.userDlcFileSummary="worldbook",h.append(T)}if(M("脚本 JSON","script",!1,!!Qt),Qt){const T=c(e,"p","notice muted",`脚本：${Qt.name}`);T.dataset.userDlcFileSummary="script",h.append(T)}const j=c(e,"div","settings-field");j.append(c(e,"span","settings-label","同名世界书处理"));const I=c(e,"div","user-dlc-choice-group");for(const[T,U]of[["replace-matching","更新同名条目并补新增条目"],["safe-merge","只补新增条目（保留同名正文）"]]){const F=$o===T,z=G(e,`user-dlc-choice${F?" selected":""}`,U,"user-dlc-mode",T);z.setAttribute("aria-pressed",String(F)),I.append(z)}j.append(I),h.append(j);const Y=G(e,"primary-button",St?"更新所选 DLC":"导入并新建 DLC","user-dlc-import");Y.disabled=!Xt.trim()||!lt,h.append(Y);const L=ze(e,b,"已导入 DLC",la.length?"检测世界书存在与当前角色挂载状态；可修复挂载或移除登记。":"尚未登记 DLC。");L.classList.add("user-dlc-manager-panel");for(const T of la){const U=c(e,"article","user-dlc-card"),F=T.worldbookExists?T.mounted?"世界书已挂载":"世界书存在但未挂载":"世界书不存在";U.append(c(e,"strong",void 0,T.name),c(e,"small","user-dlc-id",`ID：${T.id}`),c(e,"small",void 0,`${T.worldbookName} · ${F}`),c(e,"small",void 0,T.scriptStored?`脚本：${T.scriptName??"已导入"}${T.scriptActive?" · 本轮运行中":T.scriptEnabled?" · 等待运行":" · 已关闭"}`:"未配置脚本"));const z=c(e,"div","user-dlc-actions");z.append(G(e,"secondary-button","更新世界书/脚本","user-dlc-select-update",T.id));const q=G(e,"secondary-button",T.mounted?"重新检测挂载":"修复挂载","user-dlc-repair",T.id);q.disabled=!T.worldbookExists,z.append(q),T.scriptStored&&z.append(G(e,"secondary-button","移除脚本","user-dlc-remove-script",T.id)),z.append(G(e,"danger-button","移除 DLC","user-dlc-remove",T.id)),U.append(z),L.append(U)}return}b.append(G(e,"top-parent-back-button","← 返回上一级","app","home")),it(e,b,"设置","生成服务彼此隔离；主线注入可按模块独立启用。","独立配置");const l=c(e,"div","settings-api-grid"),B=[{key:"yujian",icon:"⌁",title:"玉简传讯 API",note:"联系人传讯与角色回复",scope:"独立配置"},{key:"beauty",icon:"✦",title:"绝色榜 API",note:"榜单生成与群芳谱回帖",scope:"独立配置"},{key:"xianwang",icon:"◌",title:"仙网内容 API",note:"风闻、论坛与天机日报",scope:"三应用共用"},{key:"wanbao",icon:"♢",title:"万宝商行设置",note:"货单数量与保留上限",scope:"本地偏好"},{key:"injection",icon:"◇",title:"主线注入",note:"选择可影响后续剧情的模块",scope:"默认关闭"},{key:"dlc",icon:"卷",title:"DLC 剧情拓展",note:"成组导入、挂载检测与修复",scope:"用户管理"},{key:"world",icon:"界",title:"世界推演设置",note:"双界启停、玄天界 API 与地球 API",scope:"统一入口"},{key:"pet",icon:"宠",title:"小手机与鲸鱼娘",note:"侧边抽屉或自由浮窗，及鲸鱼娘尺寸",scope:"本地偏好"},{key:"reader-portraits",icon:"绘",title:"阅读与立绘",note:"立绘布局与轮播设置",scope:"本地偏好"},{key:"content-beautifier",icon:"阅",title:"正文美化",note:"正文阅读器扫描开关",scope:"V26"},{key:"config-helper",icon:"助",title:"道渊配置小助手",note:"悬浮球显示设置",scope:"显示设置"},{key:"phone-update",icon:"更",title:"小手机更新",note:"当前版本 V1.3.4 R8.3 · "+globalThis.__daoyuanPhoneUpdate.state().current,scope:globalThis.__daoyuanPhoneUpdate.state().available?"有更新":"外链版本"}],E=new Set(["yujian","beauty","xianwang","wanbao","world"]);for(const h of B){const x=c(e,"article",`settings-api-card${E.has(h.key)&&!nt[h.key]?" module-disabled":""}`),v=G(e,"settings-api-card-open","","settings-open",h.key);if(v.append(c(e,"span","settings-api-icon",h.icon),c(e,"span","settings-api-title",h.title),c(e,"span","settings-api-note",h.note),c(e,"span","settings-api-scope",h.scope)),x.append(v),E.has(h.key)){const R=h.key,P=c(e,"label","module-master-toggle"),W=e.createElement("input");W.type="checkbox",W.checked=nt[R],W.dataset.featureModule=R,W.setAttribute("aria-label",`${h.title}总开关`),P.append(W,c(e,"span","module-master-toggle-track"),c(e,"span","module-master-toggle-copy",W.checked?"功能已开启":"功能已关闭")),x.append(P)}l.append(x)}b.append(l),b.append(c(e,"p","notice muted","API 密钥仅保存在当前浏览器本地设置中，不写入聊天变量或模型提示词。"));const f=ze(e,b,"恢复出厂设置","清空小手机全部配置和记录，包括各模块数据、联系人、聊天记录、推演账本、预设、自定义立绘及导入配置。不会删除酒馆角色卡、原始世界书或 MVU 世界数据。");f.classList.add("phone-factory-reset-panel"),f.append(G(e,"earth-reset-button","清空小手机所有配置与记录","phone-factory-reset"))}function LE(b){const l=ze(e,b,"可感知信息","开启后，仅把当前聊天内最近的相关内容提供给剧情模型；关闭后该模块不会影响正文。");l.classList.add("prompt-injection-settings-panel");const B=[{key:"yujian",title:"玉简传讯",note:"作为主角与联系人的私下通信记录。"},{key:"trends",title:"仙网风闻",note:"只作为未经证实的消息，不会直接认定为事实。"},{key:"forum",title:"仙网论坛",note:"只作为修士观点与舆论，不代表客观事实。"},{key:"news",title:"天机日报",note:"作为媒体报道与叙事，仍需由剧情核验。"}];for(const E of B){const f=c(e,"label","injection-toggle-row"),h=e.createElement("input");h.type="checkbox",h.checked=La[E.key],h.dataset.injectionSetting=E.key;const x=c(e,"span","injection-toggle-copy");x.append(c(e,"strong",void 0,E.title),c(e,"small",void 0,E.note)),f.append(h,x),l.append(f)}l.append(c(e,"p","notice muted","系统会自动限制注入内容，只取近期信息；模块内的命令或提示文字不会被执行。"),G(e,"primary-button","保存主线注入设置","prompt-injection-save"))}function jE(b){const l=ze(e,b,"绝色榜 API 配置","这里的配置只用于绝色榜生成，与玉简 API、MVU 变量和玉简预设相互独立。");l.classList.add("beauty-api-settings-panel");const B=(W,M,j="text")=>{const I=c(e,"label","settings-field");I.append(c(e,"span","settings-label",W));const Y=e.createElement("input");Y.type=M==="apiBaseUrl"?"url":j,Y.value=et[M],Y.dataset.beautySetting=M,M==="apiBaseUrl"&&da(Y),I.append(Y),l.append(I)};B("基础 URL（Endpoint）","apiBaseUrl"),B("API 密钥（API Key）","apiKey","password"),B("模型（Model）","apiModel");const E=c(e,"label","settings-auto-toggle"),f=e.createElement("input");f.type="checkbox",f.checked=et.autoEnabled,f.dataset.beautyAutoEnabled="true";const h=c(e,"span","settings-auto-toggle-copy");h.append(c(e,"strong",void 0,"启用绝色榜自动推演"),c(e,"small",void 0,"关闭后不再随 AI 正文层自动请求；手动推演仍可使用。")),E.append(f,h),l.append(E);const x=c(e,"label","settings-field");x.append(c(e,"span","settings-label","自动更新间隔（0关闭，1为每层）"));const v=e.createElement("input");v.type="number",v.min="0",v.max="999",v.value=String(et.autoInterval),v.dataset.beautyInterval="true",x.append(v),l.append(x);const R=c(e,"div","settings-control-group"),P=G(e,"secondary-button",Za?"获取中…":"获取模型列表","beauty-models-fetch");if(P.disabled=Za,R.append(P),sa.length){const W=e.createElement("select");W.className="beauty-model-select",W.dataset.beautyModelSelect="true",W.setAttribute("aria-label","绝色榜模型列表"),W.append(c(e,"option",void 0,`请选择模型（共 ${sa.length} 个）`)),sa.forEach(M=>{const j=c(e,"option",void 0,M);j.value=M,j.selected=M===et.apiModel,W.append(j)}),R.append(W)}l.append(R),l.append(G(e,"primary-button","保存绝色榜 API 设置","beauty-settings-save"))}function JE(b){const l=ze(e,b,"仙网内容 API 配置","这套配置只用于仙网风闻、仙网论坛和天机日报，与玉简传讯、绝色榜相互独立。");l.classList.add("xianwang-api-settings-panel");const B=(R,P,W="text")=>{const M=c(e,"label","settings-field");M.append(c(e,"span","settings-label",R));const j=e.createElement("input");j.type=P==="apiBaseUrl"?"url":W,j.value=Pe[P],j.dataset.xianwangSetting=P,P==="apiBaseUrl"&&da(j),P==="playerAlias"&&(j.maxLength=24,j.placeholder="我",j.setAttribute("autocomplete","nickname")),M.append(j),l.append(M)};B("玩家网名（论坛发言显示）","playerAlias"),l.append(c(e,"p","settings-section-note","默认为“我”。修改后只影响新评论；旧评论保留发布时的网名。AI 会把该名称识别为玩家而非 NPC。")),B("基础 URL（Endpoint）","apiBaseUrl"),B("API 密钥（API Key）","apiKey","password"),B("模型（Model）","apiModel");const E=(R,P,W,M)=>{const j=c(e,"label","settings-field");j.append(c(e,"span","settings-label",R));const I=e.createElement("input");I.type="number",I.min=String(W),I.max=String(M),I.value=String(Pe[P]),I.dataset.xianwangNumberSetting=P,j.append(I),l.append(j)},f=(R,P,W)=>{const M=c(e,"label","settings-auto-toggle"),j=e.createElement("input");j.type="checkbox",j.checked=Pe[W],j.dataset.xianwangAutoSetting=W;const I=c(e,"span","settings-auto-toggle-copy");I.append(c(e,"strong",void 0,R),c(e,"small",void 0,P)),M.append(j,I),l.append(M)},h=(R,P,W)=>{const M=c(e,"label","settings-auto-toggle"),j=e.createElement("input");j.type="checkbox",j.checked=Pe[W],j.dataset.xianwangFeatureSetting=W;const I=c(e,"span","settings-auto-toggle-copy");I.append(c(e,"strong",void 0,R),c(e,"small",void 0,P)),M.append(j,I),l.append(M)};l.append(c(e,"h3","settings-subtitle","仙网互动与生成")),E("每帖生成评论数（0 为不生成）","generatedCommentCount",0,10),h("去中心化模式","开启后提示 AI 不要围绕主角生成内容。","decentralizedMode"),h("自动 AI 回复","用户发表评论后，自动生成仙网道友回复。","autoAiReply"),h("显示点赞数（热度）","显示 AI 生成的热度，并允许用户手动点赞。","showHeat"),h("列表中显示评论预览","开启后帖子列表默认展开评论。","showCommentPreview"),h("启用破甲提示词","在系统提示词末尾附加创作完整性指令。","jailbreakPrompt"),l.append(c(e,"h3","settings-subtitle","仙网风闻"),c(e,"p","settings-section-note","按 AI 正文层计数触发；每次生成数量会在设定的最少与最多条数之间随机取值。")),f("启用仙网风闻自动推演","关闭后停止自动请求；手动推演仍可使用。","trendsAutoEnabled"),E("自动生成间隔（0关闭，1为每层）","autoInterval",0,999),E("每批最少生成条数","batchMin",1,8),E("每批最多生成条数","batchMax",1,8),E("最多保留 AI 风闻","maxPosts",1,500),l.append(c(e,"h3","settings-subtitle","仙网论坛")),f("启用仙网论坛自动推演","关闭后停止自动请求；手动推演仍可使用。","forumAutoEnabled"),E("论坛自动生成间隔（0关闭，1为每层）","forumAutoInterval",0,999),E("论坛每次生成帖子数","forumBatchSize",1,6),E("论坛最多保留帖子","forumMaxPosts",1,500),l.append(c(e,"h3","settings-subtitle","天机日报")),f("启用天机日报自动推演","关闭后停止自动请求；手动推演仍可使用。","newsAutoEnabled"),E("日报自动生成间隔（0关闭，1为每层）","newsAutoInterval",0,999),E("日报每次生成期数","newsBatchSize",1,3),E("日报最多保留期数","newsMaxPapers",1,200);const x=c(e,"div","settings-control-group"),v=G(e,"secondary-button",qa?"获取中…":"获取模型列表","xianwang-models-fetch");if(v.disabled=qa,x.append(v),ia.length){const R=e.createElement("select");R.className="beauty-model-select",R.dataset.xianwangModelSelect="true",R.setAttribute("aria-label","仙网内容模型列表"),R.append(c(e,"option",void 0,`请选择模型（共 ${ia.length} 个）`)),ia.forEach(P=>{const W=c(e,"option",void 0,P);W.value=P,W.selected=P===Pe.apiModel,R.append(W)}),x.append(R)}l.append(x,G(e,"primary-button","保存仙网内容 API 设置","xianwang-settings-save"))}function KE(b){if(!rt)return;const l=rt,B=c(e,"div","beauty-portrait-overlay");B.dataset.action="beauty-portrait-close";const E=c(e,"section","beauty-portrait-modal");E.setAttribute("role","dialog"),E.setAttribute("aria-modal","true"),E.setAttribute("aria-label",`${l}的立绘`);const f=c(e,"header","beauty-portrait-head");f.append(c(e,"h2",void 0,`${l}的立绘`),G(e,"beauty-portrait-close","×","beauty-portrait-close")),E.append(f);const h=c(e,"div","beauty-portrait-display");let x="";if(Yn(l)?x=En(l,"女"):It?x=lm(l)||En(l,"女"):mn(l)?x=TA(l)||En(l,"女"):x=En(l,"女"),x){const L=e.createElement("img");L.src=x,L.alt=`${l}大图`,L.referrerPolicy="no-referrer",L.addEventListener("error",()=>{h.replaceChildren(c(e,"span","beauty-portrait-error","立绘加载失败"))}),h.append(L)}else h.append(c(e,"span","beauty-portrait-error","暂无立绘，可选择本地图片或粘贴图片 URL。"));E.append(h);const v=c(e,"p","beauty-portrait-source",Yn(l)?"自定义立绘":x?It?"特殊立绘":mn(l)?"女版立绘":"立绘库":"未找到立绘");E.append(v);const R=Ea(l);if(!Yn(l)&&R.length>1){const L=c(e,"div","beauty-portrait-set-row");R.forEach((T,U)=>{const F=G(e,`beauty-portrait-set${!It&&!mn(l)&&U===im(l)?" active":""}`,"","beauty-portrait-set",`${U}`);F.dataset.portraitName=l;const z=e.createElement("img");z.src=T,z.alt=`立绘${U+1}`,z.loading="lazy",z.referrerPolicy="no-referrer",F.append(z),L.append(F)}),E.append(L)}const P=c(e,"div","beauty-portrait-toggles");!Yn(l)&&cm(l)&&P.append(G(e,`secondary-button${It?" active":""}`,It?"当前：特殊立绘（点击切回）":"查看特殊立绘","beauty-portrait-special")),!Yn(l)&&NA(l)&&TA(l)!==rm(l)&&P.append(G(e,`secondary-button${mn(l)?" active":""}`,mn(l)?"当前：女版立绘（点击切回）":"切换到女版立绘","beauty-portrait-female")),P.childElementCount&&E.append(P);const W=c(e,"div","beauty-portrait-custom"),M=c(e,"label","secondary-button","选择本地图片"),j=e.createElement("input");j.type="file",j.accept="image/*",j.hidden=!0,j.dataset.beautyPortraitFile=l,M.append(j),W.append(M);const I=c(e,"div","beauty-portrait-url-row"),Y=e.createElement("input");Y.placeholder="或粘贴图片 URL",Y.dataset.beautyPortraitUrl=l,I.append(Y,G(e,"secondary-button","应用","beauty-portrait-url")),W.append(I),Yn(l)&&W.append(G(e,"secondary-button","删除自定义立绘","beauty-portrait-remove")),E.append(W),B.append(E),b.append(B)}const OE=b=>{const l=c(e,"section","hero"),B=c(e,"div");B.append(c(e,"h2","xianxia-title","天机阁")),l.append(B,c(e,"div","hero-seal",`天
 机`)),b.append(l);const E=c(e,"section","time-place-widget");E.setAttribute("aria-label","当前时间与地点");const f=c(e,"div","time-place-cell");f.append(c(e,"span","time-place-label","时间"),c(e,"strong","time-place-value centered-place-value",He.time));const h=c(e,"div","time-place-cell");h.append(c(e,"span","time-place-label","地点"),c(e,"strong","time-place-value centered-place-value location-place-value",He.location)),E.append(f,h),b.append(E);const x=c(e,"div","app-grid");for(const v of Uo){const R=i[v.key];if(R&&!nt[R])continue;const P=G(e,"app-card","","app",v.key);P.append(c(e,"span","app-card-icon",v.icon),c(e,"div","app-card-title",v.key==="settings"&&globalThis.__daoyuanPhoneUpdate.state().available?"设置 · 有更新":v.label),c(e,"div","app-card-note",v.note));const W=Nl(v.key);W>0&&P.append(c(e,"span","app-card-badge",String(W))),x.append(P)}b.append(x)},ZE=b=>{const B=Uo.find(x=>x.key===A)?.label??"天机阁随身玉简";if(A==="settings"){HE(b);return}if(A==="world"){si(b);return}if(A==="xuantian"){Oe.xuantianEnabled?NE(b):si(b);return}if(A==="earth"){Oe.earthEnabled?RE(b):si(b);return}if(A==="yujian"){const x=Ee.length>0?Ee:lc,v=x.find(U=>U.name===Fe);if(v){const U=c(e,"div","chat-page"),F=c(e,"div","chat-header");F.append(G(e,"chat-back-button","← 联系人","chat-back"));const z=c(e,"div","chat-person"),q=c(e,"span","contact-avatar chat-avatar");if(q.dataset.tone=v.tone,q.append(c(e,"span","contact-avatar-fallback",v.avatar)),v.portrait){const we=e.createElement("img");we.src=v.portrait,we.alt=`${v.name}立绘`,we.loading="lazy",we.referrerPolicy="no-referrer",we.addEventListener("error",()=>{we.hidden=!0}),q.append(we)}const _=c(e,"span","chat-person-copy");_.append(c(e,"span","chat-person-name",v.name)),v.affection!==void 0&&_.append(c(e,"span","chat-affection",`♡ ${v.affectionLabel??"好感度"} ${v.affection}`)),z.append(q,_,c(e,"span","chat-person-detail",v.detail));const te=G(e,`chat-clear-button${de===v.name?" is-armed":""}`,de===v.name?"确认清空":"清空记录","chat-clear");te.setAttribute("aria-label",de===v.name?`确认清空与${v.name}的全部聊天记录`:`清空与${v.name}的全部聊天记录`);const Z=G(e,"chat-delete-contact-button","删除联系人","chat-contact-delete");Z.setAttribute("aria-label",`删除联系人${v.name}`);const J=c(e,"div","chat-header-actions");J.append(te,Z),F.append(z,J),U.append(F);const V=c(e,"div","chat-messages"),me=v.history??Af[v.name]??[];me.forEach((we,De)=>uf(e,V,we,De,v.name)),me.length||V.append(c(e,"p","chat-empty","暂无聊天记录")),n.requestAnimationFrame(()=>{V.scrollTop=V.scrollHeight}),U.append(V);const $=c(e,"div","chat-composer"),ve=e.createElement("input");ve.type="text",ve.placeholder="输入传讯内容",ve.setAttribute("aria-label","输入传讯内容");const ee=G(e,"chat-send-button",Ot?"传讯中…":"发送","chat-send");ee.disabled=Ot,$.append(ve,ee),U.append($),b.append(U);return}b.append(G(e,"top-parent-back-button","← 返回上一级","app","home")),it(e,b,B,"联系人与最近传讯。选择一位道友，进入微信式聊天窗口。",`${x.length} 位联系人`);const R=c(e,"div","contact-toolbar"),P=c(e,"label","contact-search");P.append(c(e,"span","sr-only","搜索联系人"));const W=c(e,"input");W.type="search",W.placeholder="搜索联系人",W.setAttribute("aria-label","搜索联系人"),W.dataset.contactSearch="true",W.value=ai,P.append(W),R.append(P,c(e,"span","contact-count",`${D.yujian.unread} 条未读`)),b.append(R);const M=Ee.length>0?Ee:D.yujian.contacts>0?lc:[],j=M.filter(U=>!!U.history?.length),I=c(e,"section","contact-list");I.append(c(e,"div","contact-section-label",`最近联系人 · ${j.length}`)),j.forEach(U=>dc(e,I,U)),j.length||I.append(c(e,"p","contact-empty","暂无最近联系人"));const Y=c(e,"section","contact-list contact-all-section"),L=G(e,"contact-section-toggle","","contacts-toggle");L.setAttribute("aria-expanded",String(Gn)),L.append(c(e,"span",void 0,`所有联系人 · ${M.length}`),c(e,"span","contact-toggle-icon",Gn?"收起⌃":"展开⌄")),Y.append(L);const T=c(e,"div","contact-all-panel");T.dataset.allContactsPanel="true",T.hidden=!Gn,M.forEach(U=>dc(e,T,U)),M.length||T.append(c(e,"p","contact-empty","暂无联系人")),Y.append(T),b.append(I,Y,c(e,"p","notice muted contact-boundary",Ee.length>0?"见过一次的 NPC 会保留在独立通讯录；离场后联系人和聊天记录仍然存在。":"当前没有已认识并建档的 NPC 联系人；不会用立绘库虚构陌生联系人。")),ri();return}if(A==="beauty"){const x=c(e,"header","beauty-plaque"),v=e.createElement("img");v.src=of,v.alt="",x.append(v,c(e,"h1",void 0,"绝色榜")),b.append(x);const R=c(e,"div","beauty-rank-list");ae.forEach(I=>pf(e,R,{name:I.name,portrait:I.portrait??"",title:I.title,rank:I.rank,xianzi:I.xianzi,qunfangpu:I.qunfangpu},oi(I.name),ge===I.name)),b.append(ae.length?R:c(e,"div","notice muted","绝色榜尚待推演。"));const P=c(e,"div","beauty-actions beauty-actions-bottom"),W=G(e,"primary-button",eo?"推演中…":"✦ 推演／更新绝色榜","beauty-generate");W.disabled=eo;const M=c(e,"section","beauty-action-panel"),j=et.autoEnabled&&et.autoInterval>0?Math.max(0,et.autoInterval-Pl):null;M.append(c(e,"h3",void 0,"榜单推演"),W,c(e,"span","xianwang-counter-line",j===null?"自动绝色榜已关闭":j===0?"本轮将更新绝色榜":`还有 ${j} 轮对话后更新绝色榜`)),P.append(M),b.append(P),KE(b);return}if(A==="trends"){const x=c(e,"div","trends-page"),v=c(e,"div","forum-action-bar");v.append(G(e,"forum-parent-back-button","← 返回上一级","app","home"));const R=G(e,"forum-ai-button",to?"推演中…":"◌ 推演风闻","trends-generate");R.disabled=to,v.append(R);const P=Pe.autoInterval,W=Pe.trendsAutoEnabled&&P>0?Math.max(0,P-re.trends):null;v.append(c(e,"span","xianwang-counter-line",W===null?"自动风闻已关闭":W===0?"本轮将开始生成仙网风闻":`还有 ${W} 轮对话后生成仙网风闻`));const M=c(e,"div","forum-post-list");[...Be].sort((I,Y)=>Y.createdAt.localeCompare(I.createdAt)).forEach((I,Y)=>{if("storyTime"in I)ko(e,M,{tag:I.type,title:I.title,excerpt:I.description,author:I.source,likes:I.heat,comments:I.comments.length,time:I.storyTime,replies:I.comments},{key:I.id,expanded:Pe.showCommentPreview&&!_t.has(I.id),showHeat:Pe.showHeat,liked:I.liked,likeAction:"trend-like",deleteId:I.id,fullContent:!0});else{const L=`trend-preview:${Y}`;ko(e,M,I,{key:L,expanded:!_t.has(L)})}}),Be.length||M.append(c(e,"div","notice muted","当前聊天暂无仙网风闻，可点击上方按钮推演。")),x.append(v,M,c(e,"p","notice muted trends-boundary",Be.length?`当前保存 ${Be.length} 条仙网风闻；${D.webTrends.label}，不等同于世界事实。`:"仙网风闻只保存当前聊天数据，不使用预设内容。")),b.append(x);return}if(A==="wanbao"){b.append(G(e,"top-parent-back-button","← 返回上一级","app","home")),it(e,b,"万宝商行","AI 货单用于购买；我的物品读取储物袋与器物并用于出售。","V0.9 · 测试");const x=c(e,"div","notice muted wanbao-preview-notice");x.append(c(e,"strong",void 0,"真实数据模式"),c(e,"span",void 0,"交易只写入主角的储物袋、器物及四档灵石字段。")),b.append(x);const v=c(e,"section","panel-card wanbao-balance-panel"),R=c(e,"div","wanbao-section-head"),P=K.mode==="combat-separate"?"战斗版结构":K.mode==="legacy-bag"?"储物袋结构":"候选识别";R.append(c(e,"div",void 0,"灵石余额"),c(e,"span","source-tag",`${P} · 实时同步`)),v.append(R);const W=c(e,"div","wanbao-balance-grid");sf.forEach(F=>{const z=c(e,"div","wanbao-balance-card");z.dataset.grade=F.tone;const q=K.balances?.find(te=>te.grade===F.label),_=typeof q?.quantity=="number"?q.quantity.toLocaleString("zh-CN"):"—";z.append(c(e,"span","wanbao-balance-label",F.label),c(e,"strong","wanbao-balance-value",_)),W.append(z)}),v.append(W),K.warning&&v.append(c(e,"p","wanbao-currency-warning",K.warning)),b.append(v);const M=c(e,"div","wanbao-tabs"),j=G(e,`wanbao-tab${d==="market"?" active":""}`,"万宝货单","wanbao-section","market");j.setAttribute("aria-selected",String(d==="market"));const I=G(e,`wanbao-tab${d==="owned"?" active":""}`,"我的物品","wanbao-section","owned");if(I.setAttribute("aria-selected",String(d==="owned")),M.append(j,I),b.append(M),d==="market"){const F=c(e,"div","wanbao-toolbar"),z=c(e,"div","wanbao-toolbar-copy"),q=u.itemDataMode==="combat"?"4×2（合计8）":"10";z.append(c(e,"span","wanbao-toolbar-label",`万宝货单 · 本轮 ${q} 件`),c(e,"span","wanbao-toolbar-meta",u.itemDataMode==="combat"?"战斗版分两次生成 · 仅可购买":"覆盖各境界 · 仅可购买"));const _=G(e,"primary-button wanbao-generate-button","立即生成（测试）","wanbao-generate");F.append(z,_),b.append(F);const te=u.refreshInterval>0?Math.max(0,u.refreshInterval-m):null;b.append(c(e,"p","xianwang-counter-line wanbao-counter-line",te===null?"自动货单更新已关闭":te===0?"本轮将更新万宝货单":`还有 ${te} 轮对话后更新万宝货单`)),y.status==="running"&&b.append(c(e,"p","notice muted wanbao-generation-running","万宝货单正在后台生成；离开此页面不会取消任务，完成后重新进入即可查看。"));const Z=c(e,"div","wanbao-product-grid"),J=O.map(V=>({...V,price:`${V.price} ${V.priceGrade}`,stockLabel:`库存 ${V.stock} 件`,stockCount:V.stock,id:V.id}));J.forEach((V,me)=>{const $=c(e,"article","wanbao-product-card"),ve=c(e,"div","wanbao-product-head"),ee=c(e,"div","wanbao-product-title");if(ee.append(c(e,"strong",void 0,V.name),c(e,"span","wanbao-product-grade",V.grade)),ve.append(ee),$.append(ve,c(e,"span","wanbao-product-category",V.category),c(e,"p","wanbao-product-description",V.description)),V.itemDataMode==="combat"){const $t=V.战斗属性??{},pn=["类型","等级","本源","品阶","效果类型","主维","辅维","祭炼度","损耗度","状态","时效","触发","技能"].flatMap(sr=>{const kt=$t[sr];if(kt==null||kt===""||Array.isArray(kt)&&!kt.length)return[];const XE=Array.isArray(kt)?kt.map(ua=>typeof ua=="object"&&ua?Object.entries(ua).map(([pa,ii])=>`${pa}=${String(ii)}`).join("，"):String(ua)).join("；"):typeof kt=="object"&&kt?Object.entries(kt).map(([ua,pa])=>{const ii=typeof pa=="object"&&pa?Object.entries(pa).map(([_E,$E])=>`${_E}=${String($E)}`).join("，"):String(pa);return`${ua}=${ii}`}).join("；"):String(kt);return[`${sr}：${XE}`]}).join(" · ");$.append(c(e,"p","wanbao-product-stats",`战斗属性：${pn||"未填"}（五维数值由战斗脚本计算）`));const bt=String($t.等级??"").split("/")[0].trim(),ao={法器:"炼气",法宝:"筑基",古宝:"金丹",通天灵宝:"元婴",仿制灵宝:"元婴",先天灵宝:"化神",仙器胚:"合体",仙器胚子:"合体",伪仙器:"合体",仙器:"大乘"},or=["炼气","筑基","金丹","元婴","化神","炼虚","合体","大乘"],rr=ao[bt],oo=or.findIndex(sr=>Q.includes(sr)),ed=or.indexOf(rr);ed>=0&&oo>=0&&oo<ed&&$.append(c(e,"p","notice muted wanbao-usability-note",`境界不足：需达到${rr}初期才计入五维；仍可提前购买并持有。`))}const we=c(e,"div","wanbao-product-footer"),De=c(e,"div","wanbao-product-price");De.append(c(e,"span","wanbao-product-price-label","售价"),c(e,"strong",void 0,V.price)),we.append(De,c(e,"span","wanbao-product-stock",V.stockLabel)),$.append(we);const Ve=c(e,"div","wanbao-product-actions"),Ze=O[me],Ct=V.stockCount<=0,Ut=G(e,"primary-button",Ct?"售罄":"购买","wanbao-buy",Ze.id);Ut.disabled=Ct,Ut.setAttribute("aria-disabled",String(Ct)),Ve.append(Ut,G(e,"secondary-button","移除","wanbao-product-delete",Ze.id)),$.append(Ve),Z.append($)}),J.length||Z.append(c(e,"div","notice muted","当前没有真实货单，请点击“立即生成”。")),b.append(Z)}else{const F=c(e,"div","wanbao-toolbar wanbao-sell-toolbar"),z=c(e,"div","wanbao-toolbar-copy");z.append(c(e,"span","wanbao-toolbar-label",`我的物品 · 可出售 ${H.length} 件`),c(e,"span","wanbao-toolbar-meta","一次请求参考灵石体系与完整在售货单"));const q=H.filter(Z=>Z.quote).length,_=G(e,"secondary-button wanbao-estimate-all-button",q?"全部重新估价":"全部估价","wanbao-estimate-all");_.disabled=H.length===0,F.append(z,_),b.append(F);const te=Z=>{const J=c(e,"section","wanbao-sell-section"),V=H.filter($=>$.category===Z).map($=>({name:$.name,quantity:String($.quantity),description:$.description,estimate:$.quote?`${$.quote.price} ${$.quote.priceGrade} / 件`:"尚未估价",reason:$.quote?.reason??"",id:$.id,quoted:!!$.quote}));J.append(c(e,"h3","wanbao-sell-section-title",`${Z} · ${V.length} 件`));const me=c(e,"div","wanbao-product-grid wanbao-sell-grid");V.forEach($=>{const ve=c(e,"article","wanbao-product-card wanbao-sell-card"),ee=c(e,"div","wanbao-product-head"),we=c(e,"div","wanbao-product-title");we.append(c(e,"strong",void 0,$.name),c(e,"span","wanbao-product-grade",Z)),ee.append(we),ve.append(ee,c(e,"span","wanbao-product-category",`持有 ${$.quantity}`),c(e,"p","wanbao-product-description",$.description));const De=c(e,"div","wanbao-product-footer");De.append(c(e,"div","wanbao-product-price",$.estimate),c(e,"span","wanbao-estimate-reason",$.reason||"请先执行全部估价")),ve.append(De);const Ve=c(e,"div","wanbao-product-actions");$.quoted&&Ve.append(G(e,"primary-button","出售","wanbao-sell",$.id)),ve.append(Ve),me.append(ve)}),V.length||me.append(c(e,"div","notice muted",`${Z}中暂无可出售物品。`)),J.append(me),b.append(J)};te("储物袋"),te("器物")}const Y=c(e,"section","wanbao-transaction-section"),L=c(e,"div","wanbao-transaction-toolbar");L.append(c(e,"h3","wanbao-sell-section-title",`交易记录 · ${g.length} 笔`));const T=G(e,"secondary-button","一键清除","wanbao-transactions-clear");T.disabled=g.length===0,L.append(T),Y.append(L);const U=c(e,"div","wanbao-transaction-list");[...g].reverse().forEach(F=>{const z=c(e,"article","wanbao-transaction-row"),q=c(e,"div","wanbao-transaction-head");q.append(c(e,"strong",void 0,`${F.kind==="buy"?"买入":"卖出"} · ${F.itemName}`),c(e,"span",void 0,F.storyTime||"时间不详")),z.append(q,c(e,"p","wanbao-transaction-description",F.description||"无物品描述"),c(e,"p","wanbao-transaction-price",`${F.quantity} 件 · ${F.amount} ${F.grade}`),G(e,"wanbao-transaction-delete","删除","wanbao-transaction-delete",F.id)),U.append(z)}),g.length||U.append(c(e,"div","notice muted","当前聊天暂无万宝楼交易记录。")),Y.append(U),b.append(Y);return}if(A==="inventory"){if(b.append(G(e,"top-parent-back-button","← 返回上一级","app","home")),it(e,b,"储物袋","查看随身携带的物品。"),!_e){b.append(c(e,"div","notice muted","暂时无法查看储物袋，请稍后再试。"));return}if(pe.length){const x=c(e,"div","inventory-list");pe.forEach(v=>{const R=c(e,"article","inventory-item"),P=c(e,"div","inventory-item-head");P.append(c(e,"span","inventory-item-icon","◇"),c(e,"span","inventory-item-name",v.name)),v.quantity!==null&&P.append(c(e,"span","inventory-item-quantity",`×${v.quantity}`));const W=[v.category,v.status].filter(Boolean).join(" · ");R.append(P),W&&R.append(c(e,"div","inventory-item-meta",W)),v.description&&R.append(c(e,"p","inventory-item-description",v.description)),x.append(R)}),b.append(x)}else b.append(c(e,"div","inventory-empty","储物袋空空如也。"));return}if(A==="map"){b.append(G(e,"top-parent-back-button","← 返回上一级","app","home"));const x=D.map.selectedRealm==="仙界"?"仙界":"玄天界",v=Qo[x],R=Sa(x,D.map.selectedNode),P=v[R],W=af(He.location),M=c(e,"header","map-page-heading");M.append(c(e,"h1",void 0,`${x}地图`),c(e,"span","source-tag",`查看：${P.name}`)),b.append(M);const j=c(e,"div",`map-location-status${W?" located":" unresolved"}`);j.append(c(e,"span","map-location-symbol",W?"◆":"◇"),c(e,"span",void 0,W?`角色当前位置：${W.node.name}（${W.realm}）`:`角色当前位置：${_e?"无法映射到现有节点":"等待 MVU 通道"}`)),W&&W.realm!==x&&j.append(G(e,"map-location-jump","查看","map-realm",W.realm)),b.append(j);const I=c(e,"div","map-tabs");if(["玄天界","仙界"].forEach(U=>I.append(G(e,`map-tab${x===U?" active":""}`,U,"map-realm",U))),x==="玄天界"&&I.append(G(e,"map-fullimg-button",Ko?"收起全图":"查看玄天界全图","map-image-toggle")),b.append(I),x==="玄天界"&&Ko){const U=c(e,"div","map-fullimg-wrap");if(Vs)U.append(c(e,"div","map-image-error","地图图片加载失败，节点地图仍可正常使用。"));else{const F=c(e,"img","map-fullimg");F.src="https://free-img.400040.xyz/4/2026/05/17/6a09d0b65af1c.png",F.alt="玄天界全图",F.dataset.action="map-image-zoom",F.addEventListener("error",()=>{Vs=!0,C()},{once:!0}),U.append(F)}b.append(U)}const Y=c(e,"div","map-canvas");Y.setAttribute("aria-label",`${x}节点地图`),ef(v).forEach(([U,F])=>{const z=v[U],q=v[F],_=q.x-z.x,te=q.y-z.y,Z=Math.sqrt(_*_+te*te),J=Math.atan2(te,_)*180/Math.PI,V=c(e,"span","map-line");Object.assign(V.style,{left:`${z.x}%`,top:`${z.y}%`,width:`calc(${Z}% - 10px)`,transform:`rotate(${J}deg)`}),Y.append(V)}),Object.entries(v).forEach(([U,F])=>{const z=W?.realm===x&&W.nodeKey===U,q=G(e,`map-node node-${tf(U)}${R===U?" active":""}${z?" current-location":""}`,F.name,"map-node",U);Object.assign(q.style,{left:`${F.x}%`,top:`${F.y}%`,"--node-color":ic(F.color)}),q.title=z?`${F.name} · 角色当前位置`:F.name,q.setAttribute("aria-label",z?`${F.name}，角色当前位置`:F.name);const _=[c(e,"span","map-node-dot"),c(e,"span","map-node-label",F.name)];if(z){const te=c(e,"span","map-current-marker","当前位置");te.setAttribute("aria-hidden","true"),_.push(te)}q.replaceChildren(..._),q.setAttribute("aria-pressed",String(R===U)),Y.append(q)}),b.append(Y);const L=c(e,"section","map-details");Object.assign(L.style,{"--node-color":ic(P.color)});const T=c(e,"header","map-detail-head");if(T.append(c(e,"strong","map-detail-name",P.name),c(e,"span","map-detail-realm",P.realm)),L.append(T,c(e,"p","map-detail-description",P.desc)),P.factions.length){const U=c(e,"div","map-factions");P.factions.forEach((F,z)=>U.append(G(e,`map-faction tag-${F.type}`,F.name,"map-faction",String(z)))),L.append(U)}if(b.append(L,c(e,"div","notice muted",`世界真实当前位置：${_e?He.location:"当前未接入世界数据"}。查看节点不会改变真实位置。`)),Se){const U=c(e,"div","map-modal-overlay");U.dataset.action="map-faction-close";const F=c(e,"section","map-modal");F.setAttribute("role","dialog"),F.setAttribute("aria-modal","true"),F.setAttribute("aria-label",`${Se.name}详情`);const z=c(e,"header","map-modal-head");z.append(c(e,"strong","map-modal-title",`【${Se.name}】`),G(e,"map-modal-close","×","map-faction-close")),F.append(z);const q=cc[Se.name]??[];if(q.length){const _=c(e,"div","map-faction-gallery"),te=c(e,"img","map-faction-portrait");te.src=q[Math.min($e,q.length-1)],te.alt=`${Se.name}宗门立绘 ${$e+1}`,_.append(te);const Z=G(e,"map-faction-portrait-zoom","查看大图","map-faction-portrait-zoom");if(Z.setAttribute("aria-label",`查看${Se.name}立绘大图`),_.append(Z),q.length>1){const J=c(e,"div","map-faction-portrait-picker");J.setAttribute("aria-label","选择宗门立绘"),q.forEach((V,me)=>{const $=G(e,`map-faction-portrait-choice${me===$e?" active":""}`,"","map-faction-portrait",String(me));$.setAttribute("aria-label",`查看第 ${me+1} 张宗门立绘`),$.setAttribute("aria-pressed",String(me===$e));const ve=c(e,"img");ve.src=V,ve.alt="",$.append(ve),J.append($)}),_.append(J)}F.append(_)}if(F.append(c(e,"div","map-modal-body",Se.note||"暂无详细信息")),U.append(F),b.append(U),Zt&&q.length){const _=c(e,"div","map-faction-image-overlay");_.dataset.action="map-faction-portrait-zoom-close";const te=c(e,"img","map-faction-image-full");te.src=q[Math.min($e,q.length-1)],te.alt=`${Se.name}宗门立绘大图`,_.append(te,G(e,"map-faction-image-close","×","map-faction-portrait-zoom-close")),b.append(_)}}if(qt&&!Vs){const U=c(e,"div","map-image-overlay");U.dataset.action="map-image-close";const F=c(e,"img","map-image-zoomed");F.src="https://free-img.400040.xyz/4/2026/05/17/6a09d0b65af1c.png",F.alt="玄天界全图放大视图",U.append(F,G(e,"map-image-close","×","map-image-close")),b.append(U)}return}if(A==="forum"){const x=c(e,"div","forum-page"),v=xe.find(M=>M.id===Me);if(v){const M=c(e,"div","news-detail-bar");M.append(G(e,"news-back-button","← 返回列表","forum-back"),G(e,"news-delete-button","删除帖子","forum-delete",v.id)),x.append(M),ko(e,x,{tag:v.tag,title:v.title,excerpt:v.content,author:v.author,likes:v.likes,comments:v.comments.length,time:v.storyTime,replies:v.comments},{key:v.id,expanded:!_t.has(v.id),fullContent:!0,showHeat:Pe.showHeat,liked:v.liked,likeAction:"forum-like"});const j=c(e,"div","forum-reply-composer"),I=e.createElement("textarea");I.placeholder=Pe.autoAiReply?"发表评论，仙网道友会自动回复…":"发表评论…",I.maxLength=3e3,I.dataset.forumCommentInput=v.id;const Y=G(e,"primary-button","发表评论","forum-comment-submit",v.id);j.append(I,Y),x.append(j),b.append(x);return}const R=c(e,"div","forum-action-bar");R.append(G(e,"forum-parent-back-button","← 返回上一级","app","home"),G(e,"forum-ai-button",tr?"推演中…":"◌ 推演论帖","forum-generate"));const P=Pe.forumAutoEnabled&&Pe.forumAutoInterval>0?Math.max(0,Pe.forumAutoInterval-re.forum):null;R.append(c(e,"span","xianwang-counter-line",P===null?"自动论坛已关闭":P===0?"本轮将开始生成仙网论坛":`还有 ${P} 轮对话后生成仙网论坛`)),x.append(R);const W=c(e,"div","forum-post-list");[...xe].sort((M,j)=>j.createdAt.localeCompare(M.createdAt)).forEach(M=>{const j=ko(e,W,{tag:M.tag,title:M.title,excerpt:M.content,author:M.author,likes:M.likes,comments:M.comments.length,time:M.storyTime,replies:M.comments.slice(0,2)},{key:M.id,expanded:Pe.showCommentPreview&&!_t.has(M.id),showHeat:Pe.showHeat,liked:M.liked,likeAction:"forum-like"});j.dataset.action="forum-open",j.dataset.key=M.id,j.tabIndex=0}),x.append(W,c(e,"p","notice muted forum-boundary",xe.length?`共 ${xe.length} 个帖子 · 新帖置顶 · 点击帖子查看全文`:"暂无帖子，可点击上方按钮生成。")),b.append(x);return}if(A==="news"){const x=be.find(I=>I.id===ne);if(!x){const I=c(e,"div","news-list-page"),Y=c(e,"div","forum-action-bar news-list-bar");Y.append(G(e,"forum-parent-back-button","← 返回上一级","app","home"),G(e,"forum-ai-button",nr?"推演中…":"◌ 推演日报","news-generate"));const L=Pe.newsAutoEnabled&&Pe.newsAutoInterval>0?Math.max(0,Pe.newsAutoInterval-re.news):null;Y.append(c(e,"span","xianwang-counter-line",L===null?"自动日报已关闭":L===0?"本轮将开始生成天机日报":`还有 ${L} 轮对话后生成天机日报`));const T=c(e,"div","news-paper-list");for(const U of[...be].sort((F,z)=>z.createdAt.localeCompare(F.createdAt))){const F=G(e,"news-paper-card","","news-open",U.id),z=c(e,"div","news-paper-head");z.append(c(e,"h1","news-paper-title",U.title),c(e,"p","news-paper-issue",U.issue));const q=c(e,"div","news-paper-lead");q.append(c(e,"span","news-paper-section","头条"),c(e,"strong",void 0,U.articles[0]?.title??"今日头条"));const _=c(e,"div","news-paper-snippets");U.articles.slice(1,3).forEach(Z=>_.append(c(e,"span",void 0,`${Z.tag}　${Z.title}`)));const te=c(e,"div","news-paper-footer");if(te.append(c(e,"span",void 0,`主编：${U.editor}`)),Pe.showHeat){const Z=G(e,`news-paper-likes${U.liked?" is-liked":""}`,`♥ ${U.likes}`,"news-like",U.id);Z.setAttribute("aria-pressed",String(U.liked===!0)),te.append(Z)}F.append(z,q,_,te),T.append(F)}I.append(Y,T,c(e,"p","notice muted news-boundary",be.length?`共 ${be.length} 期 · 最新一期置顶`:"暂无报纸，可点击上方按钮生成。")),b.append(I);return}const v=c(e,"div","news-detail-page"),R=c(e,"div","news-detail-bar");R.append(G(e,"news-back-button","← 返回列表","news-back"),G(e,"news-delete-button","删除报纸","news-delete",x.id)),v.append(R);const P=c(e,"header","news-masthead");P.append(c(e,"h1","news-detail-title",x.title),c(e,"p","news-detail-meta",`${x.issue} · 主编：${x.editor}`)),v.append(P,c(e,"blockquote","news-intro",`“${x.editorNote}”`));const W=c(e,"div","news-article-list");x.articles.forEach(I=>hf(e,W,{tag:I.tag,source:I.source,title:I.title,body:I.content})),v.append(W);const M=c(e,"div","reader-letters-header");M.append(c(e,"h2",void 0,`读者来信 (${x.letters.length})`)),v.append(M);const j=c(e,"div","reader-letter-list");x.letters.forEach(I=>gf(e,j,{author:I.author,time:x.storyTime,body:I.content})),v.append(j),b.append(v);return}b.append(G(e,"top-parent-back-button","← 返回上一级","app","home")),it(e,b,"运行诊断","用于确认能力与生命周期，不输出密钥或私聊全文。","阶段 0 / 1");const E=c(e,"div","panel-grid"),f=ze(e,E,"能力矩阵",""),h=c(e,"ul","list");Kr(e,h,"核心壳 / 自管应用","不依赖 MVU","可运行"),Kr(e,h,"MVU 世界只读","能力探测",_e?"已发现":"待接入"),Kr(e,h,"通用 stat_data 写入","桥接白名单","禁用"),f.append(h,G(e,"primary-button","重新探测","diagnostic")),ze(e,E,"当前验收候选","阶段 0 fixture、单例开合、跨布局切换、键盘可达、关闭与重开状态保留。"),b.append(E)};function C(){const b=Xa??r.querySelector(".content")?.scrollTop??0;Xa=null,r.dataset.layout=w,r.replaceChildren();const l=c(e,"header","topbar topbar-empty");l.setAttribute("aria-hidden","true");const B=c(e,"div","phone-spirit-status"),E=c(e,"div","spirit-signal");E.setAttribute("aria-label","灵力信号模拟动画");for(let J=1;J<=4;J+=1)E.append(c(e,"span",`spirit-signal-bar spirit-signal-bar-${J}`));const f=He.energy.trim(),h=f.match(/(-?\d+(?:\.\d+)?)\s*[/|]\s*(\d+(?:\.\d+)?)/),x=f.match(/-?\d+(?:\.\d+)?/),v=h?Math.min(100,Math.max(0,Number(h[1])/Math.max(1,Number(h[2]))*100)):x?Math.min(100,Math.max(0,Number(x[0]))):0,R=!!x&&f!=="未知"&&f!=="未接入",P=c(e,"div",`spirit-battery${R?v<=20?" low":"":" unknown"}`);P.setAttribute("aria-label",R?`当前灵力 ${f}`:"当前灵力未知");const W=c(e,"span","spirit-battery-shell"),M=c(e,"span","spirit-battery-fill");M.style.width=`${v}%`,W.append(M),P.append(W);const j=c(e,"time","spirit-real-time",new Date().toLocaleTimeString("zh-CN",{hour:"2-digit",minute:"2-digit",hour12:!1}));j.setAttribute("aria-label","当前现实时间"),B.append(E,j,P);const I=c(e,"div","workspace"),Y=c(e,"aside","sidebar");Y.append(c(e,"div","sidebar-caption","随身应用"));const L=c(e,"nav","app-nav"),T=G(e,`app-nav-button${A==="home"?" active":""}`,"","app","home");T.append(c(e,"span","app-nav-icon","⌂"),c(e,"span","app-nav-label","玉简桌面")),L.append(T);for(const J of Uo){const V=i[J.key];if(V&&!nt[V])continue;const me=A===J.key||J.key==="world"&&(A==="earth"||A==="xuantian"),$=G(e,`app-nav-button${me?" active":""}`,"","app",J.key);$.append(c(e,"span","app-nav-icon",J.icon),c(e,"span","app-nav-label",J.label));const ve=Nl(J.key);ve>0&&$.append(c(e,"span","app-nav-badge",String(ve))),L.append($)}Y.append(L,c(e,"div","sidebar-footer",`数据主源：chat 变量
 世界事实：可选只读通道`));const U=c(e,"main","content"),F=c(e,"div","content-inner");F.append(B),A==="home"?OE(F):ZE(F),k&&F.append(c(e,"p","notice",k)),U.append(F),I.append(Y,U);const z=c(e,"nav","mobile-nav");z.setAttribute("aria-label","小手机主导航");const q=G(e,"mobile-nav-button","← 返回","nav-back");q.disabled=A==="home";const _=G(e,`mobile-nav-button${A==="xuantian"?" active":""}`,"玄天界","app","xuantian");_.disabled=!nt.world||!Oe.xuantianEnabled;const te=G(e,`mobile-nav-button${A==="earth"?" active":""}`,"地球","app","earth");te.disabled=!nt.world||!Oe.earthEnabled,z.append(G(e,`mobile-nav-button${A==="home"?" active":""}`,"⌂ 桌面","app","home"),q,_,te),r.append(l,I,z),lf(e,r),ri();const Z=()=>{const J=r.querySelector(".content");J&&(J.scrollTop=b)};Z(),a.requestAnimationFrame(()=>{Z(),a.requestAnimationFrame(Z)})}const Hl=b=>{const l=b.target,B=l?.closest("[data-action]");if(!B)return;const E=B.dataset.action;if(!(E==="beauty-portrait-close"&&B.classList.contains("beauty-portrait-overlay")&&l!==B)&&!((E==="map-faction-close"||E==="map-image-close")&&(B.classList.contains("map-modal-overlay")||B.classList.contains("map-image-overlay"))&&l!==B)&&!(E==="map-faction-portrait-zoom-close"&&B.classList.contains("map-faction-image-overlay")&&l!==B))if(E==="nav-back")A==="xuantian"&&dn?(dn=!1,Xa=Dl):A==="map"&&Zt?Zt=!1:A==="map"&&Se?Se=null:A==="map"&&qt?qt=!1:A==="beauty"&&rt?rt=null:A==="yujian"&&Fe?(Fe=null,de=null):A==="forum"&&Me?Me=null:A==="news"&&ne?ne=null:A==="settings"&&ot!=="home"?ot="home":(A="home",dn=!1,Xa=0),k="",gn({layoutMode:"phone",lastApp:A}),o("SET_ACTIVE_APP",{app:A}),C();else if(E==="app"){const f=B.dataset.key,h=f?i[f]:void 0;if(h&&!nt[h]){k="该功能已在设置中关闭。",C();return}f&&(PE(f),A=f,dn=!1,f==="settings"&&(ot="home"),ne=null,Fe=null,k="",gn({layoutMode:"phone",lastApp:A}),o("SET_ACTIVE_APP",{app:A}),C())}else if(E==="story-director-open")A==="xuantian"&&(Dl=r.querySelector(".content")?.scrollTop??0,dn=!0,Xa=0,C());else if(E==="xuantian-force-region-toggle"){const f=B.dataset.key??"";Zo.has(f)?Zo.delete(f):Zo.add(f),C()}else if(E==="world-sim-open"){const f=B.dataset.key==="earth"?"earth":"xuantian";(f==="earth"?Oe.earthEnabled:Oe.xuantianEnabled)&&(A=f,dn=!1,k="",C())}else if(E==="wanbao-section")d=B.dataset.key==="owned"?"owned":"market",C();else if(E==="map-realm"){const f=B.dataset.key==="仙界"?"仙界":"玄天界",h=Sa(f,D.map.selectedNode);D={...D,map:{selectedRealm:f,selectedNode:h}},Se=null,qt=!1,o("SET_MAP_VIEW",{selectedRealm:f,selectedNode:h}),C()}else if(E==="map-node"){const f=D.map.selectedRealm==="仙界"?"仙界":"玄天界",h=Sa(f,B.dataset.key??"center");D={...D,map:{selectedRealm:f,selectedNode:h}},Se=null,o("SET_MAP_VIEW",{selectedRealm:f,selectedNode:h}),C()}else if(E==="map-faction"){const f=D.map.selectedRealm==="仙界"?"仙界":"玄天界";Se=Qo[f][Sa(f,D.map.selectedNode)].factions[Number(B.dataset.key)]??null,$e=0,Zt=!1,C(),r.querySelector(".map-modal-close")?.focus()}else if(E==="map-faction-portrait")$e=Math.max(0,Number(B.dataset.key)||0),C();else if(E==="map-faction-portrait-zoom"){const f=Se?cc[Se.name]??[]:[],h=f[Math.min($e,Math.max(0,f.length-1))]??"";if(!Se||kE(h,Se.name))return;Zt=!0,C(),r.querySelector(".map-faction-image-close")?.focus()}else if(E==="map-faction-portrait-zoom-close")Zt=!1,C(),r.querySelector(".map-faction-portrait-zoom")?.focus();else if(E==="map-faction-close")Se=null,Zt=!1,C();else if(E==="map-image-toggle")Ko=!Ko,qt=!1,C();else if(E==="map-image-zoom")qt=!0,C(),r.querySelector(".map-image-close")?.focus();else if(E==="map-image-close")qt=!1,C();else if(E==="phone-update-check")void globalThis.__daoyuanPhoneUpdate.check();else if(E==="phone-update-apply")void globalThis.__daoyuanPhoneUpdate.apply();else if(E==="settings-open"){const f=B.dataset.key;f&&f!=="home"&&(A="settings",dn=!1,ot=f,k="",f==="dlc"&&o("REQUEST_USER_DLC_STATUS"),C())}else if(E==="settings-home")ot="home",k="",C();else if(E==="earth-sim-tab"){const f=B.dataset.key;f&&(Fn=f,k="",C())}else if(E==="xuantian-sim-tab"){const f=B.dataset.key;f&&(Pn=f,k="",C())}else if(E==="xuantian-copy-logs"){const f=JSON.stringify({exportedAt:new Date().toISOString(),storyPlan:ln,logs:Vt},null,2);cf(r.ownerDocument,f).then(h=>{k=h?`已复制 ${Vt.length} 条玄天界故障日志。`:"自动复制被浏览器拦截；日志已保留在本页，可直接选中。",C()})}else if(E==="xuantian-clear-logs"){if(!Vt.length||!a.confirm("确认清空当前聊天的全部玄天界推演故障日志？此操作不会清除世界状态或剧情大纲。"))return;k="正在清空当前聊天的玄天界推演故障日志…",C(),o("CLEAR_XUANTIAN_FAULT_LOGS")}else if(E==="xuantian-region-select"){const f=B.dataset.key;f&&(Dn=f,C())}else if(E==="xuantian-simulation-run"){if(kn)return;kn=!0,k="正在读取原版主世界书与最近五条可见 AI 回复…",C(),o("GENERATE_XUANTIAN_SIMULATION")}else if(E==="earth-region-toggle"){const f=B.dataset.key;f&&(ei=ei===f?null:f,C(),r.querySelector(`.earth-region-card[data-key="${f}"]`)?.focus())}else if(E==="earth-event-toggle"){const f=B.dataset.key;f&&(ti=ti===f?null:f,C(),r.querySelector(`.earth-sim-event[data-key="${f}"]`)?.focus())}else if(E==="earth-worldbook-refresh")o("REQUEST_EARTH_WORLDBOOK_STATUS"),k="正在重新读取地球附属世界书…",C();else if(E==="earth-worldbook-install")o("INSTALL_EARTH_WORLDBOOK"),k="正在从内置种子创建地球附属世界书…",C();else if(E==="earth-worldbook-attach")o("ATTACH_EARTH_WORLDBOOK"),k="正在挂载到当前角色并复读确认…",C();else if(E==="earth-worldbook-repair")o("REPAIR_EARTH_WORLDBOOK"),k="正在补回缺失条目，不覆盖用户修改…",C();else if(E==="world-simulation-settings-save")Oe={xuantianEnabled:r.querySelector('[data-world-simulation-feature="xuantian"]')?.checked===!0,earthEnabled:r.querySelector('[data-world-simulation-feature="earth"]')?.checked===!0},o("SAVE_WORLD_SIMULATION_FEATURES",Oe),k="正在保存世界推演开关…",C();else if(E==="content-beautifier-save")_a=r.querySelector('[data-content-assist="body-renderer"]')?.checked===!0,xt={bodyPromptEnabled:r.querySelector('[data-content-assist="body-prompt"]')?.checked===!0,bodyPromptSuffix:r.querySelector("[data-body-prompt-suffix]")?.value??"",bodyRendererVersion:r.querySelector("[data-body-renderer-version]")?.value==="modern"?"modern":"legacy",ticketPromptEnabled:r.querySelector('[data-content-assist="ticket-prompt"]')?.checked===!0,ticketRendererEnabled:r.querySelector('[data-content-assist="ticket-renderer"]')?.checked===!0},o("SAVE_CONTENT_BEAUTIFIER_SETTINGS",{enabled:_a,...xt}),k="正在保存正文呈现设置…",C();else if(E==="config-helper-save")ca=r.querySelector("[data-config-helper-enabled]")?.checked===!0,o("SAVE_CONFIG_HELPER_SETTINGS",{enabled:ca}),k="正在保存配置小助手悬浮球显示设置…",C();else if(E==="user-dlc-import"&&lt)o("IMPORT_USER_DLC",{id:St,name:Xt.trim(),worldbook:lt.value,worldbookFileName:lt.fileName,script:Qt?.value,scriptFileName:Qt?.fileName,mode:$o}),B.textContent=St?"正在更新…":"正在导入…",B.disabled=!0;else if(E==="user-dlc-target"){St=B.dataset.key||null,Xt=la.find(v=>v.id===St)?.name??"",lt=null,Qt=null,r.querySelectorAll('[data-action="user-dlc-target"]').forEach(v=>{const R=(v.dataset.key||null)===St;v.classList.toggle("selected",R),v.setAttribute("aria-pressed",String(R))});const h=r.querySelector("[data-user-dlc-name]");h&&(h.value=Xt),r.querySelectorAll("[data-user-dlc-file]").forEach(v=>{v.value=""}),r.querySelectorAll("[data-user-dlc-file-status]").forEach(v=>{v.textContent="未选择任何文件"}),r.querySelectorAll("[data-user-dlc-file-summary]").forEach(v=>{v.remove()});const x=r.querySelector('[data-action="user-dlc-import"]');x&&(x.textContent=St?"更新所选 DLC":"导入并新建 DLC",x.disabled=!0)}else if(E==="user-dlc-mode")$o=B.dataset.key==="safe-merge"?"safe-merge":"replace-matching",r.querySelectorAll('[data-action="user-dlc-mode"]').forEach(f=>{const h=f.dataset.key===$o;f.classList.toggle("selected",h),f.setAttribute("aria-pressed",String(h))});else if(E==="user-dlc-select-update"){const f=la.find(x=>x.id===B.dataset.key);(f?r.querySelector(`[data-action="user-dlc-target"][data-key="${f.id}"]`):null)?.click()}else if(E==="user-dlc-repair")o("REPAIR_USER_DLC_MOUNT",{id:B.dataset.key}),B.textContent="正在检测…",B.disabled=!0;else if(E==="user-dlc-remove-script")o("REMOVE_USER_DLC_SCRIPT",{id:B.dataset.key}),B.textContent="正在移除…",B.disabled=!0;else if(E==="user-dlc-remove")o("REMOVE_USER_DLC",{id:B.dataset.key}),B.textContent="正在移除…",B.disabled=!0;else if(E==="wanbao-settings-save"){const f=(x,v)=>{const R=r.querySelector(`[data-wanbao-setting="${x}"]`),P=Number(R?.value);return Number.isFinite(P)?Math.floor(P):v},h=r.querySelector("[data-wanbao-item-mode]")?.value==="combat"?"combat":"legacy";u={batchSize:h==="combat"?4:10,maxItems:Math.max(1,Math.min(60,f("maxItems",u.maxItems))),refreshInterval:Math.max(0,Math.min(99,f("refreshInterval",u.refreshInterval))),currencyMode:(()=>{const x=r.querySelector("[data-wanbao-currency-mode]")?.value;return x==="legacy-bag"||x==="combat-separate"?x:"auto"})(),itemDataMode:h};try{(a.parent!==a?a.parent.localStorage:a.localStorage).setItem("daoyuan_wanbao_settings_v1",JSON.stringify(u))}catch{}k="万宝商行设置已保存（仅本地偏好，尚未触发生成）",C()}else if(E==="wanbao-debug-clear"){try{(a.parent!==a?a.parent.localStorage:a.localStorage).removeItem("daoyuan_wanbao_debug_logs_v1"),k="万宝商行诊断日志已清空"}catch{k="诊断日志清空失败"}C()}else if(E==="earth-faction-toggle"){const f=B.dataset.key??"";ni=ni===f?null:f,C()}else if(E==="earth-faction-category-toggle"){const f=B.dataset.key??"";In.has(f)?In.delete(f):In.add(f),C()}else if(E==="wanbao-api-save")r.querySelectorAll("[data-wanbao-api-setting]").forEach(f=>{const h=f.dataset.wanbaoApiSetting;h&&(p[h]=f.value)}),p.enabled=r.querySelector("[data-wanbao-api-enabled]")?.checked===!0,p.transactionInjectionEnabled=r.querySelector("[data-wanbao-injection-enabled]")?.checked!==!1,o("SAVE_WANBAO_API_SETTINGS",{...p}),k=p.enabled?"万宝商行独立 API 已启用并保存":"万宝商行将使用酒馆当前模型",C();else if(E==="wanbao-injection-save")p.transactionInjectionEnabled=r.querySelector("[data-wanbao-injection-enabled]")?.checked!==!1,o("SAVE_WANBAO_API_SETTINGS",{...p}),k=p.transactionInjectionEnabled?"万宝楼交易事实正文注入已启用":"万宝楼交易事实正文注入已关闭",C();else if(E==="wanbao-models-fetch"){if(r.querySelectorAll("[data-wanbao-api-setting]").forEach(f=>{const h=f.dataset.wanbaoApiSetting;h&&(p[h]=f.value)}),Va)return;Va=!0,k="正在获取万宝商行模型列表…",C(),o("REQUEST_WANBAO_MODELS",{apiBaseUrl:p.apiBaseUrl,apiKey:p.apiKey})}else if(E==="wanbao-generate")k=u.itemDataMode==="combat"?"正在分两次生成万宝货品（每次4件，合计8件）…":"正在生成 10 件万宝货品…",C(),o("GENERATE_WANBAO",{...u});else if(E==="wanbao-buy"){const f=O.find(h=>h.id===B.dataset.key);if(!f||f.stock<=0||(k=`正在购买「${f.name}」…`,C(),!a.confirm(`确认花费 ${f.price} ${f.priceGrade}购买「${f.name}」？`)))return;o("BUY_WANBAO",{id:f.id,quantity:1,currencyMode:u.currencyMode})}else if(E==="wanbao-product-delete"){const f=O.find(h=>h.id===B.dataset.key);if(!f||!a.confirm(`确认从当前货单移除「${f.name}」？`))return;o("DELETE_WANBAO_PRODUCT",{id:f.id})}else if(E==="wanbao-transaction-delete"){const f=g.find(h=>h.id===B.dataset.key);if(!f||!a.confirm(`确认删除「${f.itemName}」的这笔交易记录？`))return;o("DELETE_WANBAO_TRANSACTION",{id:f.id})}else if(E==="wanbao-transactions-clear"){if(!g.length||!a.confirm("确认清除当前聊天的全部万宝楼交易记录？"))return;o("CLEAR_WANBAO_TRANSACTIONS")}else if(E==="wanbao-estimate-all"){if(!H.length)return;k=`正在一次性估价 ${H.length} 件物品…`,C(),o("ESTIMATE_WANBAO")}else if(E==="wanbao-sell"){const f=H.find(h=>h.id===B.dataset.key);if(!f||(k=`正在出售「${f.name}」…`,C(),!f.quote)||!a.confirm(`确认出售 1 件「${f.name}」，获得 ${f.quote.price} ${f.quote.priceGrade}？`))return;o("SELL_WANBAO",{id:f.id,quantity:1,currencyMode:u.currencyMode})}else if(E==="chat-open")Fe=B.dataset.key??null,k="",C();else if(E==="chat-back")Fe=null,de=null,k="",C();else if(E==="chat-message-delete"){if(!Fe)return;o("DELETE_YUJIAN_MESSAGE",{charName:Fe,index:Number(B.dataset.index),from:B.dataset.from,text:B.dataset.text,time:B.dataset.time}),k="正在删除这条消息…",C()}else if(E==="chat-clear"){if(!Fe)return;if(de!==Fe){de=Fe,k="再次点击“确认清空”将删除该联系人的全部聊天记录。",C();return}const f=Fe;de=null,k="正在清空聊天记录…",C(),o("CLEAR_YUJIAN_HISTORY",{charName:f})}else if(E==="chat-contact-delete"){if(!Fe)return;const f=Fe;if(!a.confirm(`确认删除联系人「${f}」？
 
@@ -558,6 +558,200 @@ ${u.map(le=>`${le.index}:${le.content}`).join(`
 `):"",u=typeof ye.getCharWorldbookNames=="function"&&typeof ye.getWorldbook=="function"?ye:this.hostWindow,p=await Fl(u),g=qs(p),m=await jf(r,{worldTime:this.worldStatus.time,location:"",recentStory:d,worldFacts:"",lore:g,existingTitles:this.trendPosts.map(K=>K.title),sourceMessageId:t===void 0?void 0:String(t)}),y=Et(this.hostWindow);if(!this.featureEnabled("xianwang")||!n&&!y.trendsAutoEnabled)throw new Error("仙网风闻自动生成已关闭，本次结果未写入");const Q=t===void 0?void 0:cn(typeof i[Number(t)]?.mes=="string"?i[Number(t)].mes:""),w=m.map(K=>({...K,sourceFingerprint:Q}));this.trendPosts=Jf([...this.trendPosts,...w],r.maxPosts);const D=nn(this.repository.getData("daoyuan_web_trends_data"));await this.repository.write("daoyuan_web_trends_data",{...D,posts:this.trendPosts,...n?{autoCounter:0,processedMessageIds:[],processedMessageFingerprints:[],triggeredMessageIds:[],triggeredMessageFingerprints:[]}:{autoCounter:Math.max(0,D.autoCounter-r.autoInterval)}}),a=!0,this.appData=this.repository.project(),o?.contentWindow?.postMessage(X("event","TRENDS_GENERATION_STATUS",{ok:!0,posts:m.length}),"*"),this.sendContext()}catch(r){o?.contentWindow?.postMessage(X("event","TRENDS_GENERATION_STATUS",{ok:!1,error:r instanceof Error?r.message:String(r)}),"*")}finally{this.trendsGenerationInFlight=!1;const r=this.hostWindow?Et(this.hostWindow):null;a&&!n&&r?.trendsAutoEnabled&&r.autoInterval>0&&this.featureEnabled("xianwang")&&nn(this.repository.getData("daoyuan_web_trends_data")).autoCounter>=r.autoInterval&&this.generateTrendPosts()}}async deleteTrendPost(t){const n=typeof t.id=="string"?t.id:"";if(n)try{this.trendPosts=this.trendPosts.filter(o=>o.id!==n);const a=nn(this.repository.getData("daoyuan_web_trends_data"));await this.repository.write("daoyuan_web_trends_data",{...a,posts:this.trendPosts}),this.appData=this.repository.project(),this.frame?.contentWindow?.postMessage(X("event","TREND_DELETE_STATUS",{ok:!0,id:n}),"*"),this.sendContext()}catch(a){this.frame?.contentWindow?.postMessage(X("event","TREND_DELETE_STATUS",{ok:!1,error:a instanceof Error?a.message:String(a)}),"*")}}async toggleXianwangLike(t,n){const a=typeof n.id=="string"?n.id:"";if(a){if(t==="trends"){this.trendPosts=this.trendPosts.map(r=>r.id===a?{...r,liked:!r.liked,heat:Math.max(0,r.heat+(r.liked?-1:1))}:r);const o=nn(this.repository.getData("daoyuan_web_trends_data"));await this.repository.write("daoyuan_web_trends_data",{...o,posts:this.trendPosts})}if(t==="forum"){this.forumPosts=this.forumPosts.map(r=>r.id===a?{...r,liked:!r.liked,likes:Math.max(0,r.likes+(r.liked?-1:1))}:r);const o=Ft(this.repository.getData("daoyuan_forum_data"));await this.repository.write("daoyuan_forum_data",{...o,posts:this.forumPosts})}if(t==="news"){this.newsPapers=this.newsPapers.map(r=>r.id===a?{...r,liked:!r.liked,likes:Math.max(0,r.likes+(r.liked?-1:1))}:r);const o=an(this.repository.getData("daoyuan_news_data"));await this.repository.write("daoyuan_news_data",{...o,papers:this.newsPapers})}this.appData=this.repository.project(),this.sendContext()}}async submitForumComment(t){const n=typeof t.id=="string"?t.id:"",a=typeof t.content=="string"?t.content.trim().slice(0,3e3):"",o=this.forumPosts.find(A=>A.id===n);if(!o||!a)return;const r=Et(this.hostWindow??window),s={id:`forum-comment:${Date.now()}:user`,author:r.playerAlias,content:a,storyTime:this.worldStatus.time};let i=[...o.comments,s];try{this.forumPosts=this.forumPosts.map(d=>d.id===n?{...d,comments:i.slice(-20)}:d);let A=Ft(this.repository.getData("daoyuan_forum_data"));if(await this.repository.write("daoyuan_forum_data",{...A,posts:this.forumPosts}),this.sendContext(),r.autoAiReply){if(i=[...i,...await $f(r,{...o,comments:i},a)],!this.featureEnabled("xianwang"))throw new Error("仙网论坛已关闭，本次 AI 回复未写入");this.forumPosts=this.forumPosts.map(d=>d.id===n?{...d,comments:i.slice(-20)}:d),A=Ft(this.repository.getData("daoyuan_forum_data")),await this.repository.write("daoyuan_forum_data",{...A,posts:this.forumPosts})}this.appData=this.repository.project(),this.frame?.contentWindow?.postMessage(X("event","FORUM_COMMENT_STATUS",{ok:!0,id:n}),"*"),this.sendContext()}catch(A){this.frame?.contentWindow?.postMessage(X("event","FORUM_COMMENT_STATUS",{ok:!1,error:`评论已保存；AI 回复失败：${A instanceof Error?A.message:String(A)}`}),"*")}}async xianwangGenerationInput(t){if(!this.hostWindow)throw new Error("酒馆运行上下文不可用");const n=this.hostWindow.SillyTavern?.getContext?.()?.chat,o=(Array.isArray(n)?n.filter(i=>{const A=i;return A.is_user===!1&&A.is_system!==!0}).length:0)>20?(Array.isArray(n)?n:[]).slice(-5).map(i=>typeof i.mes=="string"?i.mes:"").filter(Boolean).join(`
 
 `):"",r=typeof ye.getCharWorldbookNames=="function"&&typeof ye.getWorldbook=="function"?ye:this.hostWindow,s=await Fl(r);return{worldTime:this.worldStatus.time,location:"",recentStory:o,worldFacts:"",lore:qs(s),existingTitles:[],sourceMessageId:t}}async generateForumContent(t=this.session.messageId??void 0,n=!1){if(!this.featureEnabled("xianwang")||this.forumGenerationInFlight)return;this.forumGenerationInFlight=!0;let a=!1;try{const o=Et(this.hostWindow??window),r=await this.xianwangGenerationInput(t===void 0?void 0:String(t));r.existingTitles=this.forumPosts.map(g=>g.title);const s=await _f(o,r,o.forumBatchSize),i=Et(this.hostWindow??window);if(!this.featureEnabled("xianwang")||!n&&!i.forumAutoEnabled)throw new Error("仙网论坛自动生成已关闭，本次结果未写入");const A=this.hostWindow?.SillyTavern?.getContext?.()?.chat,d=t===void 0||!Array.isArray(A)?void 0:cn(typeof A[Number(t)]?.mes=="string"?A[Number(t)].mes:""),u=s.map(g=>({...g,sourceFingerprint:d}));this.forumPosts=vc([...this.forumPosts,...u],o.forumMaxPosts);const p=Ft(this.repository.getData("daoyuan_forum_data"));await this.repository.write("daoyuan_forum_data",{...p,posts:this.forumPosts,...n?{autoCounter:0,processedMessageIds:[],processedMessageFingerprints:[],triggeredMessageIds:[],triggeredMessageFingerprints:[]}:{autoCounter:Math.max(0,p.autoCounter-o.forumAutoInterval)}}),a=!0,this.appData=this.repository.project(),this.frame?.contentWindow?.postMessage(X("event","FORUM_GENERATION_STATUS",{ok:!0,posts:s.length}),"*"),this.sendContext()}catch(o){this.frame?.contentWindow?.postMessage(X("event","FORUM_GENERATION_STATUS",{ok:!1,error:o instanceof Error?o.message:String(o)}),"*")}finally{this.forumGenerationInFlight=!1;const o=this.hostWindow?Et(this.hostWindow):null;a&&!n&&o?.forumAutoEnabled&&o.forumAutoInterval>0&&this.featureEnabled("xianwang")&&Ft(this.repository.getData("daoyuan_forum_data")).autoCounter>=o.forumAutoInterval&&this.generateForumContent()}}async deleteForumPost(t){const n=typeof t.id=="string"?t.id:"";if(n)try{this.forumPosts=this.forumPosts.filter(o=>o.id!==n);const a=Ft(this.repository.getData("daoyuan_forum_data"));await this.repository.write("daoyuan_forum_data",{...a,posts:this.forumPosts}),this.appData=this.repository.project(),this.frame?.contentWindow?.postMessage(X("event","FORUM_DELETE_STATUS",{ok:!0,id:n}),"*"),this.sendContext()}catch(a){this.frame?.contentWindow?.postMessage(X("event","FORUM_DELETE_STATUS",{ok:!1,error:a instanceof Error?a.message:String(a)}),"*")}}async generateNewsContent(t=this.session.messageId??void 0,n=!1){if(!this.featureEnabled("xianwang")||this.newsGenerationInFlight)return;this.newsGenerationInFlight=!0;let a=!1;try{const o=Et(this.hostWindow??window),r=await this.xianwangGenerationInput(t===void 0?void 0:String(t));r.existingTitles=this.newsPapers.flatMap(g=>g.articles.map(m=>m.title));const s=await ey(o,r,o.newsBatchSize),i=Et(this.hostWindow??window);if(!this.featureEnabled("xianwang")||!n&&!i.newsAutoEnabled)throw new Error("仙网报刊自动生成已关闭，本次结果未写入");const A=this.hostWindow?.SillyTavern?.getContext?.()?.chat,d=t===void 0||!Array.isArray(A)?void 0:cn(typeof A[Number(t)]?.mes=="string"?A[Number(t)].mes:""),u=s.map(g=>({...g,sourceFingerprint:d}));this.newsPapers=vc(Vr([...this.newsPapers,...u]),o.newsMaxPapers);const p=an(this.repository.getData("daoyuan_news_data"));await this.repository.write("daoyuan_news_data",{...p,papers:this.newsPapers,...n?{autoCounter:0,processedMessageIds:[],processedMessageFingerprints:[],triggeredMessageIds:[],triggeredMessageFingerprints:[]}:{autoCounter:Math.max(0,p.autoCounter-o.newsAutoInterval)}}),a=!0,this.appData=this.repository.project(),this.frame?.contentWindow?.postMessage(X("event","NEWS_GENERATION_STATUS",{ok:!0,papers:s.length}),"*"),this.sendContext()}catch(o){this.frame?.contentWindow?.postMessage(X("event","NEWS_GENERATION_STATUS",{ok:!1,error:o instanceof Error?o.message:String(o)}),"*")}finally{this.newsGenerationInFlight=!1;const o=this.hostWindow?Et(this.hostWindow):null;a&&!n&&o?.newsAutoEnabled&&o.newsAutoInterval>0&&this.featureEnabled("xianwang")&&an(this.repository.getData("daoyuan_news_data")).autoCounter>=o.newsAutoInterval&&this.generateNewsContent()}}async deleteNewsPaper(t){const n=typeof t.id=="string"?t.id:"";if(n)try{this.newsPapers=this.newsPapers.filter(o=>o.id!==n);const a=an(this.repository.getData("daoyuan_news_data"));await this.repository.write("daoyuan_news_data",{...a,papers:this.newsPapers}),this.appData=this.repository.project(),this.frame?.contentWindow?.postMessage(X("event","NEWS_DELETE_STATUS",{ok:!0,id:n}),"*"),this.sendContext()}catch(a){this.frame?.contentWindow?.postMessage(X("event","NEWS_DELETE_STATUS",{ok:!1,error:a instanceof Error?a.message:String(a)}),"*")}}async generateBeautyRank(t=!1){if(!this.featureEnabled("beauty")||this.beautyGenerationInFlight)return;this.beautyGenerationInFlight=!0;const n=this.frame;try{const a=Cn(this.hostWindow??window);if(!this.hostWindow)throw new Error("酒馆运行上下文不可用");const o=typeof ye.getCharWorldbookNames=="function"&&typeof ye.getWorldbook=="function"?ye:this.hostWindow,r=await Zs(o);if(!r.length)throw new Error("未读取到当前角色的启用世界书，已停止生成以避免人设幻觉");const s=await If(a,this.beautyRanks,this.appData.map.selectedRealm,r),i=Cn(this.hostWindow);if(!this.featureEnabled("beauty")||!t&&!i.autoEnabled)throw new Error("绝色榜自动生成已关闭，本次结果未写入");this.beautyReplies=[];const A=this.repository.getData("daoyuan_web_beauty_data");await this.repository.write("daoyuan_web_beauty_data",{...A,entries:s.entries,replies:[],source:"daoyuan-beauty-api",...t?{autoCounter:0,processedMessageIds:[],processedMessageFingerprints:[],triggeredMessageIds:[],triggeredMessageFingerprints:[]}:{autoCounter:Math.max(0,We(A.autoCounter,0)-a.autoInterval)}}),this.beautyRanks=s.entries,this.appData=this.repository.project(),n?.contentWindow?.postMessage(X("event","BEAUTY_GENERATION_STATUS",{ok:!0,entries:s.entries.length}),"*"),this.sendContext()}catch(a){n?.contentWindow?.postMessage(X("event","BEAUTY_GENERATION_STATUS",{ok:!1,error:a instanceof Error?a.message:String(a)}),"*")}finally{this.beautyGenerationInFlight=!1}}async generateBeautyReply(t){if(this.featureEnabled("beauty"))try{const n=typeof t.name=="string"?t.name:"",a=typeof t.content=="string"?t.content.trim():"",o=this.beautyRanks.find(u=>u.name===n);if(!n||!a||!o)throw new Error("回帖人物或内容无效");const r=await Gf(Cn(this.hostWindow??window),n,o.xianzi,o.qunfangpu,a,Array.isArray(t.history)?t.history.map(String):[]);if(!this.featureEnabled("beauty"))throw new Error("绝色榜已关闭，本次回复未写入");const s=this.beautyReplies.filter(u=>u.name===n).length+1,i=new Date().toLocaleTimeString("zh-CN",{hour:"2-digit",minute:"2-digit"}),A={id:`reply:${Date.now()}:user`,name:n,content:a,floor:s,time:i,likes:0,liked:!1},d=[...this.beautyReplies,A,{id:`reply:${Date.now()}:ai`,name:n,content:r,floor:s+1,time:i,likes:0,liked:!1,replyTo:s}];this.beautyReplies=d,await this.repository.write("daoyuan_web_beauty_data",{...this.repository.getData("daoyuan_web_beauty_data"),entries:this.beautyRanks,replies:d,source:"daoyuan-beauty-api"}),this.frame?.contentWindow?.postMessage(X("event","BEAUTY_REPLY_STATUS",{ok:!0,name:n,reply:d[d.length-1]}),"*"),this.sendContext()}catch(n){this.frame?.contentWindow?.postMessage(X("event","BEAUTY_REPLY_STATUS",{ok:!1,error:n instanceof Error?n.message:String(n)}),"*")}}async handleMvuUpdateStarted(){if(this.hostWindow){if(this.autoSchedulerInFlight){this.autoSchedulerPending=!0;return}this.autoSchedulerInFlight=!0;try{this.syncChatContext();const t=this.session.messageId;if(!t)return;const n=this.hostWindow.SillyTavern?.getContext?.()?.chat,a=Number(t),o=Array.isArray(n)&&Number.isSafeInteger(a)?n[a]:void 0;if(!o||o.is_user!==!1||o.is_system===!0)return;const r=Ta(this.hostWindow),s=Os(this.hostWindow),i=typeof o.mes=="string"?o.mes:"";r.yujian&&s.storyParseEnabled===!0&&i&&this.parseStoryYujian(t,i);const A=cn(i);let d=!1;const u=[],p=Kt(this.hostWindow),g=wt(this.hostWindow);if(r.world&&g.xuantianEnabled&&p.enabled&&p.replyInterval>0&&this.session.chatId){const re=this.earthVariableStore();if(re){const ge=Sn(re.get(pt),this.session.chatId);if(!ge.processedMessageIds.includes(t)){const le=ge.autoCounter+1,ie=le>=p.replyInterval&&!this.xuantianSimulationInFlight,ke={...ge,autoCounter:le,processedMessageIds:[...ge.processedMessageIds,t].slice(-200),processedMessageFingerprints:[...ge.processedMessageFingerprints,A].slice(-200)};re.set(pt,ke),this.xuantianSimulationState=ke,d=!0,ie&&this.generateXuantianSimulation()}}}const m=Jt(this.hostWindow);if(r.world&&g.earthEnabled&&m.enabled&&m.replyInterval>0&&this.session.chatId){const re=this.earthVariableStore();if(re){const ge=xn(re.get(ut),this.session.chatId,new Date().toISOString().slice(0,10));if(!ge.processedMessageIds.includes(t)){const le=ge.autoCounter+1,ie=le>=m.replyInterval&&!this.earthSimulationInFlight,ke={...ge,autoCounter:le,processedMessageIds:[...ge.processedMessageIds,t].slice(-200),processedAutoMessageFingerprints:[...ge.processedAutoMessageFingerprints,A].slice(-200)};re.set(ut,ke),this.earthSimulationState=ke,d=!0,ie&&this.generateEarthSimulation()}}}const y=nn(this.repository.getData("daoyuan_web_trends_data")),Q=Et(this.hostWindow);if(r.xianwang&&Q.trendsAutoEnabled&&Q.autoInterval>0&&!y.processedMessageIds.includes(t)){const re=[...y.processedMessageIds,t].slice(-200),ge=[...y.processedMessageFingerprints,A].slice(-200),le=y.autoCounter+1,ie=le>=Q.autoInterval&&!this.trendsGenerationInFlight,ke=ie?[...y.triggeredMessageIds,t].slice(-200):y.triggeredMessageIds,Ee=ie?[...y.triggeredMessageFingerprints,A].slice(-200):y.triggeredMessageFingerprints;u.push(this.repository.write("daoyuan_web_trends_data",{...y,autoCounter:le,processedMessageIds:re,processedMessageFingerprints:ge,triggeredMessageIds:ke,triggeredMessageFingerprints:Ee}).then(()=>{ie&&this.generateTrendPosts(t)})),d=!0}const w=Ft(this.repository.getData("daoyuan_forum_data"));if(r.xianwang&&Q.forumAutoEnabled&&Q.forumAutoInterval>0&&!w.processedMessageIds.includes(t)){const re=[...w.processedMessageIds,t].slice(-200),ge=[...w.processedMessageFingerprints,A].slice(-200),le=w.autoCounter+1,ie=le>=Q.forumAutoInterval&&!this.forumGenerationInFlight,ke=ie?[...w.triggeredMessageIds,t].slice(-200):w.triggeredMessageIds,Ee=ie?[...w.triggeredMessageFingerprints,A].slice(-200):w.triggeredMessageFingerprints;u.push(this.repository.write("daoyuan_forum_data",{...w,autoCounter:le,processedMessageIds:re,processedMessageFingerprints:ge,triggeredMessageIds:ke,triggeredMessageFingerprints:Ee}).then(()=>{ie&&this.generateForumContent(t)})),d=!0}const D=an(this.repository.getData("daoyuan_news_data"));if(r.xianwang&&Q.newsAutoEnabled&&Q.newsAutoInterval>0&&!D.processedMessageIds.includes(t)){const re=[...D.processedMessageIds,t].slice(-200),ge=[...D.processedMessageFingerprints,A].slice(-200),le=D.autoCounter+1,ie=le>=Q.newsAutoInterval&&!this.newsGenerationInFlight,ke=ie?[...D.triggeredMessageIds,t].slice(-200):D.triggeredMessageIds,Ee=ie?[...D.triggeredMessageFingerprints,A].slice(-200):D.triggeredMessageFingerprints;u.push(this.repository.write("daoyuan_news_data",{...D,autoCounter:le,processedMessageIds:re,processedMessageFingerprints:ge,triggeredMessageIds:ke,triggeredMessageFingerprints:Ee}).then(()=>{ie&&this.generateNewsContent(t)})),d=!0}const K=Ls(this.hostWindow);if(r.wanbao&&K.refreshInterval>0){const re=this.session.chatId??"__default__",ge=jo(this.hostWindow,re);if(!ge.processedMessageIds.includes(t)){const le=ge.autoCounter+1,ie=le>=K.refreshInterval&&!this.merchantGenerationInFlight;js(this.hostWindow,re,{autoCounter:le,processedMessageIds:[...ge.processedMessageIds,t].slice(-200),processedMessageFingerprints:[...ge.processedMessageFingerprints,A].slice(-200)}),d=!0,ie&&this.generateWanbao(K,!1)}}const O=Cn(this.hostWindow),H=this.repository.getData("daoyuan_web_beauty_data"),ae=Array.isArray(H.processedMessageIds)?H.processedMessageIds.filter(re=>typeof re=="string"):[],he=Array.isArray(H.processedMessageFingerprints)?H.processedMessageFingerprints.filter(re=>typeof re=="string"):[],Be=Array.isArray(H.triggeredMessageIds)?H.triggeredMessageIds.filter(re=>typeof re=="string"):[],xe=Array.isArray(H.triggeredMessageFingerprints)?H.triggeredMessageFingerprints.filter(re=>typeof re=="string"):[],be=!ae.includes(t);if(r.beauty&&O.autoEnabled&&O.autoInterval>0&&be){const ge=(typeof H.autoCounter=="number"&&Number.isFinite(H.autoCounter)?Math.max(0,Math.floor(H.autoCounter)):0)+1,le=[...ae,t].slice(-200),ie=[...he,A].slice(-200),ke=ge>=O.autoInterval&&!this.beautyGenerationInFlight,Ee=ke?[...Be,t].slice(-200):Be,pe=ke?[...xe,A].slice(-200):xe;u.push(this.repository.write("daoyuan_web_beauty_data",{...H,autoCounter:ge,processedMessageIds:le,processedMessageFingerprints:ie,triggeredMessageIds:Ee,triggeredMessageFingerprints:pe}).then(()=>{ke&&this.generateBeautyRank()}))}await Promise.all(u),d&&this.sendContext()}catch(t){console.warn("[道渊小手机] 自动推演计数更新失败",t)}finally{this.autoSchedulerInFlight=!1,this.autoSchedulerPending&&(this.autoSchedulerPending=!1,this.scheduleAutoScheduler(0))}}}async parseStoryYujian(t,n){if(!this.canParseYujianStory())return;const a=this.yujianStoryParseRevision;if(this.yujianStoryParseInFlight){this.pendingYujianStoryParse={messageId:t,story:n,revision:a};return}this.yujianStoryParseInFlight=!0;let o={messageId:t,story:n,revision:a};try{for(;o;)this.pendingYujianStoryParse=null,this.canParseYujianStory(o.revision)&&await this.parseStoryYujianFloor(o.messageId,o.story,o.revision),o=this.pendingYujianStoryParse}finally{this.yujianStoryParseInFlight=!1}}canParseYujianStory(t=this.yujianStoryParseRevision){return!!(this.hostWindow&&this.session.chatId&&t===this.yujianStoryParseRevision&&this.featureEnabled("yujian")&&Os(this.hostWindow).storyParseEnabled===!0)}stopYujianStoryParsing(){this.yujianStoryParseRevision+=1,this.pendingYujianStoryParse=null,this.yujianStoryParseAbortController?.abort(),this.yujianStoryParseAbortController=null}stopYujianOperations(){this.stopYujianStoryParsing(),this.yujianSendAbortController?.abort(),this.yujianSendAbortController=null,this.yujianModelsAbortController?.abort(),this.yujianModelsAbortController=null}async parseStoryYujianFloor(t,n,a){if(!this.hostWindow||!this.session.chatId||!this.canParseYujianStory(a))return;const o=this.session.chatId,r=await Tm(this.hostWindow,o);if(!this.canParseYujianStory(a))return;const s=cn(n),i=`${t}:${s}`;if(r.includes(i))return;const A=new AbortController;this.yujianStoryParseAbortController=A;try{const d=await $m(this.hostWindow,n,{signal:A.signal,isEnabled:()=>this.canParseYujianStory(a)});if(!this.canParseYujianStory(a))return;const u=ye.Mvu?ye:this.hostWindow,p=await oc(u,t);if(!this.canParseYujianStory(a)||(await Km(this.hostWindow,o,t),!this.canParseYujianStory(a)))return;const g=new Map((await xo(this.hostWindow,o)).map(m=>[m.name,m]));for(const m of d){if(!this.canParseYujianStory(a))return;await jr(this.hostWindow,o,m.contact,m.direction==="to_player"?"them":"me",m.content,p,{sourceMessageId:t,sourceFingerprint:s,generationMode:"auto"});const y=g.get(m.contact);g.set(m.contact,{name:m.contact,portrait:y?.portrait,affection:y?.affection,affectionLabel:y?.affectionLabel,preview:m.content,time:p,detail:y?.detail??"正文玉简联系人",unread:(y?.unread??0)+(m.direction==="to_player"?1:0)})}if(!this.canParseYujianStory(a)||(await Lr(this.hostWindow,o,[...g.values()]),!this.canParseYujianStory(a)))return;await zm(this.hostWindow,o,[...r,i]),d.length&&this.scheduleWorldDataRefresh(0)}catch(d){if(d instanceof DOMException&&d.name==="AbortError")return;console.warn("[道渊玉简] 正文玉简解析失败",d)}finally{this.yujianStoryParseAbortController===A&&(this.yujianStoryParseAbortController=null)}}async sendYujianMessage(t,n){if(!this.featureEnabled("yujian"))return;const a=this.frame;if(!this.hostWindow||!t||!n){a?.contentWindow?.postMessage(X("event","YUJIAN_SEND_STATUS",{ok:!1,error:"玉简运行上下文不可用"}),"*");return}if(!this.session.chatId){a?.contentWindow?.postMessage(X("event","YUJIAN_SEND_STATUS",{ok:!1,error:"当前聊天尚未就绪"}),"*");return}const o=ye.Mvu?ye:this.hostWindow,r=new AbortController;this.yujianSendAbortController=r;try{const s=await _m(o,this.session.chatId,t,n,i=>{i==="user-written"&&(this.scheduleWorldDataRefresh(0),a?.contentWindow?.postMessage(X("event","YUJIAN_SEND_STATUS",{phase:i}),"*"))},this.session.messageId,{signal:r.signal,isEnabled:()=>this.featureEnabled("yujian")});if(r.signal.aborted||!this.featureEnabled("yujian"))return;await this.refreshPromptInjection(),this.scheduleWorldDataRefresh(120),a?.contentWindow?.postMessage(X("event","YUJIAN_SEND_STATUS",{ok:!0,storageWarning:s.storageWarning??""}),"*")}catch(s){if(r.signal.aborted)return;const i=s instanceof Error?s.message:String(s);console.warn("[道渊玉简] 玉简传讯失败",s),a?.contentWindow?.postMessage(X("event","YUJIAN_SEND_STATUS",{ok:!1,error:i}),"*")}finally{this.yujianSendAbortController===r&&(this.yujianSendAbortController=null)}}open(){if(!this.host||!this.orb||this.session.phase==="destroyed")return;this.drawerHideTimer!==null&&this.hostWindow&&this.hostWindow.clearTimeout(this.drawerHideTimer),this.drawerHideTimer=null,this.session.visible=!0,this.orb.setAttribute("aria-expanded","true"),this.host.hidden=!1,this.orb.disabled=!1;const t=!!this.frame?.contentWindow;this.ensureFrame(),t&&this.contextDirtyWhileHidden&&this.sendContext(!0),this.resize(),this.host.offsetWidth,this.host.classList.add("is-open")}close(){!this.host||!this.orb||(this.session.visible=!1,this.orb.setAttribute("aria-expanded","false"),this.host.classList.remove("is-open"),this.phoneDisplayMode==="floating"&&(this.host.hidden=!0),this.drawerHideTimer!==null&&this.hostWindow&&this.hostWindow.clearTimeout(this.drawerHideTimer),this.drawerHideTimer=null,this.orb.hidden=!1,this.orb.disabled=!1,this.petController?.closePhone())}ensureFrame(){if(!this.host||!this.hostDocument||this.frame)return;this.frame=this.hostDocument.createElement("iframe"),this.frame.title="天机阁随身玉简",this.frame.setAttribute("aria-label","天机阁随身玉简内容"),this.frame.setAttribute("referrerpolicy","no-referrer"),this.host.append(this.frame);const t='<!doctype html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>玉简</title></head><body><div id="daoyuan-app"></div></body></html>';this.frame.addEventListener("load",()=>this.mountFrame(),{once:!0}),this.frame.srcdoc=t}mountFrame(){if(!this.frame?.contentDocument)return;const t=this.frame.contentDocument,n=t.createElement("style");n.textContent=sy,t.head.append(n),this.uiMount?.destroy();try{this.uiMount=mf(t,(a,o)=>this.handleUiAction(a,o))}catch(a){console.error("[道渊玉简] ui mount failed",a)}}sendContext(t=!1){if(!this.frame?.contentWindow)return;if(!t&&!this.session.visible){this.contextDirtyWhileHidden=!0;return}this.contextDirtyWhileHidden=!1;const n=this.earthVariableStore(),a=n?.get(ut),o=n?.get(pt);this.earthSimulationState=a&&this.session.chatId?xn(a,this.session.chatId,new Date().toISOString().slice(0,10)):null;const r=o&&this.session.chatId?Sn(o,this.session.chatId):null;if(r){const A=this.worldStatus.time,d=r.calendarLabel.includes("未校准")&&A&&A!=="未接入"&&A!=="未知"?sn.parse({...r,calendarLabel:A}):r;this.xuantianSimulationState=d,d!==r&&n?.set(pt,d)}else this.xuantianSimulationState=null;const s=this.hostWindow?wt(this.hostWindow):oa;if(this.featureEnabled("world")&&s.xuantianEnabled&&this.xuantianSimulationState)try{const A=Mo.parse(n?.get(ta));this.storyDirectorPlan=A.chatId===this.session.chatId&&A.sequence<=this.xuantianSimulationState.sequence?A:null}catch{this.storyDirectorPlan=null}else this.storyDirectorPlan=null;const i=n?.get(Ro);this.xuantianFaultLogs=Array.isArray(i)?i.filter(A=>!!(A&&typeof A=="object"&&typeof A.message=="string")).slice(-60):[],this.frame.contentWindow.postMessage(X("event","REQUEST_CONTEXT",{layout:this.layout,shellMode:this.shellMode,appData:this.appData,beautyRanks:this.beautyRanks,beautyReplies:this.beautyReplies,trendPosts:this.trendPosts,forumPosts:this.forumPosts,newsPapers:this.newsPapers,xianwangCounters:{trends:nn(this.repository.getData("daoyuan_web_trends_data")).autoCounter,forum:Ft(this.repository.getData("daoyuan_forum_data")).autoCounter,news:an(this.repository.getData("daoyuan_news_data")).autoCounter},beautyCounter:Math.max(0,Math.floor(We(this.repository.getData("daoyuan_web_beauty_data").autoCounter,0))),yujianContacts:this.yujianContacts,inventoryItems:this.inventoryItems,spiritStones:this.spiritStones,merchantProducts:this.merchantProducts,merchantSellItems:this.worldData?ss(this.worldData,this.merchantQuotes):[],merchantTransactions:this.hostWindow?Js(this.hostWindow,this.session.chatId??"__default__"):[],merchantCounter:this.hostWindow?jo(this.hostWindow,this.session.chatId??"__default__").autoCounter:0,merchantGenerationState:this.hostWindow?vE(this.hostWindow,this.session.chatId??"__default__"):{status:"idle"},protagonistRealm:LA(this.worldData),worldStatus:this.worldStatus,context:{chatId:this.session.chatId,messageId:this.session.messageId},mvuChannel:{name:Tt,ready:this.worldDataMessageId!==null&&this.worldData!==null,messageId:this.worldDataMessageId,variables:this.worldData},capabilities:{mvu:gm(ye.Mvu??this.hostWindow?.Mvu).reason},yujianSettings:this.hostWindow?Os(this.hostWindow):{},beautyApiSettings:this.hostWindow?Cn(this.hostWindow):{},xianwangApiSettings:this.hostWindow?Et(this.hostWindow):{},wanbaoApiSettings:this.hostWindow?Jo(this.hostWindow):{},promptInjectionSettings:this.hostWindow?kl(this.hostWindow):wc,petSize:this.hostWindow?Sl(this.hostWindow):"large",petKind:this.hostWindow?Cl(this.hostWindow):"whale",phoneDisplayMode:this.phoneDisplayMode,contentBeautifierEnabled:this.hostWindow?hE(this.hostWindow):!1,contentAssistSettings:this.hostWindow?mE(this.hostWindow):vl,configHelperEnabled:this.hostWindow?yE(this.hostWindow):!0,featureModuleFlags:this.hostWindow?Ta(this.hostWindow):Ho,worldSimulationFeatures:this.hostWindow?wt(this.hostWindow):oa,userScripts:this.hostWindow?An(this.hostWindow).map(A=>({id:A.id,name:A.name,enabled:A.enabled,dlcId:A.dlcId,active:this.userScriptRuntime?.isActive(A.id)===!0})):[],userDlcs:this.hostWindow?Qn(this.hostWindow):[],earthWorldbookStatus:this.earthWorldbookStatus,earthWorldbookMountedEntryCount:this.earthWorldbookEntries.length,earthApiSettings:this.hostWindow?Jt(this.hostWindow):{},earthSimulationState:this.earthSimulationState,xuantianApiSettings:this.hostWindow?Kt(this.hostWindow):{},xuantianSimulationState:this.xuantianSimulationState,storyDirectorPlan:this.storyDirectorPlan,xuantianFaultLogs:this.xuantianFaultLogs},this.session.contextRevision),"*"),this.refreshPromptInjection()}resize(){if(!this.host||!this.hostWindow)return;const t=this.hostWindow.visualViewport,n=t?.width??this.hostWindow.innerWidth,a=t?.height??this.hostWindow.innerHeight,o=t?.offsetLeft??0,r=t?.offsetTop??0,i=!!this.frame?.contentDocument?.activeElement?.matches('input:not([type="checkbox"]):not([type="radio"]):not([type="button"]):not([type="submit"]), textarea, select');(!i||Math.abs(n-this.viewportBaselineWidth)>40)&&(this.viewportBaselineWidth=n,this.viewportBaselineHeight=Math.max(this.viewportBaselineHeight,a));const A=!!(t&&i&&(t.height<this.hostWindow.innerHeight-120||a<this.viewportBaselineHeight-40));if(this.orb&&(this.orbPosition?(this.orbPosition=this.clampOrbPosition(this.orbPosition.left,this.orbPosition.top),Object.assign(this.orb.style,{left:`${this.orbPosition.left}px`,top:`${this.orbPosition.top}px`,right:"auto",bottom:"auto"})):this.positionOrb(),this.applyEdgeProbe()),!this.session.visible)return;this.keyboardViewportActive=A;const d=n<=600||this.hostWindow.matchMedia("(pointer: coarse)").matches,u=d?10:16,p=Math.max(0,a-u*2),g=Math.min(420,n,p*Bl),m=g/Bl,y=o+n-g,Q=r+Math.max(u,(a-m)/2),w=this.clampPosition((this.shellPosition?.left??o+n-g-24)-o,(this.shellPosition?.top??r+Math.max(u,(a-m)/2))-r,g,m,n,a),D=this.phoneDisplayMode==="floating"?w.left+o:y,K=this.phoneDisplayMode==="floating"?w.top+r:Q;this.phoneDisplayMode==="floating"&&(this.shellPosition={left:D,top:K}),this.host.dataset.mode="phone",this.host.dataset.presentation=d?"compact-drawer":"drawer",this.host.dataset.displayMode=this.phoneDisplayMode,this.host.dataset.keyboard=A?"open":"closed",Object.assign(this.host.style,{left:`${D}px`,top:`${K}px`,width:`${g}px`,height:`${m}px`,right:"auto",bottom:"auto"})}positionOrb(){if(!this.orb)return;if(this.orbPosition){this.orbPosition=this.clampOrbPosition(this.orbPosition.left,this.orbPosition.top),Object.assign(this.orb.style,{left:`${this.orbPosition.left}px`,top:`${this.orbPosition.top}px`,right:"auto",bottom:"auto"}),this.applyEdgeProbe();return}const t=this.hostWindow?.visualViewport,n=(t?.offsetLeft??0)+(t?.width??this.hostWindow?.innerWidth??0),a=(t?.offsetTop??0)+(t?.height??this.hostWindow?.innerHeight??0),o=this.getOrbVisualOffsets(),r=this.clampOrbPosition(n-o.right-14,a-o.bottom-14);Object.assign(this.orb.style,{left:`${r.left}px`,top:`${r.top}px`,right:"auto",bottom:"auto"})}applyEdgeProbe(){if(!this.orb||!this.edgeProbeSide||!this.hostWindow)return;const t=this.hostWindow.visualViewport,n=t?.offsetLeft??0,a=n+(t?.width??this.hostWindow.innerWidth),o=this.hostWindow.matchMedia("(max-width: 600px), (pointer: coarse)").matches,r=this.getOrbProbeVisualOffsets(),s=o?.5:.72,i=r.left+(r.right-r.left)*s-(o?0:15),A=o?10:0,d=this.edgeProbeSide==="left"?n+i-this.orb.offsetWidth+A:a-i-A,u=this.edgeProbeSide==="left"?this.orb.offsetWidth-i-A:i-48+A;this.orb.dataset.edgeProbe=this.edgeProbeSide,this.orb.style.left=`${d}px`,this.orb.style.setProperty("--pet-probe-hit-left",`${u}px`),this.petController?.setEdgeProbe(!0)}leaveEdgeProbe(){!this.orb||!this.edgeProbeSide||(this.edgeProbeSide=null,delete this.orb.dataset.edgeProbe,this.orb.style.removeProperty("--pet-probe-hit-left"),this.orbPosition&&(this.orb.style.left=`${this.orbPosition.left}px`),this.petController?.setEdgeProbe(!1))}enterEdgeProbe(){if(!this.orb||!this.orbPosition||!this.hostWindow)return;const t=this.hostWindow.visualViewport,n=t?.offsetLeft??0,a=n+(t?.width??this.hostWindow.innerWidth),o=this.getOrbVisualOffsets();this.edgeProbeSide=this.orbPosition.left+o.left<=n+1?"left":this.orbPosition.left+o.right>=a-1?"right":null,this.edgeProbeSide&&this.applyEdgeProbe()}getOrbVisualOffsets(){if(!this.orb||!this.hostWindow)return{left:0,right:0,top:0,bottom:0};const t=this.orb.querySelector(".dsh-pet-stage");if(!t)return{left:0,right:this.orb.offsetWidth,top:0,bottom:this.orb.offsetHeight};const n=t.offsetWidth,a=t.offsetHeight,o=Number.parseFloat(this.hostWindow.getComputedStyle(t).right)||0,r=this.orb.offsetWidth-o-n+n/2,s=this.orb.offsetHeight-a,i=Math.min(n/640,a/360),A=(n-640*i)/2,d=a-360*i;return{left:r+A+196*i,right:r+A+392*i,top:s+d+64*i,bottom:s+d+328*i}}getOrbProbeVisualOffsets(){if(!this.orb)return{left:0,right:0};const t=this.orb.querySelector(".dsh-pet-stage");if(!t)return{left:0,right:this.orb.offsetWidth};const n=t.offsetWidth,a=t.offsetHeight,o=Number.parseFloat(this.hostWindow?.getComputedStyle(t).right??"")||0,r=this.orb.offsetWidth-o-n,s=n/2,i=a*.72,A=Math.min(n/640,a/360),d=(n-640*A)/2,u=a-360*A,p=-Math.PI/4,g=Math.cos(p),m=Math.sin(p),y=[196,392].flatMap(Q=>[64,328].map(w=>{const D=d+Q*A,K=u+w*A;return r+n/2+s+(D-s)*g-(K-i)*m}));return{left:Math.min(...y),right:Math.max(...y)}}clampOrbPosition(t,n){if(!this.hostWindow)return{left:t,top:n};const a=this.hostWindow.visualViewport,o=a?.offsetLeft??0,r=a?.offsetTop??0,s=o+(a?.width??this.hostWindow.innerWidth),i=r+(a?.height??this.hostWindow.innerHeight),A=this.getOrbVisualOffsets();return{left:Math.min(Math.max(t,o-A.left),s-A.right),top:Math.min(Math.max(n,r-A.top),i-A.bottom)}}clampPosition(t,n,a,o,r,s){return{left:Math.min(Math.max(0,t),Math.max(0,r-a)),top:Math.min(Math.max(0,n),Math.max(0,s-o))}}bindShellDrag(){if(!this.dragStrip||!this.host||!this.hostWindow)return;let t=null;const n=A=>{if(this.phoneDisplayMode!=="floating"||A.button!==0||!this.host||t)return;const d=this.host.getBoundingClientRect(),u=this.hostWindow?.visualViewport?.width??this.hostWindow?.innerWidth??0,p=this.hostWindow?.visualViewport?.height??this.hostWindow?.innerHeight??0;t={pointerId:A.pointerId,startX:A.clientX,startY:A.clientY,left:d.left,top:d.top,width:d.width,height:d.height,viewportWidth:u,viewportHeight:p},this.host.classList.add("is-dragging"),this.dragStrip?.setPointerCapture(A.pointerId),this.dragStrip?.classList.add("is-dragging"),A.preventDefault()},a=A=>{if(!t||t.pointerId!==A.pointerId||!this.host)return;const d=this.clampPosition(t.left+A.clientX-t.startX,t.top+A.clientY-t.startY,t.width,t.height,t.viewportWidth,t.viewportHeight);this.shellPosition=d,Object.assign(this.host.style,{left:`${d.left}px`,top:`${d.top}px`,right:"auto",bottom:"auto"}),A.preventDefault()},o=A=>{!t||t.pointerId!==A.pointerId||(t=null,this.host?.classList.remove("is-dragging"),this.dragStrip?.classList.remove("is-dragging"),this.dragStrip?.hasPointerCapture(A.pointerId)&&this.dragStrip.releasePointerCapture(A.pointerId),this.shellPosition&&this.hostWindow&&Ql(this.hostWindow,this.shellPosition))},r=A=>{if(this.phoneDisplayMode!=="floating"||A.button!==0||t||!this.host)return;const d=this.host.getBoundingClientRect(),u=this.hostWindow?.visualViewport?.width??this.hostWindow?.innerWidth??0,p=this.hostWindow?.visualViewport?.height??this.hostWindow?.innerHeight??0;t={pointerId:-1,startX:A.clientX,startY:A.clientY,left:d.left,top:d.top,width:d.width,height:d.height,viewportWidth:u,viewportHeight:p},this.host.classList.add("is-dragging"),this.dragStrip?.classList.add("is-dragging"),A.preventDefault()},s=A=>{if(!t||t.pointerId!==-1)return;const d=this.clampPosition(t.left+A.clientX-t.startX,t.top+A.clientY-t.startY,t.width,t.height,t.viewportWidth,t.viewportHeight);this.shellPosition=d,Object.assign(this.host?.style??{},{left:`${d.left}px`,top:`${d.top}px`,right:"auto",bottom:"auto"}),A.preventDefault()},i=()=>{!t||t.pointerId!==-1||(t=null,this.host?.classList.remove("is-dragging"),this.dragStrip?.classList.remove("is-dragging"),this.shellPosition&&this.hostWindow&&Ql(this.hostWindow,this.shellPosition))};this.dragStrip.addEventListener("pointerdown",n),this.dragStrip.addEventListener("pointerup",o),this.dragStrip.addEventListener("pointercancel",o),this.hostWindow.addEventListener("pointermove",a),this.hostWindow.addEventListener("pointerup",o),this.hostWindow.addEventListener("pointercancel",o),this.dragStrip.addEventListener("mousedown",r),this.hostWindow.addEventListener("mousemove",s),this.hostWindow.addEventListener("mouseup",i),this.session.disposers.push(()=>{this.dragStrip?.removeEventListener("pointerdown",n),this.dragStrip?.removeEventListener("pointerup",o),this.dragStrip?.removeEventListener("pointercancel",o),this.hostWindow?.removeEventListener("pointermove",a),this.hostWindow?.removeEventListener("pointerup",o),this.hostWindow?.removeEventListener("pointercancel",o),this.dragStrip?.removeEventListener("mousedown",r),this.hostWindow?.removeEventListener("mousemove",s),this.hostWindow?.removeEventListener("mouseup",i)})}bindOrbDrag(){if(!this.orb||!this.hostWindow)return;let t=null,n=null,a=0;const o=()=>{n!==null&&this.hostWindow?.clearTimeout(n),n=null},r=w=>{o(),n=this.hostWindow?.setTimeout(()=>{n=null,t&&this.petController?.startDragHold()},w==="touch"?250:160)??null},s=(w=!1)=>{o();const D=this.petController?.stopDragHold()===!0;w&&D&&(a=Date.now()+500)},i=w=>{if(w.button!==0||!this.orb||t)return;const D=this.orb.getBoundingClientRect();t={pointerId:w.pointerId,pointerType:w.pointerType,startX:w.clientX,startY:w.clientY,left:D.left,top:D.top},this.orbDragMoved=!1,this.orb.setPointerCapture(w.pointerId),r(w.pointerType),w.preventDefault()},A=w=>{if(!t||t.pointerId!==w.pointerId||!this.orb)return;const D=w.clientX-t.startX,K=w.clientY-t.startY,O=t.pointerType==="touch"?8:3;if(!this.orbDragMoved&&(Math.abs(D)>O||Math.abs(K)>O)&&(this.orbDragMoved=!0,o(),this.edgeProbeSide&&(this.leaveEdgeProbe(),t.left=this.orbPosition?.left??t.left,t.top=this.orbPosition?.top??t.top,t.startX=w.clientX,t.startY=w.clientY),this.petController?.startDragHold()),!this.orbDragMoved||t.startX===w.clientX&&t.startY===w.clientY)return;const H=this.clampOrbPosition(t.left+D,t.top+K);this.orbPosition=H,Object.assign(this.orb.style,{left:`${H.left}px`,top:`${H.top}px`,right:"auto",bottom:"auto"}),w.preventDefault()},d=w=>{!t||t.pointerId!==w.pointerId||!this.orb||(t=null,s(!0),this.orb.hasPointerCapture(w.pointerId)&&this.orb.releasePointerCapture(w.pointerId),this.orbDragMoved&&this.enterEdgeProbe())},u=w=>{!t||t.pointerId!==w.pointerId||(t=null,s(),this.orb?.hasPointerCapture(w.pointerId)&&this.orb.releasePointerCapture(w.pointerId),this.orbDragMoved=!1)},p=w=>{if(w.button!==0||t||!this.orb)return;const D=this.orb.getBoundingClientRect();t={pointerId:-1,pointerType:"mouse",startX:w.clientX,startY:w.clientY,left:D.left,top:D.top},this.orbDragMoved=!1,r("mouse"),w.preventDefault()},g=w=>{if(!t||t.pointerId!==-1||!this.orb)return;const D=w.clientX-t.startX,K=w.clientY-t.startY;if(!this.orbDragMoved&&(Math.abs(D)>3||Math.abs(K)>3)&&(this.orbDragMoved=!0,o(),this.edgeProbeSide&&(this.leaveEdgeProbe(),t.left=this.orbPosition?.left??t.left,t.top=this.orbPosition?.top??t.top,t.startX=w.clientX,t.startY=w.clientY),this.petController?.startDragHold()),!this.orbDragMoved||t.startX===w.clientX&&t.startY===w.clientY)return;const O=this.clampOrbPosition(t.left+D,t.top+K);this.orbPosition=O,Object.assign(this.orb.style,{left:`${O.left}px`,top:`${O.top}px`,right:"auto",bottom:"auto"}),w.preventDefault()},m=()=>{!t||t.pointerId!==-1||(t=null,s(!0),this.orbDragMoved&&this.enterEdgeProbe())},y=()=>{t=null,s(),this.orbDragMoved=!1},Q=()=>{if(this.orbDragMoved||Date.now()<a){this.orbDragMoved=!1,a=0;return}this.session.visible?this.close():this.petController?.openPhone()};this.orb.addEventListener("pointerdown",i),this.orb.addEventListener("pointerup",d),this.orb.addEventListener("pointercancel",u),this.hostWindow.addEventListener("pointermove",A),this.hostWindow.addEventListener("pointerup",d),this.hostWindow.addEventListener("pointercancel",u),this.hostWindow.addEventListener("blur",y),this.orb.addEventListener("click",Q),this.orb.addEventListener("mousedown",p),this.hostWindow.addEventListener("mousemove",g),this.hostWindow.addEventListener("mouseup",m),this.session.disposers.push(()=>{this.orb?.removeEventListener("pointerdown",i),this.orb?.removeEventListener("pointerup",d),this.orb?.removeEventListener("pointercancel",u),this.hostWindow?.removeEventListener("pointermove",A),this.hostWindow?.removeEventListener("pointerup",d),this.hostWindow?.removeEventListener("pointercancel",u),this.hostWindow?.removeEventListener("blur",y),this.orb?.removeEventListener("click",Q),this.orb?.removeEventListener("mousedown",p),this.hostWindow?.removeEventListener("mousemove",g),this.hostWindow?.removeEventListener("mouseup",m),s()})}destroy(){ye.__daoyuanCultivationReaderV2?.destroy?.(),ye.__daoYuanPortraitBg?.integrated&&ye.__daoYuanPortraitBg.stop(),this.petController?.destroy(),this.petController=null,this.clearPromptInjection(),this.hostWindow?.__daoyuanMvuChannel?.name===Tt&&delete this.hostWindow.__daoyuanMvuChannel,_g(this.session),this.uiMount?.destroy(),this.uiMount=null,this.frame?.remove(),this.host?.remove(),this.hostStyle?.remove(),this.orb?.remove(),this.frame=null,this.host=null,this.dragStrip=null,this.orb=null,this.hostStyle=null,this.hostWindow=null,this.hostDocument=null,this.worldRefreshTimer!==null&&window.clearTimeout(this.worldRefreshTimer),this.worldRefreshTimer=null,this.reconcileTimer!==null&&window.clearTimeout(this.reconcileTimer),this.reconcileTimer=null,this.autoSchedulerTimer!==null&&window.clearTimeout(this.autoSchedulerTimer),this.autoSchedulerTimer=null,this.drawerHideTimer!==null&&window.clearTimeout(this.drawerHideTimer),this.drawerHideTimer=null}}function UE(){if(typeof document>"u"||typeof window>"u")return;new CE().start(),console.info("[道渊玉简] phone-ratio shell ready; desktop 16:9 mode disabled")}QE(UE)})();
+/* Multiple custom portraits share the original phone IndexedDB store.
+ * Array keys keep gallery records invisible to legacy string-only readers.
+ * Images are stored as original Blobs; limits count original binary bytes.
+ * Only explicit edits touch IndexedDB. Lookups use the in-memory index. */
+globalThis.__daoyuanCreatePortraitGallery = function createPortraitGallery() {
+  const DB = 'daoyuan_statusbar_custom_portraits', STORE = 'portraits';
+  const PREFIX = 'phone-gallery-v1', META = ['phone-gallery-revision-v1'];
+  const limitBytes = 100 * 1024 * 1024;
+  let rows = new Map(), legacy = new Map(), revision = -1, initialized = false;
+  let chain = Promise.resolve(), refreshPromise = null, closed = false;
+  const handles = new Map(), listeners = new Set(), preparedLegacy = new Map();
+  const isBlob = value => value && typeof value === 'object' && /\[object (Blob|File)\]/.test(Object.prototype.toString.call(value)) && typeof value.arrayBuffer === 'function';
+  const channel = typeof BroadcastChannel === 'function' ? new BroadcastChannel('daoyuan-phone-portrait-gallery-v1') : null;
+  const safe = value => {
+    const text = String(value || '').trim();
+    if (/^data:image\/(png|jpeg|webp|gif);base64,[a-z0-9+/=\s]+$/i.test(text)) return text;
+    try { const url = new URL(text); return ['https:', 'http:'].includes(url.protocol) ? url.href : ''; } catch { return ''; }
+  };
+  const hash = async value => Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value)))).map(b => b.toString(16).padStart(2, '0')).join('');
+  const dataUrl = blob => new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = () => reject(new Error('图片读取失败')); reader.readAsDataURL(blob); });
+  const failure = text => { throw new Error(text); };
+  function open() {
+    return new Promise((resolve, reject) => {
+      const request = indexedDB.open(DB, 1);
+      request.onupgradeneeded = () => { if (!request.result.objectStoreNames.contains(STORE)) request.result.createObjectStore(STORE); };
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(new Error('无法打开立绘数据库'));
+      request.onblocked = () => reject(new Error('立绘数据库正忙，请稍后重试'));
+    });
+  }
+  function decode(keys, values) {
+    const result = { rows: new Map(), legacy: new Map(), revision: 0 };
+    keys.forEach((key, index) => {
+      const value = values[index];
+      if (typeof key === 'string' && typeof value === 'string' && safe(value)) result.legacy.set(key, value);
+      else if (Array.isArray(key) && key[0] === PREFIX && typeof key[1] === 'string' && value?.schema === 1 && Array.isArray(value.items)) result.rows.set(key[1], value);
+      else if (Array.isArray(key) && key[0] === META[0]) result.revision = Number(value?.revision) || 0;
+    });
+    return result;
+  }
+  function readStore(store) {
+    return new Promise((resolve, reject) => {
+      const keys = store.getAllKeys(), values = store.getAll();
+      const done = () => { if (keys.readyState === 'done' && values.readyState === 'done') resolve(decode(keys.result, values.result)); };
+      keys.onsuccess = values.onsuccess = done;
+      keys.onerror = values.onerror = () => reject(new Error('立绘读取失败'));
+    });
+  }
+  async function read() {
+    const db = await open();
+    try { return await readStore(db.transaction(STORE, 'readonly').objectStore(STORE)); } finally { db.close(); }
+  }
+  function statsOf(map) {
+    let localBytes = 0, localCount = 0, remoteCount = 0;
+    for (const row of map.values()) for (const item of row.items) {
+      if (item.kind === 'local') { localBytes += item.bytes; localCount++; } else remoteCount++;
+    }
+    return { limitBytes, localBytes, localCount, remoteCount, total: localCount + remoteCount };
+  }
+  function adopt(snapshot) {
+    rows = snapshot.rows; legacy = snapshot.legacy; revision = snapshot.revision; initialized = true;
+    preparedLegacy.clear();
+    const ids = new Set([...rows.values()].flatMap(row => row.items.map(item => item.id)));
+    for (const [id, url] of handles) if (!ids.has(id)) { URL.revokeObjectURL(url); handles.delete(id); }
+    for (const callback of listeners) try { callback(); } catch {}
+  }
+  async function prepare(input, filename = '') {
+    if (isBlob(input)) {
+      if (!/^image\/(png|jpeg|webp|gif)$/i.test(input.type)) failure('请选择 PNG、JPEG、WebP 或 GIF 图片。');
+      if (input.size > limitBytes) failure('本地图片合计上限为 100MB，这张图片已超过总上限。');
+      const url = await dataUrl(input);
+      return { item: { id: await hash(url), kind: 'local', blob: input, bytes: input.size, filename: filename || input.name || '本地图片' }, legacyUrl: url };
+    }
+    const url = safe(input);
+    if (!url) failure('请填入有效的图片网址，或选择本地图片。');
+    if (url.startsWith('data:')) {
+      const response = await fetch(url), blob = await response.blob();
+      return { item: { id: await hash(url), kind: 'local', blob, bytes: blob.size, filename: filename || '原有本地图片' }, legacyUrl: url };
+    }
+    return { item: { id: await hash(url), kind: 'url', url, bytes: 0, filename: '' }, legacyUrl: url };
+  }
+  async function includeLegacy(snapshot) {
+    const changed = new Set();
+    for (const [name, value] of snapshot.legacy) {
+      const old = rows.get(name);
+      if (initialized && legacy.get(name) === value && old?.legacyId === snapshot.rows.get(name)?.legacyId) continue;
+      if(snapshot.rows.get(name)?.legacyId===await hash(value))continue;
+      let cached = preparedLegacy.get(name);
+      if (cached?.url !== value) { cached = { url: value, prepared: await prepare(value) }; preparedLegacy.set(name, cached); }
+      const entry = cached.prepared.item, row = snapshot.rows.get(name) || { schema: 1, items: [], selectedId: '', legacyId: '' };
+      if (row.legacyId === entry.id && row.items.some(item => item.id === entry.id)) continue;
+      const items = row.items.some(item => item.id === entry.id) ? row.items : [...row.items, entry];
+      snapshot.rows.set(name, { ...row, items, selectedId: entry.id, legacyId: entry.id }); changed.add(name);
+    }
+    return changed;
+  }
+  async function commit(before, next, changed, primaryWrites) {
+    const db = await open();
+    try {
+      return await new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE, 'readwrite'), store = tx.objectStore(STORE);
+        let conflict = false;
+        tx.oncomplete = () => resolve(true);
+        tx.onabort = () => conflict ? resolve(false) : reject(new Error('图片未能保存，浏览器可用储存空间可能不足。'));
+        tx.onerror = () => {};
+        // Promise microtasks remain inside the active IndexedDB request task.
+        readStore(store).then(current => {
+          if (current.revision !== before.revision || current.legacy.size !== before.legacy.size || [...before.legacy].some(([name, url]) => current.legacy.get(name) !== url)) { conflict = true; tx.abort(); return; }
+          for (const name of changed) {
+            const row = next.rows.get(name);
+            if (row?.items.length) store.put(row, [PREFIX, name]); else store.delete([PREFIX, name]);
+          }
+          for (const [name, url] of primaryWrites) { if (url) store.put(url, name); else store.delete(name); }
+          store.put({ revision: before.revision + 1 }, META);
+        }).catch(() => tx.abort());
+      });
+    } finally { db.close(); }
+  }
+  function enqueue(work) { const promise = chain.then(work); chain = promise.catch(() => {}); return promise; }
+  async function mutate(operation, enforceLimit = false) {
+    for (let attempt = 0; attempt < 32; attempt++) {
+      const before = await read(), next = { rows: new Map(before.rows), legacy: new Map(before.legacy), revision: before.revision };
+      const changed = await includeLegacy(next), primaryWrites = new Map();
+      const oldBytes = statsOf(next.rows).localBytes;
+      const result = operation ? await operation(next, changed, primaryWrites) : null;
+      const used = statsOf(next.rows).localBytes;
+      if (enforceLimit && used > limitBytes && used > oldBytes) failure('本地图片合计超过 100MB，请先删除一些本地图片；图床网址不占这个额度。');
+      if (!changed.size && !primaryWrites.size) { adopt(next); return result; }
+      if (!await commit(before, next, changed, primaryWrites)) continue;
+      next.revision++;
+      for (const [name, url] of primaryWrites) { if (url) next.legacy.set(name, url); else next.legacy.delete(name); }
+      adopt(next); channel?.postMessage({ revision: next.revision }); return result;
+    }
+    failure('立绘正在被其他窗口修改，请稍后重试。');
+  }
+  function display(item) {
+    if (item.kind !== 'local') return item.url;
+    if (!handles.has(item.id)) handles.set(item.id, URL.createObjectURL(item.blob));
+    return handles.get(item.id);
+  }
+  function entries(name) { return (rows.get(name)?.items || []).map(item => ({ id: item.id, kind: item.kind, bytes: item.bytes, filename: item.filename, url: display(item) })); }
+  function selected(name) { const row = rows.get(name); const item = row?.items.find(item => item.id === row.selectedId) || row?.items[0]; return item ? display(item) : ''; }
+  async function add(name, inputs, options = {}) {
+    const person = String(name || '').trim(); if (!person) failure('请先填写角色名。');
+    const list = Array.isArray(inputs) ? inputs : [inputs];
+    const binary = list.filter(isBlob).reduce((sum, blob) => sum + blob.size, 0);
+    if(binary>limitBytes)failure('本地图片合计上限为 100MB。');
+    const prepared = [];
+    for (const input of list) prepared.push(await prepare(input));
+    return enqueue(() => mutate(async (snapshot, changed, writes) => {
+      const row = snapshot.rows.get(person) || { schema: 1, items: [], selectedId: '', legacyId: '' };
+      let items = [...row.items];
+      if (options.replaceId) items = items.filter(item => item.id !== options.replaceId);
+      for (const { item } of prepared) if (!items.some(existing => existing.id === item.id)) items.push(item);
+      const last = prepared.at(-1); if (!last) return [];
+      snapshot.rows.set(person, { ...row, items, selectedId: last.item.id, legacyId: last.item.id });
+      changed.add(person); writes.set(person, last.legacyUrl);
+      return prepared.map(entry => entry.item.id);
+    }, true));
+  }
+  async function remove(name, id) {
+    return enqueue(() => mutate(async (snapshot, changed, writes) => {
+      const row = snapshot.rows.get(name); if (!row) return false;
+      const items = id ? row.items.filter(item => item.id !== id) : [];
+      if (id && items.length === row.items.length) return false;
+      const chosen = items.find(item => item.id === row.selectedId) || items[0];
+      if (chosen && chosen.id === row.legacyId) snapshot.rows.set(name, { ...row, items });
+      else {
+        const url = chosen ? chosen.kind === 'local' ? await dataUrl(chosen.blob) : chosen.url : '';
+        if (items.length) snapshot.rows.set(name, { ...row, items, selectedId: chosen.id, legacyId: chosen.id }); else snapshot.rows.delete(name);
+        writes.set(name, url);
+      }
+      changed.add(name); return true;
+    }));
+  }
+  function refresh() {
+    if (closed) return Promise.resolve();
+    return refreshPromise || (refreshPromise = enqueue(() => mutate()).finally(() => { refreshPromise = null; }));
+  }
+  const api = {
+    ready: refresh, refresh, add, remove, entries, selected,
+    names: () => [...rows.keys()], stats: () => statsOf(rows), revision: () => revision,
+    entryIds: name => (rows.get(name)?.items||[]).map(item=>item.id),
+    matchesLegacy: map => initialized && Object.keys(map).length === legacy.size && Object.entries(map).every(([name, url]) => legacy.get(name) === url),
+    legacyId: name => rows.get(name)?.legacyId || '',
+    byId(name, id) { const item = rows.get(name)?.items.find(item => item.id === id); return item ? { id, kind: item.kind, url: display(item) } : null; },
+    owns: url => [...handles.values()].includes(url),
+    subscribe(callback) { listeners.add(callback); return () => listeners.delete(callback); },
+    destroy() { closed = true; channel?.close(); for (const url of handles.values()) URL.revokeObjectURL(url); handles.clear(); listeners.clear(); preparedLegacy.clear(); rows.clear(); legacy.clear(); },
+  };
+  if (channel) channel.onmessage = () => { void refresh().catch(() => {}); };
+  return api;
+};
+
 
 
 ;
@@ -572,9 +766,14 @@ ${p.theme}`,S=u.get(v);u.set(v,S?{...S,tags:[...new Set([...S.tags,...p.tags])]}
 ${l.theme}`,l]));i.forEach(l=>a.set(`${l.url}
 ${l.theme}`,a.get(`${l.url}
 ${l.theme}`)??l)),n[s]=[...a.values()]}const o=[...e.drawers];for(const s of t.drawers)o.some(i=>i.themeKey===s.themeKey||i.key.toLowerCase()===s.key.toLowerCase())||o.push(s);return o.sort((s,i)=>s.order-i.order||s.key.localeCompare(i.key)),{...e,characters:r,sectMaps:n,drawers:o,updatedAt:Date.now()}}function oi(e,t,r){if(!e||typeof e!="object")return null;const n=e,o={},s=new Map([["charPortraits","default"],["charPortraitsFemale","female"],["specialPortraits","special"],...r.drawers.filter(l=>l.sourceKey).map(l=>[l.sourceKey,ri(l.sourceKey,l.key)])]);for(const[l,d]of Object.entries(n)){if(!d||typeof d!="object")continue;const u=s.get(l)??(/Portraits$/i.test(l)?l.replace(/Portraits$/i,"").toLowerCase():null);if(u)for(const[p,v]of Object.entries(d)){const _=(typeof v=="string"?v.split("|"):[]).map(C=>eo({url:C,theme:u,tags:[]},u)).filter(C=>!!C);_.length&&((o[p]??={})[u]=_)}}const i={},a=t&&typeof t=="object"&&"sectMaps"in t?t.sectMaps:t;if(a&&typeof a=="object")for(const[l,d]of Object.entries(a)){const p=(typeof d=="string"?d.split("|"):Array.isArray(d)?d:[]).map(v=>eo({url:v,theme:"map",tags:[]},"map")).filter(v=>!!v);p.length&&(i[l]=p)}return!Object.keys(o).length&&!Object.keys(i).length?null:{...to({characters:o,sectMaps:i},r,"legacy"),schemaVersion:1,source:"legacy"}}function Mc(e){return e.replace(/[·・]/g,"")}function st(e){return[e,Mc(e)].filter((t,r,n)=>t&&n.indexOf(t)===r)}function Cc(e,t){try{const r=localStorage.getItem(e);return r?JSON.parse(r):t}catch{return t}}function ro(e,t){try{return localStorage.setItem(e,JSON.stringify(t)),_t++,wt(),xt?.publish("selection"),!0}catch{return!1}}function si(e){return st(e).map(pc).find(t=>typeof t=="string"&&t)||void 0}function it(e){return Cc(e,{})}function ii(e){return st(e).map(t=>Rt.characters[t]).find(Boolean)??{}}function ur(e){return Object.entries(ii(e)).map(([t,r])=>{const n=Rt.drawers.find(o=>o.themeKey===t)??ni(t,{drawers:Rt.drawers,aliases:{}})??{key:t,name:t,icon:"◇",order:9999,configured:!1};return{key:t,drawer:n,images:r}}).sort((t,r)=>t.drawer.order-r.drawer.order||t.key.localeCompare(r.key))}function ft(e,t){return ii(e)[t]??[]}function Gr(e){const t=ur(e),r=st(e).map(s=>it(Jn)[s]).find(s=>Array.isArray(s));if(!Array.isArray(r))return t.map(s=>s.key);const n=new Set(t.map(s=>s.key)),o=r.filter(s=>typeof s=="string"&&n.has(s));return o.length?o:t.slice(0,1).map(s=>s.key)}function Tc(e,t,r){const n=ur(e);if(!n.some(i=>i.key===t))return;const o=new Set(Gr(e));r?o.add(t):o.size>1&&o.delete(t);const s=it(Jn);s[e]=n.map(i=>i.key).filter(i=>o.has(i)),ro(Jn,s)}function kc(e){const t=it(qn),r=st(e).map(n=>t[n]).find(n=>typeof n=="string");return typeof r=="string"?r:null}function Xr(e,t){const r=ur(e);if(!r.length)return null;const n=new Set(Gr(e)),o=kc(e);return o&&r.some(s=>s.key===o)&&n.has(o)?o:st(e).some(s=>it(_c)[s]===!0)&&ft(e,"special").length&&n.has("special")?"special":st(e).some(s=>it(yc)[s]===!0)&&ft(e,"female").length&&n.has("female")||t&&/^女/.test(t)&&ft(e,"female").length&&n.has("female")?"female":r.find(s=>s.key==="default"&&n.has(s.key))?.key??r.find(s=>n.has(s.key))?.key??r[0].key}function ai(e,t){if(!ft(e,t).length)return;const r=it(qn);r[e]=t,ro(qn,r)}function li(e,t=Xr(e)??"default"){const r=ft(e,t),n=it(Yn),o=st(e).map(a=>n[`${a}:${t}`]).find(a=>typeof a=="number"),s=t==="default"?st(e).map(a=>it(vc)[a]).find(a=>typeof a=="number"):void 0,i=typeof o=="number"?o:s;return typeof i=="number"&&i>=0&&i<r.length?i:0}function Pc(e,t,r){const n=ft(e,t),o=it(Yn);o[`${e}:${t}`]=r>=0&&r<n.length?r:0,ro(Yn,o)}function no(e,t){const r=si(e);if(r)return r;const n=Xr(e,t);return(n?ft(e,n):[])[li(e,n??"default")]?.url??""}function ci(e){return!!si(e)}async function ui(e,t){if(!t)return fi(e);if(t=Zn(t),!t)return!1;const r=await hc(e,t);return r&&(_t++,wt(),xt?.publish("custom")),r}async function fi(e){const t=await gc(st(e));return t&&(_t++,wt(),xt?.publish("custom")),t}function Ac(){return Nt}function Oc(){return lr}function Ic(){return cc().portraitSource}async function Qr(e,t){const r=new AbortController,n=setTimeout(()=>r.abort(),bc),o=()=>r.abort();t?.addEventListener("abort",o,{once:!0});try{const s=await fetch(e,{signal:r.signal,cache:"no-store"});if(!s.ok)throw new Error(`HTTP ${s.status}`);return await s.json()}finally{clearTimeout(n),t?.removeEventListener("abort",o)}}function di(){try{const e=window.parent?.DaoyuanWorkshopAPI;return typeof e?.getImages=="function"?e:null}catch{return null}}async function Lc(e){const t=Date.now();let r=di();for(;!r&&Date.now()-t<Qs;)await new Promise(n=>setTimeout(n,100)),r=di();if(!r)return null;try{const n=await Promise.race([Promise.resolve(r.getImages()),new Promise(i=>setTimeout(()=>i(null),Qs))]),o=ti(n);if(!o)return null;const s={drawers:e?.drawers??[],aliases:{}};return to(o,s,"workshop")}catch{return null}}async function pi(e,t){for(const r of e)try{const n=Ec(await Qr(`${r}portrait-drawers.json`,t));if(n.drawers.length)return n}catch{}return Yr}async function jc(e,t){const r=e.map(n=>Dt[n]);for(const n of e)try{const o=ti(await Qr(`${Dt[n]}images.json`,t));if(!o)continue;const s=await pi([Dt[n],...r.filter(i=>i!==Dt[n])],t);return to(o,s,n)}catch{if(t.aborted)return null}return null}async function Dc(e,t){const r=await pi(e.map(n=>Dt[n]),t);for(const n of e){const o=Dt[n];try{const[s,i]=await Promise.all([Qr(`${o}portraits.json`,t),Qr(`${o}sect-maps.json`,t).catch(()=>null)]),a=oi(s,i,r);if(a)return a}catch{if(t.aborted)return null}}return null}async function Rc(e,t){const r=[e,e==="github"?"jsdelivr":"github"];return await jc(r,t)??await Dc(r,t)}async function Nc(e){if(await lc(e))try{localStorage.removeItem(Zs)}catch{}else lr="数据已更新，但本地缓存失败"}function $c(){try{const e=localStorage.getItem(Zs);if(!e)return null;const t=JSON.parse(e),r=t.data??t.catalog??t;return oi(r,null,Yr)}catch{return null}}function Fc(){if(cr)return cr;const e=++Jr;Gn?.abort();const t=new AbortController;return Gn=t,cr=(async()=>{Nt="loading",lr="",await qr(),_t++,wt();const r=await ac(),n=r?null:$c(),o=r?.catalog??n;o&&e===Jr&&(Rt=o,Nt=r?.stale?"stale-cache":"cache",_t++,wt());const s=await Rc(Ic(),t.signal);if(e!==Jr||t.signal.aborted)return;Xn=await Lc(s??o??null);const i=Sc(s,Xn);i?(Rt=i,Nt=s?s.source==="legacy"?"legacy-remote":Xn?"remote-v2-workshop":"remote-v2":"workshop",s&&await Nc(s)):o?(Nt=r?.stale?"stale-cache":"cache",lr="网络同步失败，正在使用本地缓存"):(Rt=ei,Nt="error",lr="立绘数据加载失败，请稍后重试"),_t++,wt()})().finally(()=>{e===Jr&&(Gn=null,cr=null)}),cr}function hi(e){return Qn.add(e),()=>Qn.delete(e)}function wt(){for(const e of Qn)try{e()}catch{}}const Hc=["aria-label"],Vc={class:"portrait-modal-head"},Kc={class:"portrait-title"},Bc={class:"portrait-modal-head-actions"},Uc=["aria-expanded"],zc={key:0,class:"portrait-theme-settings","aria-label":"显示主题设置"},Wc=["checked","disabled","onChange"],qc={key:0,class:"portrait-theme-setting-icon","aria-hidden":"true"},Yc=["disabled"],Jc={key:0,class:"portrait-load-hint",role:"alert"},Gc={key:1,class:"portrait-display"},Xc=["src","alt"],Qc={class:"portrait-display-actions"},Zc={key:0,class:"portrait-img-err"},eu={key:2,class:"portrait-img-err"},tu={class:"portrait-source"},ru={key:0,class:"src-tag custom"},nu={key:1,class:"src-tag builtin"},ou={key:3,class:"portrait-theme-nav",role:"tablist","aria-label":"立绘主题"},su=["aria-selected","title","onClick"],iu={key:0,class:"portrait-theme-icon","aria-hidden":"true"},au={class:"portrait-theme-name"},lu={key:4,class:"portrait-empty-hint"},cu={key:5,class:"portrait-empty-hint"},uu={key:6,class:"portrait-load-hint",role:"status"},fu={key:7,class:"portrait-set-row"},du=["title","onClick"],pu=["src","alt","onError"],hu={key:0,class:"set-thumb-err"},gu={class:"portrait-custom-area"},mu={class:"portrait-file-label"},bu={class:"portrait-url-row"},yu=["disabled"],vu={key:1,class:"portrait-remove-confirm",role:"group","aria-label":"恢复内置立绘确认"},gi=7e6,_u=Wo({__name:"PortraitModal",props:{charName:{},gender:{}},emits:["close"],setup(e){const t=e,r=Oe(""),n=Oe(!1),o=Oe(!1),s=Oe(""),i=Oe(!1),a=Oe(0),l=Oe(0),d=Oe(0),u=Oe(new Set),p=Oe(!1),v=Oe(Xr(t.charName,t.gender)??""),S=hi(()=>{const j=ur(t.charName);v.value=Xr(t.charName,t.gender)??j[0]?.key??"",i.value=!1,d.value++});Qo(()=>S());const _=Se(()=>(d.value,l.value,ci(t.charName))),C=Se(()=>(l.value,d.value,ur(t.charName))),N=Se(()=>(l.value,d.value,Gr(t.charName))),$=Se(()=>C.value.filter(j=>N.value.includes(j.key))),L=Se(()=>$.value.find(j=>j.key===v.value)??$.value[0]),F=Se(()=>(l.value,d.value,L.value?ft(t.charName,L.value.key):[])),T=Se(()=>(l.value,d.value,L.value?li(t.charName,L.value.key):0)),X=Se(()=>(d.value,Ac())),se=Se(()=>{d.value;const j=Oc();return j||(X.value==="stale-cache"?"当前显示的是较早的本地缓存":X.value==="cache"?"已先从本地缓存读取，正在同步最新数据":X.value==="legacy-remote"?"当前数据源使用兼容模式":"")}),ce=Se(()=>(l.value,d.value,ci(t.charName),no(t.charName,t.gender))),ye=Se(()=>{const j=ce.value,O=a.value;if(!j||O===0||j.startsWith("data:")||j.startsWith("blob:"))return j;try{const k=new URL(j,window.location.href);return k.searchParams.set("_daoyuan_refresh",String(O)),k.href}catch{const k=j.includes("?")?"&":"?";return`${j}${k}_daoyuan_refresh=${O}`}});function je(){i.value=!1,a.value=Date.now()}function ee(){i.value=!1}function We(j){v.value=j,ai(t.charName,j),i.value=!1,l.value++}function at(j,O){const k=O.target.checked;Tc(t.charName,j,k);const U=Gr(t.charName);U.includes(v.value)||(v.value=U[0]??"",v.value&&ai(t.charName,v.value)),l.value++}function $t(j){L.value&&(Pc(t.charName,L.value.key,j),i.value=!1,l.value++)}function fr(){i.value=!0}function Zr(j,O){j.target.style.visibility="hidden",u.value.add(O)}function ue(j){return new Promise((O,k)=>{const U=new FileReader;U.onload=Ce=>typeof Ce.target?.result=="string"?O(Ce.target.result):k(new Error("无法读取图片文件")),U.onerror=()=>k(new Error("无法读取图片文件")),U.readAsDataURL(j)})}function te(j){return new Promise((O,k)=>{const U=new Image;U.onload=()=>O(U),U.onerror=()=>k(new Error("无法解析图片文件")),U.src=j})}async function Y(j){const O=await ue(j);if(O.length<=gi)return O;const k=await te(O),Ce=Math.min(1,1400/Math.max(k.naturalWidth,k.naturalHeight));let dt=Math.max(1,Math.round(k.naturalWidth*Ce)),Re=Math.max(1,Math.round(k.naturalHeight*Ce));const dr=document.createElement("canvas"),c=dr.getContext("2d");if(!c)throw new Error("当前浏览器无法处理图片");for(let f=0;f<6;f++){dr.width=dt,dr.height=Re,c.clearRect(0,0,dt,Re),c.drawImage(k,0,0,dt,Re);for(const h of[.88,.76,.64,.52,.42]){const y=dr.toDataURL("image/webp",h);if(y.length<=gi)return y}dt=Math.max(1,Math.round(dt*.8)),Re=Math.max(1,Math.round(Re*.8))}throw new Error("图片压缩后仍然过大，请换一张图片或使用图片 URL")}async function De(j){if(!n.value){n.value=!0,s.value="";try{await j(),i.value=!1,l.value++,o.value=!1}catch(O){s.value=O instanceof Error?O.message:"保存立绘失败"}finally{n.value=!1}}}async function Ft(j){const O=j.target,k=O.files?.[0];k&&await De(async()=>{try{if(k.size>5*1024*1024)throw new Error("图片文件过大，请选择小于5MB的图片（建议使用图床URL）");if(!/^image\/(png|jpeg|webp|gif)$/i.test(k.type))throw new Error("请选择 PNG、JPG、WebP 或 GIF 图片");const U=await Y(k);if(!await ui(t.charName,U))throw new Error("本地图片保存失败，请检查浏览器存储空间")}finally{O.value=""}})}async function lt(){await De(async()=>{const j=r.value.trim();if(!Zn(j))throw new Error("请使用 HTTP/HTTPS 图片地址或本地图片");if(!await ui(t.charName,j))throw new Error("图片地址保存失败，请检查浏览器存储空间");r.value=""})}async function Me(){await De(async()=>{if(!await fi(t.charName))throw new Error("删除自定义立绘失败，原图片已保留，请稍后重试")})}function en(){const j=ye.value;j&&Zl({url:j,alt:t.charName,ariaLabel:`${t.charName}的完整立绘`})}return Xo(()=>{r.value=""}),(j,O)=>(W(),q("div",{class:"portrait-modal-overlay",onClick:O[5]||(O[5]=zr(k=>j.$emit("close"),["self"]))},[K("div",{class:"portrait-modal",role:"dialog","aria-modal":"true","aria-label":`${e.charName} 的立绘`},[K("header",Vc,[K("span",Kc,ke(e.charName)+" 的立绘",1),K("div",Bc,[!_.value&&C.value.length?(W(),q("button",{key:0,class:"portrait-theme-settings-btn",type:"button","aria-label":"设置显示主题","aria-expanded":p.value,title:"设置显示主题",onClick:O[0]||(O[0]=zr(k=>p.value=!p.value,["stop"]))},[oe(Lt,{name:"gear",size:15})],8,Uc)):ge("",!0),K("button",{class:"portrait-close",type:"button","aria-label":"关闭立绘",onClick:O[1]||(O[1]=k=>j.$emit("close"))},[oe(Lt,{name:"close",size:14})])])]),p.value&&!_.value?(W(),q("section",zc,[O[6]||(O[6]=K("div",{class:"portrait-theme-settings-head"},[K("span",null,"显示主题"),K("span",{class:"portrait-theme-settings-hint"},"控制下方主题按钮")],-1)),(W(!0),q(ve,null,An(C.value,k=>(W(),q("label",{key:`setting-${k.key}`,class:"portrait-theme-setting-row"},[K("input",{type:"checkbox",checked:N.value.includes(k.key),disabled:N.value.length===1&&N.value.includes(k.key),onChange:U=>at(k.key,U)},null,40,Wc),k.key!=="default"&&k.drawer.key!=="normal"?(W(),q("span",qc,ke(k.drawer.icon),1)):ge("",!0),K("span",null,ke(k.drawer.name),1)]))),128))])):ge("",!0),K("fieldset",{class:"portrait-modal-body",disabled:n.value},[s.value?(W(),q("p",Jc,ke(s.value),1)):ge("",!0),ce.value?(W(),q("div",Gc,[K("img",{src:ye.value,alt:e.charName,class:"portrait-img",onLoad:ee,onError:fr},null,40,Xc),K("div",Qc,[K("button",{class:"portrait-display-btn",type:"button",title:"绕过浏览器缓存，重新从 CDN 获取立绘","aria-label":"重新从 CDN 获取立绘",onClick:zr(je,["stop"])},[oe(Lt,{name:"refresh",size:12}),O[7]||(O[7]=K("span",null,"刷新",-1))]),i.value?ge("",!0):(W(),q("button",{key:0,class:"portrait-display-btn",type:"button",title:"在浏览器界面查看完整立绘","aria-label":"在浏览器界面查看完整立绘",onClick:zr(en,["stop"])},[oe(Lt,{name:"popout",size:12}),O[8]||(O[8]=K("span",null,"查看大图",-1))]))]),i.value?(W(),q("div",Zc,"立绘加载失败")):ge("",!0)])):(W(),q("div",eu,"暂无立绘")),K("div",tu,[_.value?(W(),q("span",ru,"自定义")):ce.value?(W(),q("span",nu,[Fr(ke(L.value?.drawer.name||"内置")+" ",1),F.value.length>1?(W(),q(ve,{key:0},[Fr(" · 第 "+ke(T.value+1)+"/"+ke(F.value.length)+" 张",1)],64)):ge("",!0)])):ge("",!0)]),!_.value&&$.value.length?(W(),q("div",ou,[(W(!0),q(ve,null,An($.value,k=>(W(),q("button",{key:k.key,type:"button",class:Kt(["portrait-theme-btn",{active:v.value===k.key}]),role:"tab","aria-selected":v.value===k.key,title:k.drawer.name,onClick:U=>We(k.key)},[k.key!=="default"&&k.drawer.key!=="normal"?(W(),q("span",iu,ke(k.drawer.icon),1)):ge("",!0),K("span",au,ke(k.drawer.name),1)],10,su))),128))])):!_.value&&X.value==="loading"?(W(),q("div",lu,"正在读取立绘主题…")):!_.value&&!C.value.length?(W(),q("div",cu,"暂无可用立绘主题")):ge("",!0),!_.value&&se.value?(W(),q("div",uu,ke(se.value),1)):ge("",!0),F.value.length>1?(W(),q("div",fu,[(W(!0),q(ve,null,An(F.value,(k,U)=>(W(),q("button",{key:U,type:"button",class:Kt(["portrait-set-thumb",{active:U===T.value}]),title:`立绘 ${U+1}`,onClick:Ce=>$t(U)},[K("img",{src:k.url,alt:`立绘${U+1}`,onError:Ce=>Zr(Ce,U)},null,40,pu),u.value.has(U)?(W(),q("span",hu,"✕")):ge("",!0)],10,du))),128))])):ge("",!0),K("div",gu,[K("label",mu,[oe(Lt,{name:"plus",size:12}),O[9]||(O[9]=K("span",null,"选择本地图片",-1)),K("input",{type:"file",accept:"image/*",class:"portrait-file-input","aria-label":"选择本地图片",onChange:Ft},null,32)]),K("div",bu,[pa(K("input",{"onUpdate:modelValue":O[2]||(O[2]=k=>r.value=k),class:"portrait-url-input","aria-label":"自定义立绘图片地址",placeholder:"或粘贴图片 URL..."},null,512),[[Ul,r.value]]),K("button",{type:"button",class:"portrait-btn",disabled:!r.value.trim(),onClick:lt},"应用",8,yu)]),_.value?(W(),q("button",{key:0,type:"button",class:"portrait-btn portrait-btn-danger",onClick:O[3]||(O[3]=k=>o.value=!0)},[oe(Lt,{name:"trash",size:12}),O[10]||(O[10]=Fr(" 删除自定义立绘 ",-1))])):ge("",!0),o.value&&_.value?(W(),q("div",vu,[O[11]||(O[11]=K("span",null,"删除自定义立绘，恢复内置立绘？",-1)),K("button",{type:"button",class:"portrait-btn",onClick:Me},"确认恢复内置"),K("button",{type:"button",class:"portrait-btn",onClick:O[4]||(O[4]=k=>o.value=!1)},"取消")])):ge("",!0)])],8,Yc)],8,Hc)]))}}),xu='.dao-reader-portraits{color-scheme:dark;--c-bg-panel:#1a181d;--c-border-gold:#6b5a3a;--c-border:#514832;--c-text:#e3dfcf;--c-text-muted:#b9b39f;--c-text-dim:#938b79;--c-primary:#d8c188;--c-primary-dim:#8a7a4a;--c-accent:#a888d4;--c-danger:#c4665b}.dao-reader-portraits .portrait-modal-overlay{position:fixed;inset:0;background:#000000a6;display:flex;align-items:center;justify-content:center;z-index:1100;padding:.6em}.dao-reader-portraits .portrait-modal{width:100%;max-width:360px;background:var(--c-bg-panel, #1a181d);border:1px solid var(--c-border-gold, #6b5a3a);border-radius:4px;box-shadow:0 6px 24px #00000080;overflow:hidden}.dao-reader-portraits .portrait-modal-head{display:flex;align-items:center;padding:.55em .7em;border-bottom:1px solid var(--c-border);background:#d8c1880f}.dao-reader-portraits .portrait-modal-head .portrait-title{flex:1;color:var(--c-text);font-size:.92em;letter-spacing:.04em}.dao-reader-portraits .portrait-modal-head .portrait-modal-head-actions{display:inline-flex;align-items:center;gap:.25em}.dao-reader-portraits .portrait-modal-head .portrait-theme-settings-btn{display:inline-flex;align-items:center;justify-content:center;width:2em;height:2em;padding:0;color:var(--c-text-muted);background:transparent;border:1px solid transparent;border-radius:3px;cursor:pointer}.dao-reader-portraits .portrait-modal-head .portrait-theme-settings-btn:hover,.dao-reader-portraits .portrait-modal-head .portrait-theme-settings-btn:focus-visible,.dao-reader-portraits .portrait-modal-head .portrait-theme-settings-btn[aria-expanded=true]{color:var(--c-primary);border-color:var(--c-border-gold);background:#d8c1881a;outline:none}.dao-reader-portraits .portrait-modal-head .portrait-close{background:transparent;border:none;color:var(--c-text-muted);cursor:pointer;padding:.1em;display:inline-flex}.dao-reader-portraits .portrait-modal-head .portrait-close:hover{color:var(--c-text)}.dao-reader-portraits .portrait-theme-settings{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.35em .5em;padding:.55em .7em;border-bottom:1px solid var(--c-border);background:#00000029}.dao-reader-portraits .portrait-theme-settings-head{grid-column:1 / -1;display:flex;align-items:baseline;justify-content:space-between;gap:.5em;color:var(--c-primary);font-size:.78em}.dao-reader-portraits .portrait-theme-settings-hint{color:var(--c-text-dim);font-size:.9em}.dao-reader-portraits .portrait-load-hint{margin-top:.55em;padding:.45em .6em;color:var(--c-text-muted);background:#d8c18812;border:1px solid rgba(216,193,136,.2);border-radius:3px;font-size:.72em;line-height:1.45}.dao-reader-portraits .portrait-theme-setting-row{display:flex;align-items:center;gap:.35em;min-width:0;padding:.25em .35em;color:var(--c-text-muted);font-size:.78em;cursor:pointer;border-radius:3px}.dao-reader-portraits .portrait-theme-setting-row:hover{background:#d8c18814;color:var(--c-text)}.dao-reader-portraits .portrait-theme-setting-row input[type=checkbox]{flex:0 0 auto;width:14px;height:14px;margin:0;accent-color:var(--c-primary)}.dao-reader-portraits .portrait-theme-setting-row input[type=checkbox]:disabled{cursor:not-allowed}.dao-reader-portraits .portrait-theme-setting-icon{flex:0 0 auto}.dao-reader-portraits .portrait-modal-body{padding:.6em;display:flex;flex-direction:column;gap:.5em}.dao-reader-portraits .portrait-display{position:relative;width:100%;max-height:50vh;display:flex;align-items:center;justify-content:center;background:#0000004d;border:1px solid var(--c-border);border-radius:3px;overflow:hidden}.dao-reader-portraits .portrait-img{max-width:100%;max-height:50vh;object-fit:contain}.dao-reader-portraits .portrait-display-actions{position:absolute;top:.35em;right:.35em;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:.3em;max-width:calc(100% - .7em)}.dao-reader-portraits .portrait-display-btn{display:inline-flex;align-items:center;gap:.28em;padding:.28em .5em;background:#0000009e;border:1px solid var(--c-border-gold, #6b5a3a);border-radius:3px;color:var(--c-primary, #d8c188);font:inherit;font-size:.76em;cursor:pointer;transition:background .15s,border-color .15s}.dao-reader-portraits .portrait-display-btn:hover,.dao-reader-portraits .portrait-display-btn:focus-visible{outline:none;background:#d8c18840;border-color:var(--c-primary, #d8c188)}.dao-reader-portraits .portrait-img-err{padding:1.5em;color:var(--c-text-dim);font-size:.84em;font-style:italic}.dao-reader-portraits .portrait-source{display:flex;justify-content:center;gap:.4em}.dao-reader-portraits .portrait-source .src-tag{font-size:.72em;padding:.05em .5em;border-radius:2px}.dao-reader-portraits .portrait-source .src-tag.custom{color:var(--c-accent);border:1px solid rgba(168,136,212,.4);background:#a888d40f}.dao-reader-portraits .portrait-source .src-tag.builtin{color:var(--c-primary);border:1px solid rgba(216,193,136,.4);background:#d8c1880f}.dao-reader-portraits .portrait-source .src-tag.special{color:var(--c-danger, #c4665b);border:1px solid rgba(196,102,91,.4);background:#c4665b14}.dao-reader-portraits .portrait-theme-nav{display:flex;gap:.35em;overflow-x:auto;padding:.1em 0 .2em;scrollbar-width:thin}.dao-reader-portraits .portrait-theme-btn{flex:0 0 auto;min-width:3.8em;max-width:9em;min-height:2.8em;display:inline-flex;align-items:center;justify-content:center;gap:.25em;padding:.35em .55em;color:var(--c-text-muted);background:#00000040;border:1px solid var(--c-border);border-radius:3px;font:inherit;font-size:.78em;cursor:pointer}.dao-reader-portraits .portrait-theme-btn:hover,.dao-reader-portraits .portrait-theme-btn.active{color:var(--c-primary);border-color:var(--c-border-gold);background:#d8c1881f}.dao-reader-portraits .portrait-theme-icon{flex:0 0 auto}.dao-reader-portraits .portrait-theme-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.dao-reader-portraits .portrait-set-row{display:flex;flex-wrap:wrap;gap:.35em;justify-content:center;padding:.3em 0;border-top:1px dashed var(--c-border)}.dao-reader-portraits .portrait-set-thumb{position:relative;width:3.2em;height:4.2em;padding:0;background:#0000004d;border:1px solid var(--c-border);border-radius:3px;overflow:hidden;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}.dao-reader-portraits .portrait-set-thumb img{width:100%;height:100%;object-fit:cover}.dao-reader-portraits .portrait-set-thumb:hover{border-color:var(--c-primary-dim, #8a7a4a)}.dao-reader-portraits .portrait-set-thumb.active{border-color:var(--c-primary, #d8c188);box-shadow:0 0 0 1px var(--c-primary, #d8c188)}.dao-reader-portraits .portrait-set-thumb .set-thumb-err{position:absolute;color:var(--c-text-dim);font-size:.9em}.dao-reader-portraits .portrait-custom-area{display:flex;flex-direction:column;gap:.4em;padding-top:.4em;border-top:1px dashed var(--c-border)}.dao-reader-portraits .portrait-toggle-row{display:flex}.dao-reader-portraits .portrait-empty-hint{display:flex;align-items:center;justify-content:center;gap:.3em;width:100%;padding:.35em;border:1px dashed var(--c-border);border-radius:3px;color:var(--c-text-dim);font-size:.78em;opacity:.7}.dao-reader-portraits .portrait-toggle-btn{width:100%;justify-content:center;background:#a888d414;border-color:#a888d459;color:var(--c-accent, #a888d4)}.dao-reader-portraits .portrait-toggle-btn:hover:not(:disabled){background:#a888d429;border-color:var(--c-accent, #a888d4)}.dao-reader-portraits .portrait-toggle-btn.active{background:#a888d42e;border-color:var(--c-accent, #a888d4)}.dao-reader-portraits .portrait-special-btn{background:#c4665b14;border-color:#c4665b59;color:var(--c-danger, #c4665b)}.dao-reader-portraits .portrait-special-btn:hover:not(:disabled){background:#c4665b29;border-color:var(--c-danger, #c4665b)}.dao-reader-portraits .portrait-special-btn.active{background:#c4665b2e;border-color:var(--c-danger, #c4665b)}.dao-reader-portraits .portrait-file-label{display:inline-flex;align-items:center;justify-content:center;gap:.3em;padding:.4em;background:#d8c18814;border:1px dashed var(--c-border-gold, #6b5a3a);border-radius:3px;color:var(--c-primary);font-size:.82em;cursor:pointer}.dao-reader-portraits .portrait-file-label:hover{background:#d8c18824}.dao-reader-portraits .portrait-file-label .portrait-file-input{display:none}.dao-reader-portraits .portrait-url-row{display:flex;gap:.35em}.dao-reader-portraits .portrait-url-row .portrait-url-input{flex:1;min-width:0;padding:.35em .5em;background:#00000040;border:1px solid var(--c-border);border-radius:3px;color:var(--c-text);font-size:.82em;font-family:inherit}.dao-reader-portraits .portrait-url-row .portrait-url-input:focus{outline:none;border-color:var(--c-primary-dim, #8a7a4a)}.dao-reader-portraits .portrait-btn{padding:.35em .6em;background:#00000040;border:1px solid var(--c-border);border-radius:3px;color:var(--c-text);font-size:.8em;cursor:pointer;display:inline-flex;align-items:center;gap:.25em;font-family:inherit}.dao-reader-portraits .portrait-btn:hover:not(:disabled){border-color:var(--c-primary-dim, #8a7a4a)}.dao-reader-portraits .portrait-btn:disabled{opacity:.4;cursor:not-allowed}.dao-reader-portraits .portrait-btn-danger:hover:not(:disabled){border-color:var(--c-danger, #c4665b);color:var(--c-danger, #c4665b)}.dao-reader-portraits .portrait-modal-overlay{z-index:2147483600;font:16px/1.5 system-ui,sans-serif;padding:12px}.dao-reader-portraits .portrait-modal{max-height:calc(100dvh - 24px);display:flex;flex-direction:column}.dao-reader-portraits .portrait-modal-body{margin:0;border:0;min-width:0;overflow:auto;flex:1;gap:10px}.dao-reader-portraits .portrait-theme-settings{flex-shrink:0;overflow:auto;max-height:25vh}.dao-reader-portraits .portrait-theme-name{white-space:normal;overflow-wrap:anywhere}.dao-reader-portraits button,.dao-reader-portraits input{color-scheme:dark;box-sizing:border-box}.dao-reader-portraits button:focus-visible,.dao-reader-portraits input:focus-visible{outline:2px solid #d8c188;outline-offset:2px}.dao-reader-portraits button:disabled,.dao-reader-portraits input:disabled{opacity:.45;cursor:not-allowed}.dao-reader-portraits input[type=checkbox]{appearance:none;background:#15151a;border:1px solid #9d895a;width:18px;height:18px;border-radius:3px;display:inline-grid;place-content:center}.dao-reader-portraits input[type=checkbox]:checked{background:#d8c188;border-color:#d8c188}.dao-reader-portraits input[type=checkbox]:checked:before{content:"✓";color:#15151a;font:700 14px/1 system-ui}.dao-reader-portraits input[type=checkbox]:disabled{background:#38342b;border-color:#71664f}.dao-reader-portraits .portrait-file-label{position:relative;min-height:40px}.dao-reader-portraits .portrait-file-input{display:block;position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;background:#18171b;color:#e3dfcf;border:1px solid #6b5a3a}.dao-reader-portraits .portrait-file-label:focus-within{outline:2px solid #d8c188;outline-offset:2px}.dao-reader-portraits .portrait-url-row{display:flex;gap:8px}.dao-reader-portraits .portrait-url-input{min-height:40px}.dy-reader-v2__portrait[role=button]{cursor:pointer}.dy-reader-v2__portrait[role=button]:focus-visible{outline:2px solid #d8c188;outline-offset:3px}@media(max-width:400px){.dao-reader-portraits .portrait-url-row{flex-wrap:wrap}.dao-reader-portraits .portrait-url-input{flex-basis:100%}}.dao-reader-portraits .portrait-remove-confirm{display:flex;flex-wrap:wrap;gap:8px;padding:10px;border:1px solid #6b5a3a;background:#242029}.dao-reader-portraits .dy-icon{display:inline-block;vertical-align:middle;flex-shrink:0}.dao-reader-portraits input[type=checkbox]{appearance:none!important;background:#15151a!important;color:#e3dfcf!important;border:1px solid #9d895a!important;box-shadow:none!important}.dao-reader-portraits input[type=checkbox]:checked{background:#d8c188!important;border-color:#d8c188!important}.dao-reader-portraits input[type=checkbox]:checked:before{content:"✓"!important;color:#15151a!important}.dao-reader-portraits input[type=checkbox]:disabled{background:#38342b!important;border-color:#71664f!important}.dao-reader-portraits button:focus-visible,.dao-reader-portraits input:focus-visible{outline:2px solid #d8c188!important;outline-offset:2px!important}';function installDatabasePortraitBridge(){
+  const gallery=globalThis.__daoyuanCreatePortraitGallery();
   let readyPromise=null,index=null,catalogCache=null;
   const imageCache=new Map(),preferredCache=new Map(),safeCache=new Map(),listeners=new Set();
   let preferenceSignature='',catalogIdentity=null,customSnapshot={},selectionSnapshot='',statusSnapshot='',notificationTimer=null;
+  const appearanceKey='daoyuan_phone_reader_appearance_v1';
+  let appearanceSnapshot='',pinSnapshot={},galleryRevision=-1,gallerySyncing=false,galleryStarted=false;
+  let officialIdentity=null,officialSignature='',galleryError='';
+  function appearance(){try{const value=JSON.parse(storageValue(appearanceKey)||'{}');return value&&typeof value==='object'&&!Array.isArray(value)?value:{};}catch{return {};}}
   const variants=Object.fromEntries([...'嵐蘇夢緋陸兒瓊錦紅羅蘿綾淵雲塵葉無風靈寧語雪蓮蘭慕媚婉燭譽顧'].map((c,i)=>[c,[...'岚苏梦绯陆儿琼锦红罗萝绫渊云尘叶无风灵宁语雪莲兰慕媚婉烛誉顾'][i]]));
   const normalized=value=>String(value||'').normalize('NFKC').replace(/[\u200b-\u200f\ufeff\s·・]/g,'').split('').map(c=>variants[c]||c).join('');
   const storageValue=key=>{try{return localStorage.getItem(key)||'';}catch{return '';}};
@@ -586,15 +785,25 @@ ${l.theme}`)??l)),n[s]=[...a.values()]}const o=[...e.drawers];for(const s of t.d
     notificationTimer=setTimeout(()=>{notificationTimer=null;for(const fn of listeners)try{fn();}catch{}},80);
   }
   function synchronize(){
-    const nextCustom={...ar(),...Object.fromEntries(ot)};
+    const rawCustom={...ar(),...Object.fromEntries(ot)};
+    if(galleryStarted&&!gallerySyncing&&!gallery.matchesLegacy(rawCustom))void syncGallery().catch(()=>{});
+    const nextCustom={...rawCustom,...Object.fromEntries(gallery.names().map(name=>[name,gallery.selected(name)]))};
     const nextSelection=selectionKeys.map(storageValue).join('\u001f');
+    const nextAppearance=storageValue(appearanceKey);
+    let pinsChanged=false;
+    if(nextAppearance!==appearanceSnapshot){
+      const raw=appearance().facePin;
+      const pins=raw&&typeof raw==='object'&&!Array.isArray(raw)?Object.fromEntries(Object.entries(raw).filter(([,url])=>typeof url==='string'&&url)):{};
+      pinsChanged=Object.keys(pins).length!==Object.keys(pinSnapshot).length||Object.keys(pins).some(name=>pins[name]!==pinSnapshot[name]);
+      pinSnapshot=pins;appearanceSnapshot=nextAppearance;
+    }
     const current=state(),nextStatus=[current.phase,current.source,current.workshop,current.failed.join('|')].join('\u001f');
     const oldNames=Object.keys(customSnapshot),newNames=Object.keys(nextCustom);
     const customChanged=oldNames.length!==newNames.length||newNames.some(name=>customSnapshot[name]!==nextCustom[name]);
-    const dataChanged=catalogIdentity!==Rt||customChanged;
-    const selectionChanged=nextSelection!==selectionSnapshot,statusChanged=nextStatus!==statusSnapshot;
+    const dataChanged=catalogIdentity!==Rt||customChanged||galleryRevision!==gallery.revision();
+    const selectionChanged=nextSelection!==selectionSnapshot||pinsChanged,statusChanged=nextStatus!==statusSnapshot;
     if(!dataChanged&&!selectionChanged&&!statusChanged)return;
-    catalogIdentity=Rt;customSnapshot=nextCustom;selectionSnapshot=nextSelection;statusSnapshot=nextStatus;
+    catalogIdentity=Rt;customSnapshot=nextCustom;selectionSnapshot=nextSelection;statusSnapshot=nextStatus;galleryRevision=gallery.revision();
     if(dataChanged||selectionChanged)invalidate();
     if(dataChanged)safeCache.clear();
     queueNotification();
@@ -607,13 +816,39 @@ ${l.theme}`)??l)),n[s]=[...a.values()]}const o=[...e.drawers];for(const s of t.d
     return index={names,exact,folded};
   }
   function canonical(value){const text=String(value||'').trim(),list=nameIndex();return list.exact.has(text)?text:list.folded.get(normalized(text))||text;}
-  const safe=value=>{const text=String(value||'');if(safeCache.has(text))return safeCache.get(text);const result=Zn(text);if(safeCache.size>=512)safeCache.clear();safeCache.set(text,result);return result;};
-  function preferred(name){const person=canonical(name);if(preferredCache.has(person))return preferredCache.get(person);const result=safe(no(person));preferredCache.set(person,result);return result;}
+  const safe=value=>{const text=String(value||'');if(safeCache.has(text))return safeCache.get(text);const result=gallery.owns(text)?text:Zn(text);if(safeCache.size>=512)safeCache.clear();safeCache.set(text,result);return result;};
+  function locked(name){
+    const person=canonical(name),stored=pinSnapshot[person]||Object.entries(pinSnapshot).find(([key])=>normalized(key)===normalized(person))?.[1];
+    const entry=stored?.startsWith('@phone-gallery:')?gallery.byId(person,stored.slice(15)):null;
+    const legacyEntry=(stored==='@phone-custom'||stored===si(person))?gallery.byId(person,gallery.legacyId(person)):null;
+    const url=entry?.url||legacyEntry?.url||(stored==='@phone-custom'?safe(si(person)):stored);
+    if(!url)return '';
+    return gallery.entries(person).some(item=>item.url===url)||safe(si(person))===url||ur(person).some(group=>group.images.some(item=>safe(item.url)===url))?url:'';
+  }
+  function setLockedPortrait(name,value){
+    const person=canonical(name),url=value?safe(value):'';
+    if(!person||(value&&(!url||!images(person).some(item=>item.url===url))))return false;
+    const settings=appearance(),bag={...(settings.facePin&&typeof settings.facePin==='object'&&!Array.isArray(settings.facePin)?settings.facePin:{})};
+    for(const key of Object.keys(bag))if(normalized(key)===normalized(person))delete bag[key];
+    const entry=gallery.entries(person).find(item=>item.url===url);
+    const pin=entry?'@phone-gallery:'+entry.id:url.startsWith('data:image/')&&safe(si(person))===url?'@phone-custom':url;
+    if(pin)Object.defineProperty(bag,person,{value:pin,enumerable:true,writable:true,configurable:true});
+    settings.facePin=bag;
+    try{localStorage.setItem(appearanceKey,JSON.stringify(settings));}catch{return false;}
+    _t++;wt();xt?.publish('selection');return true;
+  }
+  function notifyAppearancePins(pins){
+    if(!pins||typeof pins!=='object'||Array.isArray(pins))pins={};
+    if(Object.keys(pins).length===Object.keys(pinSnapshot).length&&Object.keys(pins).every(name=>pins[name]===pinSnapshot[name]))return;
+    synchronize();xt?.publish('selection');
+  }
+  function preferred(name){const person=canonical(name);if(preferredCache.has(person))return preferredCache.get(person);const result=safe(locked(person)||gallery.selected(person)||no(person));preferredCache.set(person,result);return result;}
   function images(value){
     const person=canonical(value);if(imageCache.has(person))return imageCache.get(person);
     const list=[],seen=new Set();
     const add=(url,theme)=>{url=safe(url);if(url&&!seen.has(url)){seen.add(url);list.push(Object.freeze({url,theme,src:'phone'}));}};
-    add(si(person),'custom');
+    const own=gallery.entries(person);
+    if(own.length)for(const item of own)add(item.url,'custom');else add(si(person),'custom');
     for(const group of ur(person))for(const item of group.images)add(item.url,group.key);
     const selected=preferred(person),at=list.findIndex(item=>item.url===selected);
     if(at>0)list.unshift(list.splice(at,1)[0]);
@@ -626,9 +861,35 @@ ${l.theme}`)??l)),n[s]=[...a.values()]}const o=[...e.drawers];for(const s of t.d
   }
   function state(){
     const phase=Nt==='idle'||Nt==='loading'||cr?'loading':Nt==='cache'||Nt==='stale-cache'||Nt==='error'||Nt==='workshop'?'fallback':'ready';
-    return {phase,source:Rt.source,workshop:Xn?'ready':cr?'loading':'not-present',updatedAt:Rt.updatedAt,loaded:Rt.source!=='empty'?[Rt.source]:[],failed:lr?[lr]:[]};
+    return {phase,source:Rt.source,workshop:Xn?'ready':cr?'loading':'not-present',updatedAt:Rt.updatedAt,loaded:Rt.source!=='empty'?[Rt.source]:[],failed:[lr,galleryError].filter(Boolean)};
   }
-  function ready(){return readyPromise||(readyPromise=Fc().then(value=>{synchronize();return value;}));}
+  async function syncGallery(){
+    if(gallerySyncing)return;
+    gallerySyncing=true;
+    try{await gallery.refresh();await mc();}finally{gallerySyncing=false;}
+    synchronize();
+  }
+  async function initializeGallery(){
+    galleryStarted=true;
+    try{await syncGallery();galleryError='';}catch(error){galleryStarted=false;galleryError=error.message||'自定义图库暂时无法读取';}
+    synchronize();
+  }
+  function ready(){return readyPromise||(readyPromise=Fc().then(async value=>{await initializeGallery();return value;}));}
+  async function addCustomPortrait(name,inputs,options){
+    await ready();const person=canonical(name),ids=await gallery.add(person,inputs,options);galleryStarted=true;galleryError='';
+    zn(person,null);await mc();_t++;wt();xt?.publish('custom');synchronize();
+    return ids.map(id=>gallery.byId(person,id)).filter(Boolean);
+  }
+  async function removeCustomPortrait(name,id){
+    await ready();const person=canonical(name),ok=await gallery.remove(person,id);galleryStarted=true;galleryError='';
+    zn(person,null);await mc();_t++;wt();xt?.publish('custom');synchronize();return ok;
+  }
+  ui=async(name,url)=>{try{if(url)await addCustomPortrait(name,url);else await removeCustomPortrait(name);return true;}catch{return false;}};
+  fi=async name=>{try{return await removeCustomPortrait(name);}catch{return false;}};
+  function signature(){
+    if(officialIdentity!==Rt){officialIdentity=Rt;officialSignature=JSON.stringify(Rt.characters);}
+    return JSON.stringify([officialSignature,gallery.names().map(name=>[name,gallery.entryIds(name)]),nameIndex().names.map(name=>[name,preferred(name)])]);
+  }
   function notifyIfChanged(){
     const signature=['daoyuan_custom_portraits','daoyuan_female_portraits','daoyuan_portrait_set_index','daoyuan_special_portraits','daoyuan_portrait_theme','daoyuan_portrait_theme_index','daoyuan_portrait_theme_visibility'].map(storageValue).join('\u001f');
     if(signature===preferenceSignature)return;
@@ -636,16 +897,19 @@ ${l.theme}`)??l)),n[s]=[...a.values()]}const o=[...e.drawers];for(const s of t.d
     void mc().then(()=>{_t++;wt();}).catch(()=>{});
   }
   const releaseBus=xc(),releaseCache=hi(synchronize);
-  window.addEventListener('pagehide',()=>{releaseCache();releaseBus();Gn?.abort();if(notificationTimer!==null)clearTimeout(notificationTimer);listeners.clear();invalidate();safeCache.clear();},{once:true});
+  const releaseGallery=gallery.subscribe(()=>{void mc().then(synchronize).catch(()=>{});});
+  window.addEventListener('pagehide',()=>{releaseGallery();gallery.destroy();releaseCache();releaseBus();Gn?.abort();if(notificationTimer!==null)clearTimeout(notificationTimer);listeners.clear();invalidate();safeCache.clear();},{once:true});
   synchronize();
   const api={
-    names:()=>nameIndex().names,images,catalog,safe,state,
-    preferred,
+    names:()=>nameIndex().names,images,catalog,safe,state,signature,
+    preferred,locked,setLockedPortrait,notifyAppearancePins,
     lookup(name){const person=canonical(name),items=images(person),current=state();return{canonical:person,count:items.length,status:items.length?'available':current.phase==='loading'?'loading':current.phase==='fallback'?'unavailable':'not-found'};},
     customPortraits:custom,
+    customEntries:name=>name?gallery.entries(canonical(name)):gallery.names().flatMap(person=>gallery.entries(person).map(item=>({...item,name:person}))),
+    customStorage:()=>gallery.stats(),addCustomPortrait,removeCustomPortrait,
     setCustomPortrait:(name,url)=>ui(canonical(name),String(url||'')),
     subscribe(fn){listeners.add(fn);return()=>listeners.delete(fn);},notifyIfChanged,ready,
-    refresh(){readyPromise=Fc().then(value=>{synchronize();return value;});return readyPromise.then(()=>catalog());},
+    refresh(){readyPromise=Fc().then(async value=>{await initializeGallery();return value;});return readyPromise.then(()=>catalog());},
   };
   window.__daoyuanPhonePortraitSource=api;
   void ready().catch(()=>{});
@@ -689,7 +953,7 @@ window.__daoyuanCreateReaderPortraits=(e,t)=>{let r=!1,n=null,o=null,s=null;cons
 (function () {
   'use strict';
 
-  const VERSION = '3.4-phone.9';
+  const VERSION = '3.4-phone.12';
 
   /* ==========================================================================
    *  ★ 步 骤 0：先找到「宿主窗口」
@@ -1041,7 +1305,7 @@ window.__daoyuanCreateReaderPortraits=(e,t)=>{let r=!1,n=null,o=null,s=null;cons
       const v = o.facePin;
       const bag = {};
       if (v && typeof v === 'object' && !Array.isArray(v)) {
-        Object.keys(v).forEach((k) => { const u = safeUrl(v[k]); if (u) bag[String(k).trim()] = u; });
+        Object.keys(v).forEach((k) => { const u = v[k] === '@phone-custom' || /^@phone-gallery:[a-f0-9]{64}$/.test(v[k]) ? v[k] : safeUrl(v[k]); if (u) bag[String(k).trim()] = u; });
       }
       CONFIG.facePin = bag;
       n += 1;
@@ -1101,7 +1365,9 @@ window.__daoyuanCreateReaderPortraits=(e,t)=>{let r=!1,n=null,o=null,s=null;cons
   function saveSettings() {
     const o = {};
     SAVED_KEYS.forEach((k) => { o[k] = CONFIG[k]; });
-    return writeRaw(LS_SETTINGS, JSON.stringify(o));
+    const saved = writeRaw(LS_SETTINGS, JSON.stringify(o));
+    if(saved)window.__daoyuanPhonePortraitSource?.notifyAppearancePins?.(o.facePin);
+    return saved;
   }
 
   function resetSettings() {
@@ -1218,9 +1484,10 @@ window.__daoyuanCreateReaderPortraits=(e,t)=>{let r=!1,n=null,o=null,s=null;cons
   // Pins select an image already supplied by the phone. Old stand-alone pins,
   // gallery entries and hardcoded manual URLs cannot introduce another source.
   function faceImages(name, skipPin) {
-    const images = window.__daoyuanPhonePortraitSource.images(name);
+    const source = window.__daoyuanPhonePortraitSource;
+    const images = source.images(name);
     if (skipPin) return images;
-    const pinned = keysOf(name).map(key => CONFIG.facePin?.[key]).find(url => images.some(item => item.url === url));
+    const pinned = source.locked ? source.locked(name) : keysOf(name).map(key => CONFIG.facePin?.[key]).find(url => images.some(item => item.url === url));
     return pinned ? images.filter(item => item.url === pinned) : images;
   }
 
@@ -1855,7 +2122,7 @@ window.__daoyuanCreateReaderPortraits=(e,t)=>{let r=!1,n=null,o=null,s=null;cons
     managedReaders.delete(article);
   }
 
-  function attachReaders() {
+  function attachReaders(changedArticles) {
     readerActive = true;
     ensureStyle();
     rpStart();
@@ -1866,7 +2133,9 @@ window.__daoyuanCreateReaderPortraits=(e,t)=>{let r=!1,n=null,o=null,s=null;cons
     const current = new Set(cards());
     managedReaders.forEach((a) => { if (!current.has(a)) releaseReader(a); });
     current.forEach((a) => managedReaders.add(a));
-    scan(DOC, true);
+    if (Array.isArray(changedArticles)) {
+      changedArticles.forEach((article) => { applyTo(article); rpEnhance(article); });
+    } else scan(DOC, true);
     setupIO();
     setupRO();
     queueFollow();
@@ -2940,15 +3209,22 @@ function preload(list) {
     recentNames = [n].concat(recentNames.filter((x) => x !== n)).slice(0, 6);
   }
 
-  function saveCustom(name, url) {
+  async function saveCustom(name, url, replaceId) {
     const n = String(name || '').trim();
     if (!n) return false;
-    const obj = Object.assign({}, readCustomPortraits());
-    if (url) obj[n] = cleanUrl(url); else delete obj[n];
-    const ok = window.__daoyuanPhoneAppearance.setCustomPortrait(n, url ? cleanUrl(url) : "");
+    const source=window.__daoyuanPhonePortraitSource;
+    const locked=source.locked(n),own=source.customEntries(n);
+    const affectsLock=own.some(item=>item.url===locked&&(!replaceId||item.id===replaceId));
+    if(url){
+      const added=await source.addCustomPortrait(n,cleanUrl(url),replaceId?{replaceId}:{});
+      if(replaceId&&affectsLock&&added.at(-1))setFacePin(n,added.at(-1).url);
+    }else{
+      await source.removeCustomPortrait(n,replaceId);
+      if(affectsLock)setFacePin(n,'');
+    }
     custCache = null; custAt = 0;                 // 让立绘查询立刻看到新值
-    if (ok) touchRecent(n);
-    return ok;
+    touchRecent(n);
+    return true;
   }
 
   /* 一行 = 名字 + 地址 + ✎改 + ×删。默认只列前 LIST_CAP 条（每条都要建 DOM），
@@ -2957,21 +3233,25 @@ function preload(list) {
   let listQuery = '';
   let listAll = false;
 
-  function fillEdit(n, u) {
+  let editPortraitId = null;
+  function fillEdit(n, u, id) {
     if (nmInRef) nmInRef.value = n;
     if (urlInRef) urlInRef.value = u;
-    sayList('已填回输入框：' + n + '　改完点「存」覆盖');
+    editPortraitId=id||null;
+    sayList('已填回输入框：' + n + '　改完点「存」仅更新这张');
     try { if (nmInRef && nmInRef.focus) nmInRef.focus(); } catch (_) {}
   }
 
   function renderList() {
     if (!listBox) return;
-    const obj = readCustomPortraits();
-    const keys = Object.keys(obj);
+    const source=window.__daoyuanPhonePortraitSource;
+    const entries=source.customEntries(),stats=source.customStorage();
+    const keys = [...new Set(entries.map(item=>item.name))];
     if (cntBox) {
-      cntBox.textContent = '自定义立绘 ' + keys.length + ' 条'
+      cntBox.textContent = '自定义立绘 ' + entries.length + ' 张 / ' + keys.length + ' 人'
         + (catalog ? ' ＋ 官方库 ' + Object.keys(catalog).length + ' 角色' : '')
-        + (catalogTried && !catalog ? '（官方库拉取失败）' : '');
+        + (catalogTried && !catalog ? '（官方库拉取失败）' : '')
+        + ' · 本地 '+(stats.localBytes/1048576).toFixed(2)+' / 100MB（所有角色合计）· 图床网址不限张数';
     }
     listBox.textContent = '';
 
@@ -2981,9 +3261,9 @@ function preload(list) {
     }
 
     const q = listQuery.trim().toLowerCase();
-    const recent = recentNames.filter((n) => Object.prototype.hasOwnProperty.call(obj, n));
-    let show = recent.concat(keys.filter((n) => recent.indexOf(n) < 0));
-    if (q) show = show.filter((n) => (n + ' ' + obj[n]).toLowerCase().indexOf(q) >= 0);
+    const recent = recentNames.filter((n) => keys.includes(n));
+    let show = entries.slice().sort((a,b)=>(recent.indexOf(a.name)<0?999:recent.indexOf(a.name))-(recent.indexOf(b.name)<0?999:recent.indexOf(b.name)));
+    if (q) show = show.filter((item) => (item.name+' '+item.url+' '+item.filename).toLowerCase().indexOf(q) >= 0);
     if (!listAll && !q && show.length > LIST_CAP) show = show.slice(0, LIST_CAP);
 
     if (!show.length) {
@@ -2991,26 +3271,26 @@ function preload(list) {
       return;
     }
 
-    show.forEach((n) => {
-      const u = String(obj[n] || '');
-      const preview=u.length>512?u.slice(0,100)+'…':u;
+    show.forEach((item) => {
+      const n=item.name,u=item.url;
+      const preview=item.kind==='local'?'本地 · '+item.filename+' · '+(item.bytes/1048576).toFixed(2)+'MB':u;
       const isNew = recent.indexOf(n) >= 0;
       listBox.appendChild(mk('div', { class: 'pi' + (isNew ? ' new' : '') }, [
         mk('span', { class: 'n', text: n, title: n }),
         mk('span', { class: 'u', text: preview, title: preview }),
         mk('button', {
           class: 'e',
-          text: '✎',
-          title: '把这条填回上面的输入框，改完点「存」覆盖',
-          on: { click: () => { fillEdit(n, u); } },
+          text: item.kind==='local'?'看':'✎',
+          title: item.kind==='local'?'打开并选择这张立绘':'编辑这一个网址，保留其他图片',
+          on: { click: () => { if(item.kind==='local')lbOpen(n,u);else fillEdit(n,u,item.id); } },
         }),
         mk('button', {
           class: 'd',
           text: '×',
           title: '删掉这条',
           on: {
-            click: () => {
-              saveCustom(n, '');
+            click: async () => {
+              try{await saveCustom(n,'',item.id);}catch(error){sayList(error.message||'删除失败',true);return;}
               recentNames = recentNames.filter((x) => x !== n);
               renderList();
               sayList('已删除：' + n);
@@ -3021,11 +3301,11 @@ function preload(list) {
       ]));
     });
 
-    if (!listAll && !q && show.length < keys.length) {
+    if (!listAll && !q && show.length < entries.length) {
       listBox.appendChild(mk('div', { class: 'more' }, [
-        mk('span', { class: 'hint', text: '还有 ' + (keys.length - show.length) + ' 条被折叠　' }),
+        mk('span', { class: 'hint', text: '还有 ' + (entries.length - show.length) + ' 张被折叠　' }),
         mk('button', {
-          text: '显示全部 ' + keys.length + ' 条',
+          text: '显示全部 ' + entries.length + ' 张',
           on: { click: () => { listAll = true; renderList(); } },
         }),
       ]));
@@ -3186,41 +3466,38 @@ function preload(list) {
     return true;
   }
 
-  /** 把某个人的立绘固定成这一张（之后只用它）。同一张再点一次 = 取消固定。 */
-  function pinFace(name, url) {
+  function setFacePin(name, url) {
     const n = String(name || '').trim();
-    const u = safeUrl(url);
-    if (!n || !u || !faceImages(n, true).some(item => item.url === u)) return false;
-    const bag = Object.assign({}, CONFIG.facePin || {});
-    if (bag[n] === u) delete bag[n]; else bag[n] = u;
-    CONFIG.facePin = bag;
-    saveSettings();
+    if (!n || !window.__daoyuanPhonePortraitSource.setLockedPortrait(n, url)) return false;
+    CONFIG.facePin = window.__daoyuanPhoneAppearance.settings().facePin || {};
     /* ★ v2.6：这里原来是 refreshAll(true)。
        那个 true 的含义是"不管现在显示的是谁，重新按台词最多的那位从头开始"，
        于是每张卡都会跳回【第一个人第一张】—— 你刚固定好的那张立刻被顶掉，
        看上去就是"点了没反应 / 画面乱跳"。
        改成 false（保留当前那张脸），再显式把画面跳到被固定的这个人身上。 */
     refreshAll(false);
-    if (bag[n]) {
+    if (url) {
       cards().forEach((a) => {
         const st = a.__dyBg;
         if (st && st.names.indexOf(n) >= 0) jumpToFace(a, n);
       });
     }
     if (panelRoot) renderFaces();
-    return !!bag[n];
+    return true;
+  }
+
+  /** 同一张再点一次取消；头像与底图共用同一角色锁定。 */
+  function pinFace(name, url) {
+    const u = safeUrl(url);
+    if (!u) return false;
+    const next = window.__daoyuanPhonePortraitSource.locked(name) === u ? '' : u;
+    return setFacePin(name, next) && !!next;
   }
 
   function unpinFace(name) {
     const n = String(name || '').trim();
-    if (!n || !(CONFIG.facePin || {})[n]) return 0;
-    const bag = Object.assign({}, CONFIG.facePin || {});
-    delete bag[n];
-    CONFIG.facePin = bag;
-    saveSettings();
-    refreshAll(false);                 // ★ v2.6 同上：保住当前这张，不跳回第一个人
-    if (panelRoot) renderFaces();
-    return 1;
+    if (!n || !window.__daoyuanPhonePortraitSource.locked(n)) return 0;
+    return setFacePin(n, '') ? 1 : 0;
   }
 
   function srcLabel(s) {
@@ -3781,7 +4058,9 @@ function preload(list) {
       return { n, u };
     };
 
-    const doAdd = () => {
+    let tableSaving=false;
+    const doAdd = async () => {
+      if(tableSaving)return;
       const r = parseEntry();
       if (r.err) { sayList(r.err, true); say(r.err, true); return; }
       if (!r.n) { sayList('先填角色名', true); say('先填角色名', true); return; }
@@ -3794,23 +4073,22 @@ function preload(list) {
         say(msg, true);
         return;
       }
-      const had = Object.prototype.hasOwnProperty.call(readCustomPortraits(), r.n);
-      if (!saveCustom(r.n, r.u)) {
-        sayList('写不进去：浏览器拒绝了 localStorage（可能满了）—— 先「导出」备份再清理', true);
-        return;
-      }
+      tableSaving=true;addBtn.disabled=true;
+      try{await saveCustom(r.n,r.u,editPortraitId);}catch(error){sayList(error.message||'保存失败',true);return;}
+      finally{tableSaving=false;addBtn.disabled=false;}
+      const edited=!!editPortraitId;editPortraitId=null;
       nmInRef.value = '';
       urlInRef.value = '';
       listQuery = '';
       if (listSrch) listSrch.value = '';           // 清掉搜索，让置顶那条直接在第一行
       renderList();
       const face = detectedFaces().some((f) => f.name === r.n || norm(f.name) === norm(r.n));
-      sayList((had ? '已更新：' : '已保存：') + r.n
+      sayList((edited ? '已更新这张：' : '已新增立绘：') + r.n
         + (face ? '　★ 本层有 TA，底图已生效' : '　（本层正文没提到 TA —— 钉住上方名字才能预览）'));
-      say((had ? '已更新：' : '已保存：') + r.n);
+      say((edited ? '已更新：' : '已新增：') + r.n);
       markChanged(true);                 // ★ fresh：刚配好立绘的人要立刻出现在底图上
     };
-    const addBtn = mk('button', { class: 'add pri', text: '存', title: '同名就覆盖（地址留空不会删除，放心填）', on: { click: doAdd } });
+    const addBtn = mk('button', { class: 'add pri', text: '存', title: '同名新增一张；点某张的铅笔后，只更新那一张', on: { click: doAdd } });
     [nmInRef, urlInRef].forEach((el) => el.addEventListener('keydown', (e) => {
       if (!e) return;
       if (e.key === 'Enter' || e.keyCode === 13) {
@@ -3830,12 +4108,24 @@ function preload(list) {
       }, 140);
     });
 
-    listMsg = mk('p', { class: 'hint msg', text: '填【角色名】+【https 地址】→ 点「存」。同名覆盖；地址留空不会删。' });
+    const localInput=mk('input',{type:'file',multiple:'',accept:'image/png,image/jpeg,image/webp,image/gif','aria-label':'立绘表选择本地图片'});
+    localInput.style.maxWidth='100%';
+    localInput.addEventListener('change',async()=>{
+      const files=Array.from(localInput.files||[]),name=String(nmInRef.value||'').trim();localInput.value='';
+      if(!files.length||tableSaving)return;
+      if(!name){sayList('先填角色名，再选择本地图片。',true);return;}
+      tableSaving=true;localInput.disabled=addBtn.disabled=true;
+      try{await window.__daoyuanPhonePortraitSource.addCustomPortrait(name,files);touchRecent(name);renderList();markChanged(true);sayList('已为'+name+'新增'+files.length+'张本地图片；原有立绘保留。');}
+      catch(error){sayList(error.message||'保存失败',true);}
+      finally{tableSaving=false;localInput.disabled=addBtn.disabled=false;}
+    });
+    listMsg = mk('p', { class: 'hint msg', text: '同角色可保存多张；填名字＋图片网址后点「存」，或先填名字再选本地图片（可多选）。' });
     listBox = mk('div', { class: 'plist' });
     const sec5 = mk('div', { class: 'sec' }, [
       mk('h4', { text: '立绘表' }),
       cntBox,
       mk('div', { class: 'pair' }, [nmInRef, urlInRef, addBtn]),
+      localInput,
       listSrch,
       listMsg,
       listBox,
@@ -4196,6 +4486,8 @@ function preload(list) {
   let lbRoot = null, lbShadow = null, lbImg = null, lbStage = null, lbPicture = null;
   let lbNameEl = null, lbMetaEl = null, lbErrEl = null, lbPrev = null, lbNext = null;
   let lbItems = [], lbIdx = 0, lbWho = '', lbBound = false, lbResize = null, lbReturnFocus = null;
+  let lbLock = null, lbUrl = null, lbFile = null, lbSave = null, lbActionEl = null, lbUsage = null, lbDelete = null, lbConfirm = null;
+  let lbSession = 0, lbSaving = false;
 
   function ensureLbStyle() {
     // Remove obsolete page-level CSS from earlier versions; current styles are private.
@@ -4206,6 +4498,7 @@ function preload(list) {
     return `
       :host { color-scheme:dark; }
       * { box-sizing:border-box; }
+      [hidden] { display:none!important; }
       .viewer { position:absolute;inset:0;display:flex;flex-direction:column;min-width:0;min-height:0;
         overflow:hidden;background:rgba(6,8,11,.96);color:#e8dfca;
         font:14px/1.5 "Microsoft YaHei",system-ui,sans-serif;text-align:center; }
@@ -4214,6 +4507,16 @@ function preload(list) {
       .meta { color:#a8a292;font-size:12px;overflow-wrap:anywhere; }
       .close { margin-left:auto;flex:0 0 44px;width:44px;height:40px;border:1px solid #6d654f;
         border-radius:8px;background:#20252c;color:#f2e6ca;font:24px/1 system-ui;cursor:pointer; }
+      .control,.url { min-height:38px;border:1px solid #6d654f;border-radius:6px;background:#20252c;color:#f2e6ca;font:inherit;padding:6px 10px; }
+      .control { cursor:pointer; }.control[aria-pressed="true"]{background:#564a2b;border-color:#d3b76b;}
+      .control:disabled,.url:disabled { opacity:.5;cursor:wait; }
+      .control:focus-visible,.url:focus-visible,summary:focus-visible{outline:2px solid #d3b76b;outline-offset:2px;}
+      .custom { flex:0 0 auto;padding:0 14px;text-align:left;max-height:36vh;overflow:auto; }
+      summary { cursor:pointer;color:#d9c390;padding:5px 0; }
+      .custom-row { display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:4px 0; }
+      .url { flex:1 1 170px;min-width:0; }.file{max-width:100%;font:inherit;}
+      .custom p,.action { font-size:12px;margin:4px 0;color:#b8b09e;overflow-wrap:anywhere; }
+      .action { flex:0 0 auto;padding:0 14px; }.action[data-error]{color:#f1ada3;}
       .stage { flex:1 1 auto;min-height:0;min-width:0;padding:12px 16px;display:flex;
         align-items:center;justify-content:center;overflow:hidden;position:relative;cursor:zoom-out; }
       .picture { flex:none;position:relative;margin:0;width:1px;height:1px;max-width:100%;max-height:100%;
@@ -4276,7 +4579,14 @@ function preload(list) {
     const close = mk('button',{type:'button',class:'close',text:'×','aria-label':'关闭大图',title:'关闭'});
     close.autofocus = true;
     close.addEventListener('click',lbClose);
-    const bar = mk('header',{class:'bar'},[lbNameEl,lbMetaEl,close]);
+    lbLock = mk('button',{type:'button',class:'control','data-action':'lock-portrait',text:'锁定这张','aria-pressed':'false'});
+    lbLock.addEventListener('click',()=>{
+      const item=lbItems[lbIdx];if(lbSaving||!lbWho||!item)return;
+      const wasLocked=window.__daoyuanPhonePortraitSource.locked(lbWho)===item.url;
+      if(!setFacePin(lbWho,wasLocked?'':item.url)){lbSay('锁定未能保存，请检查浏览器储存空间。',true);return;}
+      lbSyncLock();lbSay(wasLocked?'已解除锁定，恢复该角色原本的选图。':'已锁定：'+lbWho+'的对白头像与底图会使用这张。');
+    });
+    const bar = mk('header',{class:'bar'},[lbNameEl,lbMetaEl,lbLock,close]);
     lbImg = mk('img',{class:'image',alt:'',decoding:'async',loading:'eager',referrerpolicy:'no-referrer',draggable:'false'});
     lbPrev = mk('button',{type:'button',class:'edge prev','aria-label':'上一张',title:'点击图片左侧：上一张'},[mk('span',{text:'‹','aria-hidden':'true'})]);
     lbNext = mk('button',{type:'button',class:'edge next','aria-label':'下一张',title:'点击图片右侧：下一张'},[mk('span',{text:'›','aria-hidden':'true'})]);
@@ -4295,7 +4605,57 @@ function preload(list) {
       lbErrEl.textContent='图片未能载入，请检查图源连接，或点击左右两侧换一张。';
       lbErrEl.hidden=false;lbErrEl.setAttribute('data-error','');
     });
-    lbShadow.appendChild(mk('section',{class:'viewer'},[bar,lbStage,
+    lbFile=mk('input',{type:'file',class:'file',multiple:'',accept:'image/png,image/jpeg,image/webp,image/gif','aria-label':'选择本地立绘图片'});
+    lbFile.addEventListener('change',async()=>{
+      const files=Array.from(lbFile.files||[]),session=lbSession,who=lbWho;
+      if(!files.length||lbSaving)return;
+      lbFile.value='';
+      if(files.some(file=>!/^image\/(png|jpeg|webp|gif)$/i.test(file.type))){lbSay('请选择 PNG、JPEG、WebP 或 GIF 图片。',true);return;}
+      if(files.reduce((sum,file)=>sum+file.size,0)>100*1048576){lbSay('本地图片合计上限为 100MB。',true);return;}
+      lbBusy(true);lbSay('正在读取本地图片…');
+      try{
+        if(session===lbSession)await lbSaveCustom(who,files,session);
+      }catch{if(session===lbSession)lbSay('图片读取失败，请重新选择。',true);}
+      finally{if(session===lbSession)lbBusy(false);}
+    });
+    lbUrl=mk('input',{type:'url',class:'url',placeholder:'https://…','aria-label':'自定义立绘图片网址'});
+    lbSave=mk('button',{type:'button',class:'control',text:'保存并锁定'});
+    const saveUrl=async()=>{
+      if(lbSaving)return;
+      const url=cleanUrl(lbUrl.value),session=lbSession,who=lbWho;
+      if(!/^https?:\/\//i.test(url)||!safeUrl(url)){lbSay('请填入有效的 http:// 或 https:// 图片网址。',true);return;}
+      lbBusy(true);try{await lbSaveCustom(who,url,session);}finally{if(session===lbSession)lbBusy(false);}
+    };
+    lbSave.addEventListener('click',saveUrl);
+    lbUrl.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();void saveUrl();}});
+    const custom=mk('details',{class:'custom'},[
+      mk('summary',{text:'新增自定义立绘（可多张）'}),
+      mk('div',{class:'custom-row'},[lbFile]),
+      mk('div',{class:'custom-row'},[lbUrl,lbSave]),
+      mk('p',{text:'同角色新增图片会保留原图，保存后锁定最后新增的一张。与「阅读与立绘 → 立绘表」共用；本地图片所有角色合计 100MB，图床网址不设张数上限。'})
+    ]);
+    lbUsage=mk('p',{class:'action','data-portrait-storage':''});
+    lbDelete=mk('button',{type:'button',class:'control',text:'删除这张自定义图'});
+    lbDelete.addEventListener('click',()=>{if(!lbSaving)lbConfirm.hidden=false;});
+    lbConfirm=mk('div',{class:'custom-row',hidden:''},[
+      mk('span',{text:'只删除这张自定义图？'}),
+      mk('button',{type:'button',class:'control',text:'确认删除',on:{click:async()=>{
+        if(lbSaving)return;const session=lbSession,who=lbWho,current=lbItems[lbIdx]?.url;
+        const entry=window.__daoyuanPhonePortraitSource.customEntries(who).find(item=>item.url===current);if(!entry)return;
+        const wasLocked=window.__daoyuanPhonePortraitSource.locked(who)===current;lbBusy(true);
+        try{
+          await window.__daoyuanPhonePortraitSource.removeCustomPortrait(who,entry.id);
+          if(session!==lbSession)return;
+          if(wasLocked)setFacePin(who,'');
+          lbItems=faceImages(who,true).map(item=>({...item}));lbIdx=0;lbRender();if(panelRoot)renderList();lbSay('已删除这张，其他图片保留；本地容量已重新计算。');
+        }catch(error){if(session===lbSession)lbSay(error.message||'删除失败',true);}
+        finally{if(session===lbSession)lbBusy(false);}
+      }}}),
+      mk('button',{type:'button',class:'control',text:'取消删除',on:{click:()=>{lbConfirm.hidden=true;}}})
+    ]);
+    custom.append(lbDelete,lbConfirm);
+    lbActionEl=mk('p',{class:'action',role:'status','aria-live':'polite'});
+    lbShadow.appendChild(mk('section',{class:'viewer'},[bar,lbStage,custom,lbUsage,lbActionEl,
       mk('p',{class:'hint',text:'点击图片左侧 / 右侧换图；点击图片外的空白、× 或 Esc 关闭。'})]));
     lbRoot.addEventListener('cancel',event=>{event.preventDefault();lbClose();});
     // documentElement also protects the non-dialog fallback from body transforms.
@@ -4304,14 +4664,39 @@ function preload(list) {
     return lbRoot;
   }
 
+  function lbSay(text,bad=false){if(lbActionEl){lbActionEl.textContent=text;lbActionEl.toggleAttribute('data-error',bad);}}
+  function lbBusy(busy){lbSaving=busy;for(const input of [lbFile,lbUrl,lbSave,lbDelete])if(input)input.disabled=busy;lbSyncLock();}
+  function lbSyncLock(){
+    if(!lbLock)return;
+    const locked=window.__daoyuanPhonePortraitSource.locked(lbWho),current=lbItems[lbIdx]?.url;
+    lbLock.textContent=locked&&locked===current?'已锁定 · 点击解锁':'锁定这张';
+    lbLock.setAttribute('aria-pressed',String(!!locked&&locked===current));lbLock.disabled=lbSaving||!lbWho||!current;
+    lbLock.title=locked&&locked!==current?'该角色已锁定另一张，点击改为这张':'按角色保存，对白头像与底图共用';
+    if(lbDelete)lbDelete.hidden=!window.__daoyuanPhonePortraitSource.customEntries(lbWho).some(item=>item.url===current);
+    if(lbConfirm)lbConfirm.hidden=true;
+    if(lbUsage){const stats=window.__daoyuanPhonePortraitSource.customStorage();lbUsage.textContent='本地 '+(stats.localBytes/1048576).toFixed(2)+' / 100MB（所有角色合计） · 图床 '+stats.remoteCount+' 张（不占本地额度）';}
+  }
+  async function lbSaveCustom(who,url,session){
+    try{
+      const added=await window.__daoyuanPhonePortraitSource.addCustomPortrait(who,url);
+      if(session!==lbSession)return;
+      const selected=added.at(-1)?.url;if(!selected){lbSay('没有新增图片。',true);return;}
+      const locked=setFacePin(who,selected);
+      lbItems=faceImages(who,true).map(item=>({...item}));lbIdx=Math.max(0,lbItems.findIndex(item=>item.url===selected));
+      lbUrl.value='';if(panelRoot)renderList();lbRender();
+      lbSay(locked?'已保存至立绘表，并锁定为'+who+'的立绘。':'图片已存入立绘表，但锁定未能保存，请再试一次。',!locked);
+    }catch(error){if(session===lbSession)lbSay(error.message||'图片未能保存，请重试。',true);}
+  }
+
   function lbRender() {
     if (!lbRoot) return;
     const item=lbItems[lbIdx];
     lbNameEl.textContent=lbWho||'角色立绘';
-    lbMetaEl.textContent='第 '+(lbIdx+1)+' / '+lbItems.length+' 张'+(item?.theme?' · '+item.theme:'');
+    lbMetaEl.textContent=lbItems.length?'第 '+(lbIdx+1)+' / '+lbItems.length+' 张'+(item?.theme?' · '+item.theme:''):'尚无立绘，可在下方新增';
     lbImg.alt=(lbWho||'角色')+'的立绘';
-    lbErrEl.textContent='正在载入图片…';lbErrEl.hidden=false;lbErrEl.removeAttribute('data-error');
+    lbErrEl.textContent=item?'正在载入图片…':'可在下方选择本地图片或填入图片网址。';lbErrEl.hidden=false;lbErrEl.removeAttribute('data-error');
     lbPrev.hidden=lbNext.hidden=lbItems.length<2;
+    lbSyncLock();
     // Give the hit areas a usable box while a remote image is pending or fails.
     lbPicture.style.width=Math.max(48,Math.min(520,HOST.innerWidth-32))+'px';
     lbPicture.style.height=Math.max(48,Math.min(640,HOST.innerHeight-140))+'px';
@@ -4325,10 +4710,11 @@ function preload(list) {
     const items=who?faceImages(who,true).map(item=>({...item})):[];
     const direct=safeUrl(url);
     if(direct&&!items.some(item=>item.url===direct))items.unshift({url:direct,theme:'',src:'card'});
-    if(!items.length)return false;
+    if(!who&&!items.length)return false;
     ensureLbStyle();buildLb();
     if(lbRoot.classList.contains('hide'))lbReturnFocus=DOC.activeElement;
-    lbWho=who;lbItems=items;lbIdx=Math.max(0,direct?items.findIndex(item=>item.url===direct):0);
+    lbSession++;lbWho=who;lbItems=items;lbIdx=Math.max(0,direct?items.findIndex(item=>item.url===direct):0);
+    lbUrl.value='';lbFile.value='';lbBusy(false);lbSay('');
     lbRoot.classList.remove('hide');imp(lbRoot,'display','block');
     if(typeof lbRoot.showModal==='function'&&!lbRoot.open){
       try{lbRoot.showModal();}catch{lbRoot.setAttribute('open','');}
@@ -4337,6 +4723,7 @@ function preload(list) {
   }
 
   function lbClose() {
+    lbSession++;
     if(lbRoot){if(typeof lbRoot.close==='function'&&lbRoot.open)lbRoot.close();lbRoot.classList.add('hide');imp(lbRoot,'display','none');}
     lbImg?.removeAttribute('src');
     if(lbErrEl){lbErrEl.textContent='';lbErrEl.hidden=true;}
@@ -4346,7 +4733,7 @@ function preload(list) {
   }
 
   function lbStep(delta){
-    if(lbItems.length<2)return false;
+    if(lbSaving||lbItems.length<2)return false;
     lbIdx=(lbIdx+delta+lbItems.length)%lbItems.length;lbRender();return true;
   }
 
@@ -4366,8 +4753,11 @@ function preload(list) {
       if(lbOpen(row.dataset.speaker,image.currentSrc||image.getAttribute('src'))){event.preventDefault();event.stopImmediatePropagation();}
     },{capture:true,signal:phoneBindings.signal});
     HOST.addEventListener('keydown',event=>{
-      if(event.key!=='Escape'||!lbRoot||lbRoot.classList.contains('hide'))return;
-      event.preventDefault();event.stopImmediatePropagation();lbClose();
+      if(!lbRoot||lbRoot.classList.contains('hide'))return;
+      if(event.key==='Escape'){event.preventDefault();event.stopImmediatePropagation();lbClose();return;}
+      if((event.key==='ArrowLeft'||event.key==='ArrowRight')&&!event.composedPath().some(node=>node.matches?.('input,textarea,[contenteditable="true"]'))){
+        event.preventDefault();event.stopImmediatePropagation();lbStep(event.key==='ArrowLeft'?-1:1);
+      }
     },{capture:true,signal:phoneBindings.signal});
     HOST.addEventListener('resize',lbFit,{passive:true,signal:phoneBindings.signal});
   }
@@ -4375,6 +4765,8 @@ function preload(list) {
   function unmountLb(){
     lbClose();lbResize?.disconnect();lbResize=null;lbRoot?.remove();
     lbRoot=lbShadow=lbImg=lbStage=lbPicture=lbNameEl=lbMetaEl=lbErrEl=lbPrev=lbNext=null;
+    lbLock=lbUrl=lbFile=lbSave=lbActionEl=null;
+    lbUsage=lbDelete=lbConfirm=null;
     DOC.getElementById(LB_STYLE_ID)?.remove();DOC.documentElement.removeAttribute('data-dy-lb');
   }
 
@@ -4668,7 +5060,7 @@ function preload(list) {
     version: VERSION,
     ownerWindow: window,
     integrated: true,
-    syncNativeSource() {catalog=window.__daoyuanPhonePortraitSource.catalog();catalogAt=Date.now();refreshAll(true);},
+    syncNativeSource() {catalog=window.__daoyuanPhonePortraitSource.catalog();catalogAt=Date.now();CONFIG.facePin=window.__daoyuanPhoneAppearance.settings().facePin||{};refreshAll(false);},
     attachReaders, detachReaders,
     mountPhoneSettings,
     setFollow(value) { CONFIG.followReading=!!value; saveSettings(); refreshAll(false); if(panelRoot)syncUI(); },
@@ -4707,21 +5099,21 @@ function preload(list) {
       });
       return out;
     },
-    setPortrait(name, url) {
+    async setPortrait(name, url) {
       const n = String(name || '').trim();
       const u = cleanUrl(url);
       if (!n) return '先给个角色名';
       if (!u) return '地址是空的（要删请用 removePortrait）';
       if (!safeUrl(u)) return '地址要 https:// 开头（本地文件 / http 都不行）';
-      saveCustom(n, u);
+      await saveCustom(n, u);
       renderList();
       refreshAll(true);
       return '已保存：' + n;
     },
-    removePortrait(name) {
+    async removePortrait(name) {
       const n = String(name || '').trim();
       if (!n) return '先给个角色名';
-      saveCustom(n, '');
+      await saveCustom(n, '');
       renderList();
       refreshAll(true);
       return '已删除：' + n;
@@ -5595,6 +5987,9 @@ function preload(list) {
   const READER_MESSAGE_LIMIT = 5;
   const originalContentByReader = new WeakMap();
   const contentSignatureByMessage = new WeakMap();
+  const readersByMessage = new WeakMap();
+  const managedMessages = new Set();
+  let initialPassPending = true;
   const dirtyMessages = new Set();
   let eligibleMessagesBefore = new Set();
   let messageWindowDirty = true;
@@ -5817,6 +6212,7 @@ function preload(list) {
 
   function buildReader(content) {
     if (!content?.isConnected || content.closest(PAPER_SELECTOR)) return;
+    if (isMessageBeingEdited(content.closest('.mes'))) return;
     if (content.dataset.daoyuanBoundaryComplete !== 'true') return;
     const originalContentSnapshot = content.cloneNode(true);
     const movedTickets = [];
@@ -6039,6 +6435,7 @@ function preload(list) {
 
   const helperRenderRequests = new WeakMap();
   function requestHelperMessageRender(message) {
+    if (isMessageBeingEdited(message)) return;
     const text = message?.querySelector('.mes_text');
     const id = Number(message?.getAttribute('mesid'));
     if (!text || !Number.isInteger(id) || id < 0) return;
@@ -6076,12 +6473,13 @@ function preload(list) {
     // this floor's iframe renderer; refreshOneMessage would rebuild the whole
     // message again and can create a reader/host refresh loop.
     Promise.resolve().then(async () => {
-      if (disposed || generationActive || !message.isConnected
+      if (disposed || generationActive || !message.isConnected || isMessageBeingEdited(message)
         || helperRenderRequests.get(message) !== request
         || Number(message.getAttribute('mesid')) !== id
         || rawMessageForMessage(message) !== source
         || (chatId != null && getContext?.()?.chatId !== chatId)) {
         if (helperRenderRequests.get(message) === request) helperRenderRequests.delete(message);
+        if (generationActive && message.isConnected) dirtyMessages.add(message);
         return;
       }
       if (!nodes.some(node => node.isConnected && text.contains(node)
@@ -6146,6 +6544,7 @@ function readerHasCompleteBody(content,bounds) {
   }
 
   function rebuildReaderBoundary(message, bounds) {
+    if (isMessageBeingEdited(message)) return false;
     const text = message.querySelector('.mes_text'), doc = text.ownerDocument;
     let context;
     for (const scope of [doc.defaultView, window]) {
@@ -6173,12 +6572,14 @@ function readerHasCompleteBody(content,bounds) {
     for (const content of [...root.querySelectorAll('content')].reverse()) content.replaceWith(...content.childNodes);
     start.after(root); start.remove(); end.remove();
     prepareRestoredSpecialModules(root);
+    if (isMessageBeingEdited(message)) return false;
     preserveReaderModules(text, holder.content);
     text.replaceChildren(holder.content);
     return true;
   }
 
   function prepareReaderBoundaries(message) {
+    if (isMessageBeingEdited(message)) return;
     const text = message?.querySelector('.mes_text'); if (!text) return;
     if (text.querySelector(PAPER_SELECTOR)) return;
     const roots = [...text.querySelectorAll('[data-daoyuan-content-root]')];
@@ -6283,6 +6684,7 @@ function repairReaderBoundary(article) {
 
   let portraitCharacters = null;
   let portraitLoading = null;
+  let portraitCatalogSignature = '';
 
   function storageFor(doc) {
     try { return doc.defaultView?.localStorage || window.parent?.localStorage || localStorage; }
@@ -6307,10 +6709,18 @@ function repairReaderBoundary(article) {
     catch (_) { return ''; }
   }
 
+  function syncPortraitCatalog() {
+    if(disposed)return;
+    const next=window.__daoyuanPhonePortraitSource.catalog();
+    const signature=window.__daoyuanPhonePortraitSource.signature?.()||fastTextSignature(JSON.stringify(next||{}));
+    portraitCharacters=next;
+    // Cache/status reloads can replace the catalog object without changing images.
+    if(signature===portraitCatalogSignature)return;
+    portraitCatalogSignature=signature;presentationSignatureBefore='';forcePresentationSync=true;
+    window.parent?.__daoYuanPortraitBg?.syncNativeSource();schedule();
+  }
   function ensurePortraitCatalog(doc) {
-    if (!portraitLoading) portraitLoading = window.__daoyuanPhonePortraitSource.ready().then(() => {
-      portraitCharacters = window.__daoyuanPhonePortraitSource.catalog(); schedule();
-    });
+    if (!portraitLoading) portraitLoading = window.__daoyuanPhonePortraitSource.ready().then(syncPortraitCatalog);
     return portraitLoading;
   }
 
@@ -6383,12 +6793,20 @@ function repairReaderBoundary(article) {
   }
 
   const portraitUrlByImage = new WeakMap();
+  const sourceManagedPortraits = new WeakSet();
   function refreshDialoguePortraits(article) {
     article.querySelectorAll('.dy-reader-v2__dialogue[data-speaker]').forEach(row => {
       const speaker = normalizedSpeaker(row.dataset.speaker);
       const portrait = portraitForSpeaker(article.ownerDocument, speaker);
-      if (!portrait) return;
       let image = row.querySelector('img.dy-reader-v2__portrait');
+      if (!portrait) {
+        if(image&&sourceManagedPortraits.has(image)){
+          const fallback=article.ownerDocument.createElement('span');
+          fallback.className='dy-reader-v2__portrait dy-reader-v2__portrait-fallback';fallback.textContent=speaker.slice(0,1);
+          image.replaceWith(fallback);
+        }
+        return;
+      }
       if (!image) {
         image = article.ownerDocument.createElement('img');
         image.className = 'dy-reader-v2__portrait'; image.alt = speaker + '立绘';
@@ -6398,6 +6816,7 @@ function repairReaderBoundary(article) {
         if(image.getAttribute('src')!==portrait)image.src=portrait;
         portraitUrlByImage.set(image,portrait);
       }
+      sourceManagedPortraits.add(image);
     });
   }
 
@@ -6670,7 +7089,7 @@ function repairReaderBoundary(article) {
   }
 
   function updateTermControls(doc, state, message = '') {
-    const enabled = termPreference(doc);
+    const enabled = termPreference(doc.ownerDocument || doc);
     doc.querySelectorAll('.dy-reader-v2__terms-toggle').forEach(input => {
       const checked = String(enabled); if (input.getAttribute('aria-checked') !== checked) input.setAttribute('aria-checked', checked);
       input.setAttribute('aria-disabled', String(state === 'loading'));
@@ -6726,8 +7145,18 @@ function repairReaderBoundary(article) {
     if (enabled) ensureTermWidget(doc);
   }
 
+  function isMessageBeingEdited(message) {
+    if (!message?.querySelector) return false;
+    // Native Tavern messageEdit() replaces mes_text with this raw-text editor.
+    // Its removal of a reader is intentional, not a missing-reader repair case.
+    if (message.querySelector('.mes_text textarea.edit_textarea, .mes_text textarea#curEditTextarea')) return true;
+    const controls = message.querySelector('.mes_edit_buttons');
+    return Boolean(controls?.style.display && controls.style.display !== 'none');
+  }
+
   function isVisibleAiMessage(message) {
     if (!message?.isConnected || message.getAttribute('is_user') !== 'false') return false;
+    if (isMessageBeingEdited(message)) return false;
     if (message.getAttribute('is_system') === 'true' || message.hidden || message.getAttribute('aria-hidden') === 'true') return false;
     const style = message.ownerDocument.defaultView?.getComputedStyle(message);
     return !style || (style.display !== 'none' && style.visibility !== 'hidden');
@@ -6735,6 +7164,7 @@ function repairReaderBoundary(article) {
 
   function restoreReader(article) {
     if (!article?.isConnected) return;
+    if (isMessageBeingEdited(article.closest('.mes'))) return;
     const snapshot = originalContentByReader.get(article);
     if (snapshot) {
       snapshot.movedTickets?.forEach(({ anchor, ticket }) => {
@@ -6792,12 +7222,15 @@ function repairReaderBoundary(article) {
       || preserved
       || message.querySelector('.mes_text')?.textContent
       || '';
-    return [message.getAttribute('mesid') || '', message.getAttribute('swipe_id') || '', fastTextSignature(raw || fallback)].join('|');
+    const bounds = raw ? readerContentBounds(raw) : null;
+    // Summary/MVU/status output and floor renumbering do not change this body.
+    const body = bounds ? bounds.source.slice(bounds.start, bounds.end) : raw || fallback;
+    return [message.dataset.name || '', fastTextSignature(body)].join('|');
   }
 
   function presentationSignature(doc, moonlit) {
     const storage = storageFor(doc);
-    const keys = ['daoyuan-reader-font', 'daoyuan-reader-size', 'daoyuan-reader-terms-enabled', 'daoyuan_statusbar_settings', 'daoyuan_custom_portraits', 'daoyuan_portrait_theme', 'daoyuan_special_portraits', 'daoyuan_female_portraits', 'daoyuan_portrait_theme_index', 'daoyuan_portrait_set_index'];
+    const keys = ['daoyuan-reader-font', 'daoyuan-reader-size', 'daoyuan-reader-terms-enabled', 'daoyuan_phone_reader_appearance_v1', 'daoyuan_statusbar_settings', 'daoyuan_custom_portraits', 'daoyuan_portrait_theme', 'daoyuan_special_portraits', 'daoyuan_female_portraits', 'daoyuan_portrait_theme_index', 'daoyuan_portrait_set_index'];
     let stored = '';
     try { stored = keys.map(key => storage?.getItem(key) || '').join('\u001f'); } catch (_) {}
     return fastTextSignature(String(moonlit) + '|' + String(Boolean(portraitCharacters)) + '|' + stored);
@@ -6876,17 +7309,52 @@ function repairReaderBoundary(article) {
   function renderAll() {
     const doc=hostDocument();ensureStyle(doc);ensurePortraitCatalog(doc);
     const moonlit=hasMoonlitEchoes(doc);
-    const eligibleMessages=new Set([...doc.querySelectorAll('.mes[is_user="false"]')].filter(isVisibleAiMessage).slice(-READER_MESSAGE_LIMIT));
-    doc.querySelectorAll(PAPER_SELECTOR).forEach(article=>{if(!eligibleMessages.has(article.closest('.mes')))restoreReader(article);});
-    for(const message of dirtyMessages)if(!eligibleMessages.has(message))dirtyMessages.delete(message);
-    const preferencesOnly=forcePresentationSync;forcePresentationSync=false;
-    eligibleMessages.forEach(message=>{
+    const changedMessages=new Set(dirtyMessages);dirtyMessages.clear();
+    let bindingsChanged=false;
+    for(const message of managedMessages)if(!message.isConnected){managedMessages.delete(message);bindingsChanged=true;}
+    if(initialPassPending){
+      [...doc.querySelectorAll('.mes[is_user="false"]')].filter(isVisibleAiMessage).slice(-READER_MESSAGE_LIMIT).forEach(message=>changedMessages.add(message));
+      initialPassPending=false;
+    }
+    const nextPresentation=forcePresentationSync?presentationSignature(doc,moonlit):presentationSignatureBefore;
+    const preferencesChanged=forcePresentationSync&&nextPresentation!==presentationSignatureBefore;
+    presentationSignatureBefore=nextPresentation;forcePresentationSync=false;
+    const targets=new Set(changedMessages);
+    if(preferencesChanged)managedMessages.forEach(message=>targets.add(message));
+    const newBindings=[];
+    targets.forEach(message=>{
+      if(!message.isConnected)return;
+      if(isMessageBeingEdited(message))return;
+      if(message.getAttribute('is_user')!=='false'){
+        message.querySelectorAll(PAPER_SELECTOR).forEach(restoreReader);
+        managedMessages.delete(message);contentSignatureByMessage.delete(message);readersByMessage.delete(message);bindingsChanged=true;return;
+      }
+      if(!isVisibleAiMessage(message))return;
       let articles=[...message.querySelectorAll(PAPER_SELECTOR)];
       const previous=contentSignatureByMessage.get(message);
-      let structureChanged=!articles.length||!previous||dirtyMessages.has(message);
-      let signature=previous;
-      if(structureChanged||!preferencesOnly){signature=messageContentSignature(message);structureChanged=structureChanged||signature!==previous;}
+      const signature=changedMessages.has(message)||!previous?messageContentSignature(message):previous;
+      let structureChanged=!articles.length||previous!==signature;
+      let reused=false;
+      if(!articles.length&&previous===signature){
+        const cached=readersByMessage.get(message);
+        if(cached?.length&&cached.every(article=>!article.isConnected)){
+          prepareReaderBoundaries(message);
+          const roots=[...message.querySelectorAll('.mes_text content, .mes_text [data-daoyuan-content-root]')];
+          if(roots.length===cached.length){
+            roots.forEach((root,index)=>{
+              const parent=root.parentElement;
+              const wrapped=parent?.tagName==='P'&&[...parent.childNodes].every(node=>node===root||(node.nodeType===3&&!node.textContent.trim()));
+              (wrapped?parent:root).replaceWith(cached[index]);
+            });
+            articles=cached;structureChanged=false;reused=true;
+          }
+        }
+      }
       if(structureChanged){
+        if(articles.length&&previous&&signature!==previous){
+          const bounds=readerContentBounds(rawMessageForMessage(message));
+          if(!bounds||!rebuildReaderBoundary(message,bounds))return;
+        }
         prepareReaderBoundaries(message);
         message.querySelectorAll('.mes_text content, .mes_text [data-daoyuan-content-root]').forEach(buildReader);
         articles=[...message.querySelectorAll(PAPER_SELECTOR)];
@@ -6895,17 +7363,22 @@ function repairReaderBoundary(article) {
           renderZsjkDialogues(article);promoteVisibleSpeakerDialogues(article);promoteCommentDialogues(article);
           renderZsjkDialogues(article);renderTaggedDialogues(article);
         });
-        contentSignatureByMessage.set(message,signature);dirtyMessages.delete(message);
+        articles.forEach(article=>{article.dataset.daoyuanSourceSignature=signature;});
       }
-      articles.forEach(article=>{
-        syncThemeCompatibility(article,moonlit);refreshDialoguePortraits(article);upgradeSettingsPanel(article);
-        protectReaderChrome(article);syncReaderPreferences(article);
-      });
+      if(articles.length){managedMessages.add(message);contentSignatureByMessage.set(message,signature);readersByMessage.set(message,articles);}
+      if(structureChanged||preferencesChanged){
+        const termsEnabled=termPreference(doc);
+        articles.forEach(article=>{
+          syncThemeCompatibility(article,moonlit);refreshDialoguePortraits(article);upgradeSettingsPanel(article);
+          protectReaderChrome(article);syncReaderPreferences(article);
+          article.querySelector('.dy-reader-v2__body')?.toggleAttribute('data-daoyuan-term-ignore',!termsEnabled);
+          updateTermControls(article,termsEnabled?(termWidgetInstance?'ready':'loading'):'idle',termsEnabled?(termWidgetInstance?'已启用 · 点击正文术语查看 iWiki':'正在载入术语库…'):'默认关闭');
+        });
+      }
+      if(structureChanged||reused)newBindings.push(...articles);
       requestHelperMessageRender(message);
     });
-    window.parent?.__daoYuanPortraitBg?.attachReaders?.();
-    const termsEnabled=termPreference(doc);setTermScanEnabled(doc,termsEnabled);
-    updateTermControls(doc,termsEnabled?(termWidgetInstance?'ready':'loading'):'idle',termsEnabled?(termWidgetInstance?'已启用 · 点击正文术语查看 iWiki':'正在载入术语库…'):'默认关闭');
+    if(bindingsChanged||newBindings.length)window.parent?.__daoYuanPortraitBg?.attachReaders?.(newBindings);
   }
 
   window[INSTANCE_KEY]?.destroy?.();
@@ -6914,16 +7387,16 @@ function repairReaderBoundary(article) {
   let generationActive = false, disposed = false;
   const generationDisposers = [];
   const observeTarget = doc.querySelector('#chat') || doc.body || doc.documentElement;
-  const observeOptions = { childList: true, subtree: true };
+  const observeOptions = { childList: true, characterData: true, subtree: true, attributes: true, attributeFilter: ['mesid','swipe_id','is_user','is_system','hidden','aria-hidden','style'] };
   const renderSafely = () => {
     if (disposed || generationActive) return;
     // Display writes must never notify this same observer and schedule another render.
-    observer.disconnect();
+    collectMutations(observer.takeRecords(),false);observer.disconnect();
     try { renderAll(); }
     finally { if (!disposed) observer.observe(observeTarget, observeOptions); }
   };
   const schedule = () => {
-    if (disposed || generationActive || scheduled) return;
+    if (disposed || generationActive || scheduled || (!initialPassPending&&!forcePresentationSync&&!dirtyMessages.size)) return;
     scheduled = true;
     renderTimer = window.setTimeout(() => {
       renderTimer = null;
@@ -6932,22 +7405,47 @@ function repairReaderBoundary(article) {
       });
     }, 180);
   };
-  const observer = new MutationObserver(records => {
+  const collectMutations = (records,dispatch=true) => {
     let relevant=false;
     for(const record of records){
       const target=record.target?.nodeType===1?record.target:record.target?.parentElement;
+      if(record.type==='attributes'&&!target?.matches?.('.mes'))continue;
       if(target?.closest?.('style,script,canvas,.TH-render,.custom-zsjk,.custom-zsjk-ripple,[data-daoyuan-image-module],[data-wnq-dialogue],.wnq-dialogue-mount,.custom-wnq-dialogue-mount,.dy-pbg,.dy-reader-v2__header,.dy-reader-v2__footer'))continue;
       const changed=[...record.addedNodes,...record.removedNodes];
       if(changed.length&&changed.every(node=>node.nodeType===1&&node.matches?.('canvas,.custom-zsjk-ripple,.dy-pbg,.dy-reader-v2__portrait,.dy-reader-v2__portrait-fallback')))continue;
       const message=target?.closest?.('.mes');
-      if(message){dirtyMessages.add(message);relevant=true;}
-      else if(changed.some(node=>node.nodeType===1&&(node.matches?.('.mes')||node.querySelector?.('.mes'))))relevant=true;
+      if(message){
+        if(isMessageBeingEdited(message))continue;
+        if((message.getAttribute('is_user')==='false'||managedMessages.has(message))&&(target?.closest?.('.mes_text')||record.type==='attributes')){dirtyMessages.add(message);relevant=true;}
+      }else for(const node of changed){
+        if(node.nodeType!==1)continue;
+        const messages=node.matches?.('.mes')?[node]:[...node.querySelectorAll?.('.mes')||[]];
+        for(const item of messages){
+          if(item.isConnected&&item.getAttribute('is_user')==='false'){dirtyMessages.add(item);relevant=true;}
+          else if(managedMessages.has(item)){dirtyMessages.add(item);relevant=true;}
+        }
+      }
     }
-    if(relevant)schedule();
-  });
+    if(relevant&&dispatch)schedule();
+  };
+  const observer = new MutationObserver(records=>collectMutations(records));
 
-  const pauseRendering = () => { generationActive = true; };
-  const resumeRendering = () => { generationActive = false; forcePresentationSync=false; schedule(); };
+  const pauseRendering = () => {
+    generationActive=true;
+    if(renderTimer!==null)window.clearTimeout(renderTimer);
+    if(renderFrame!==null)(doc.defaultView||window).cancelAnimationFrame(renderFrame);
+    renderTimer=null;renderFrame=null;scheduled=false;
+  };
+  const resumeRendering = () => { generationActive = false; schedule(); };
+  const markEditedMessage = value => {
+    const key=value?.messageId??value?.message_id??value;
+    if(key==null||(typeof key==='string'&&!key.trim()))return;
+    const id=Number(key);
+    if(!Number.isInteger(id)||id<0)return;
+    const message=doc.querySelector('.mes[mesid="'+id+'"]');
+    if(message?.getAttribute('is_user')==='false'&&!isMessageBeingEdited(message)){dirtyMessages.add(message);schedule();}
+  };
+  const changeChat = () => { managedMessages.clear();dirtyMessages.clear();initialPassPending=true;resumeRendering(); };
   // Bind to the available Tavern Helper/host emitter without awaiting generation work.
   const eventScopes = [window];
   try { if (window.parent !== window) eventScopes.push(window.parent); } catch (_) {}
@@ -6959,7 +7457,9 @@ function repairReaderBoundary(article) {
     if (!subscribe || !events?.GENERATION_STARTED || !events?.GENERATION_ENDED) continue;
     const listeners = [[events.GENERATION_STARTED, (_type, _options, dryRun) => { if (!dryRun) pauseRendering(); }],
       [events.GENERATION_ENDED, resumeRendering], [events.GENERATION_STOPPED, resumeRendering],
-      [events.CHAT_CHANGED, resumeRendering]].filter(([name]) => name);
+      [events.CHAT_CHANGED, changeChat], [events.MESSAGE_EDITED,markEditedMessage],
+      [events.MESSAGE_UPDATED,markEditedMessage], [events.MESSAGE_SWIPED,markEditedMessage],
+      [events.MESSAGE_RECEIVED,markEditedMessage]].filter(([name]) => name);
     for (const [name, fn] of listeners) {
       try {
         const off = subscribe(name, fn);
@@ -6983,12 +7483,13 @@ function repairReaderBoundary(article) {
     preferredPortrait:(speaker)=>portraitForSpeaker(doc,speaker),
     async loadPortraits(force){const source=window.__daoyuanPhonePortraitSource;await (force?source.refresh():source.ready());return source.catalog();},
     refreshPreferences(){forcePresentationSync=true;schedule();},
-    refresh(){forcePresentationSync=false;schedule();},
+    refresh(){managedMessages.forEach(message=>dirtyMessages.add(message));initialPassPending=true;schedule();},
     destroy() {
     disposed = true;
     if (renderTimer !== null) window.clearTimeout(renderTimer);
     if (renderFrame !== null) (doc.defaultView || window).cancelAnimationFrame(renderFrame);
     generationDisposers.splice(0).forEach(off => { try { off(); } catch (_) {} });
+    dirtyMessages.clear();managedMessages.clear();
     observer.disconnect();
     window.parent?.__daoYuanPortraitBg?.detachReaders?.();
     doc.querySelectorAll(PAPER_SELECTOR).forEach(restoreReader);
@@ -7001,7 +7502,7 @@ function repairReaderBoundary(article) {
     if (termWidgetManaged) { try { termWidgetInstance?.uninstall?.(); } catch (_) {} termWidgetInstance = null; }
     delete window[INSTANCE_KEY];
   } };
-  generationDisposers.push(window.__daoyuanPhonePortraitSource.subscribe(() => {portraitCharacters=window.__daoyuanPhonePortraitSource.catalog();window.parent?.__daoYuanPortraitBg?.syncNativeSource();schedule();}));
+  generationDisposers.push(window.__daoyuanPhonePortraitSource.subscribe(syncPortraitCatalog));
   renderSafely();
   syncTermFeature(doc);
 })();
@@ -8016,7 +8517,7 @@ promise.catch(()=>{if(globalThis[key]===entry)delete globalThis[key];});return p
 
 if(typeof globalThis.__daoyuanPhoneUpdate?.apply==='function')await bootDaoyuanPhone();
 else {
-const options={"manifests":[],"api":"https://api.github.com/repos/linxin1925/DaoYuan-Phone/contents/releases/cdn/%E9%81%93%E6%B8%8A%E5%B0%8F%E6%89%8B%E6%9C%BAV1.2%E7%89%88%E6%9C%AC%E6%B8%85%E5%8D%95.json?ref=main","fallback":[],"fallbackRef":"891093006502ebc7baad5c0fc2f4f877c6afea41","path":"%E9%81%93%E6%B8%8A%E5%B0%8F%E6%89%8B%E6%9C%BAV1.2%E5%A4%96%E9%93%BE%E8%BF%90%E8%A1%8C%E6%97%B6.js","manifestPath":"releases/cdn/道渊小手机V1.2外链运行时.js","embeddedBaseline":"2026-11-09T07:53:44.521Z","bundledLabel":"V1.3.3 R8.2","embeddedBuildId":"4ba77149da4c9f5b3741ac011d4be51cd6752ab4e7431bb404022f23bedd73bd"};
+const options={"manifests":[],"api":"https://api.github.com/repos/linxin1925/DaoYuan-Phone/contents/releases/cdn/%E9%81%93%E6%B8%8A%E5%B0%8F%E6%89%8B%E6%9C%BAV1.2%E7%89%88%E6%9C%AC%E6%B8%85%E5%8D%95.json?ref=main","fallback":[],"fallbackRef":"fe56ca7b9770623c714547461a560a67057bd7ea","path":"%E9%81%93%E6%B8%8A%E5%B0%8F%E6%89%8B%E6%9C%BAV1.2%E5%A4%96%E9%93%BE%E8%BF%90%E8%A1%8C%E6%97%B6.js","manifestPath":"releases/cdn/道渊小手机V1.2外链运行时.js","embeddedBaseline":"2026-11-12T06:37:18.398Z","bundledLabel":"V1.3.4 R8.3","embeddedBuildId":"430f6cd2952a8ed09b276ef67a9b73fd395457e215446b9a3fce3749364ab46e"};
 const loadedRef=new URL(import.meta.url).pathname.match(/@([a-f0-9]{40})\//i)?.[1];
 if(loadedRef){options.loadedRef=loadedRef;options.fallbackRef=loadedRef;}
 await (async function loadCdnPhone({ manifests, api, fallback, fallbackRef, path, manifestPath, loadedRef, embeddedBaseline, embeddedBuildId, bundledLabel = '本地内置版' }, bootLocal) {
