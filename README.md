@@ -1,9 +1,10 @@
 # 道渊小手机
 
-面向 SillyTavern 的道渊世界观内嵌手机前端。当前正式发行版为 **V1.3.4 R8.3**。下载见 [GitHub Release](https://github.com/linxin1925/DaoYuan-Phone/releases/tag/v1.3.4)。
+面向 SillyTavern 的道渊世界观内嵌手机前端。当前正式发行版为 **V1.3.5 R8.3**。下载见 [GitHub Release](https://github.com/linxin1925/DaoYuan-Phone/releases/tag/v1.3.5)。
 
 ## 功能
 
+- V1.3.5 整合 R8.3-r5 图片更新卡顿修复：图片生成进度与结果独立更新，保留已完成正文；图片脚本刷新不再带动整段旧历史检查。保留原生编辑、多张立绘与原有美化设置。
 - R8.3 保持已完成的正文楼层稳定：玩家发言不重排历史正文，AI 生成结束后只处理变动楼层。点铅笔进入原生编辑时保留原文编辑框、草稿及光标，保存／取消完成后才恢复显示。
 - 同角色支持多张自定义立绘：本地图片可多选，原始大小所有角色合计 100MB；图床网址不设张数上限。立绘表、对白小图与底图共用清单，支持单张锁定、单张删除、容量显示，保留原有图片与选图。
 
@@ -27,9 +28,9 @@
 
 当前 R8.3 发行提供：
 
-- [V1.3.4-R8.3.json — 完整数据库安装版](https://github.com/linxin1925/DaoYuan-Phone/releases/download/v1.3.4/V1.3.4-R8.3.json)：脚本完整内置，下载后在酒馆助手的「脚本」页导入。
-- [V1.3.4-R8.3-CDN.json — CDN 外链安装版](https://github.com/linxin1925/DaoYuan-Phone/releases/download/v1.3.4/V1.3.4-R8.3-CDN.json)：从版本清单加载线上运行时，后续可在小手机设置检查更新。
-- [V1.3.4-R8.3-source.zip — 完整原始码](https://github.com/linxin1925/DaoYuan-Phone/releases/download/v1.3.4/V1.3.4-R8.3-source.zip)：供开发和协作使用，无需导入酒馆助手。
+- [V1.3.5-R8.3.json — 完整数据库安装版](https://github.com/linxin1925/DaoYuan-Phone/releases/download/v1.3.5/V1.3.5-R8.3.json)：脚本完整内置，下载后在酒馆助手的「脚本」页导入。
+- [V1.3.5-R8.3-CDN.json — CDN 外链安装版](https://github.com/linxin1925/DaoYuan-Phone/releases/download/v1.3.5/V1.3.5-R8.3-CDN.json)：从版本清单加载线上运行时，后续可在小手机设置检查更新。
+- [V1.3.5-R8.3-source.zip — 完整原始码](https://github.com/linxin1925/DaoYuan-Phone/releases/download/v1.3.5/V1.3.5-R8.3-source.zip)：供开发和协作使用，无需导入酒馆助手。
 
 完整数据库版与 CDN 外链版选择一份启用；导入前先停用旧的小手机脚本，保持酒馆助手的「渲染」功能开启。更新前请保存正在编辑的聊天与输入框草稿，并等待生成结束；一键更新会刷新酒馆。
 
@@ -37,7 +38,7 @@
 
 ## 本地开发
 
-R8.3 的完整原始码以本次 Release 附件 `V1.3.4-R8.3-source.zip` 为准，要求 Node.js 24.14 或以上、pnpm 10.28.2。当前仓库 main 的历史 TypeScript 预览源码尚未整体同步发行快照；开发 R8.3 请解压本次完整原始码包。正式构建采用带哈希校验的 R8 快照与共享后台逻辑，不能将历史 Vite 预览结果直接替代发行包。
+R8.3 的完整原始码以本次 Release 附件 `V1.3.5-R8.3-source.zip` 为准，要求 Node.js 24.14 或以上、pnpm 10.28.2。当前仓库 main 的历史 TypeScript 预览源码尚未整体同步发行快照；开发 R8.3 请解压本次完整原始码包。正式构建采用带哈希校验的 R8 快照与共享后台逻辑，不能将历史 Vite 预览结果直接替代发行包。
 
 ```bash
 cd app
